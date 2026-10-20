@@ -36,3 +36,9 @@
 }
 @media(max-width:1200px){.ds-desktop-search-control{display:none!important}}
 @keyframes ds-search-reveal{from{width:0;opacity:0}to{width:150px;opacity:1}}
+
+@media(min-width:1201px){
+ .ds-desktop-brand .ds-header-logo{width:230px}
+ .ds-desktop-brand .ds-header-logo img{max-height:64px}
+ .ds-desktop-brand .ds-header-logo-fallback strong{font-size:20px}
+}
