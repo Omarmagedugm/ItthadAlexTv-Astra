@@ -5,6 +5,28 @@ import './index.css';
 import './lib/confetti';
 import { registerSW } from 'virtual:pwa-register';
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
+declare global {
+  interface Window {
+    deferredPwaInstallPrompt?: BeforeInstallPromptEvent;
+  }
+}
+
+// Capture this before lazy-loaded UI mounts so the install prompt is not missed.
+window.addEventListener('beforeinstallprompt', (event: Event) => {
+  event.preventDefault();
+  window.deferredPwaInstallPrompt = event as BeforeInstallPromptEvent;
+  window.dispatchEvent(new Event('pwa-install-available'));
+});
+
+window.addEventListener('appinstalled', () => {
+  window.deferredPwaInstallPrompt = undefined;
+});
+
 // Handle service worker registration safely in background
 registerSW({
   onNeedRefresh() {
