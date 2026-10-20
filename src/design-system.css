@@ -120,3 +120,67 @@ html.dark{--ds-bg:#141b1b;--ds-surface:#202a28;--ds-soft:#283330;--ds-line:#3541
 @media(max-width:1023px){.ds-mobile-brand .ds-header-logo{width:170px;height:62px}.ds-mobile-brand>a{display:flex;min-width:0}}
 @media(max-width:767px){.ds-topbar{gap:8px}.ds-mobile-brand{min-width:0;flex-shrink:1}.ds-mobile-brand .ds-header-logo{width:150px;height:58px}.ds-top-actions{flex-shrink:0}.ds-header-logo-fallback strong{font-size:14px}}
 @media(max-width:380px){.ds-mobile-brand .ds-header-logo{width:112px;height:56px}.ds-header-logo-fallback strong{font-size:12px}}
+
+
+/* Modern club members portal */
+.club-portal {
+  --club-green: #087c60;
+  padding-top: 18px;
+  background:
+    radial-gradient(ellipse at 88% 3%, rgba(8,124,96,.07), transparent 28rem),
+    var(--ds-bg);
+}
+.club-portal > .max-w-6xl {
+  width: min(calc(100% - 2rem), 76rem);
+  margin-inline: auto;
+}
+.club-portal > div:first-child > .ds-feature-panel {
+  min-height: 250px;
+  display: flex;
+  align-items: center;
+  border-radius: 26px;
+  padding: clamp(24px, 4vw, 42px);
+  background: linear-gradient(125deg, #123c31 0%, #087c60 54%, #125749 100%);
+  box-shadow: 0 22px 55px rgba(10, 70, 53, .16);
+}
+.club-portal > div:first-child h1 {
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  line-height: 1.55;
+}
+.club-portal > div:first-child p {
+  line-height: 1.9;
+}
+.club-portal .ds-feature-panel,
+.club-portal .ds-content-card {
+  border-radius: 18px;
+}
+.club-portal > div:nth-child(2) .ds-feature-panel {
+  min-height: 96px;
+  padding: 18px 22px;
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(6, 95, 70, .12);
+}
+.club-portal > div:nth-child(3) > .ds-content-card {
+  padding: 8px;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(20, 50, 37, .07);
+}
+.club-portal button:focus-visible,
+.club-portal a:focus-visible {
+  outline: 3px solid rgba(8, 124, 96, .65);
+  outline-offset: 3px;
+}
+@media (max-width: 767px) {
+  .club-portal { padding-top: 10px; }
+  .club-portal > .max-w-6xl { width: min(calc(100% - 1.25rem), 76rem); }
+  .club-portal > div:first-child > .ds-feature-panel {
+    min-height: 0;
+    border-radius: 20px;
+    padding: 22px 18px;
+  }
+  .club-portal > div:nth-child(3) > .ds-content-card {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .club-portal > div:nth-child(3) > .ds-content-card::-webkit-scrollbar { display: none; }
+}
