@@ -17,6 +17,24 @@ import Home from './pages/Home';
 import MaintenanceScreen from './components/MaintenanceScreen';
 import { updateClientSEO, buildWebsiteSchema } from './lib/seo';
 
+function isStaleChunkError(error: any) {
+  const message = String(error?.message || error || '');
+  return /failed to fetch dynamically imported module|importing a module script failed|chunkloaderror|loading chunk .* failed/i.test(message);
+}
+
+function reloadForStaleChunkOnce() {
+  try {
+    const key = 'stale-chunk-reload-at';
+    const lastAttempt = Number(sessionStorage.getItem(key) || 0);
+    if (Date.now() - lastAttempt < 30_000) return false;
+    sessionStorage.setItem(key, String(Date.now()));
+    window.location.reload();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function safeLazy<T extends React.ComponentType<any>>(
   factory: () => Promise<{ default: T }>
 ) {
@@ -29,6 +47,7 @@ function safeLazy<T extends React.ComponentType<any>>(
         return await factory();
       } catch (retryErr) {
         console.error('Route chunk failed to load:', retryErr);
+        if (isStaleChunkError(retryErr)) reloadForStaleChunkOnce();
         throw retryErr;
       }
     }
