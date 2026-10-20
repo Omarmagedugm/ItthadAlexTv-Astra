@@ -369,15 +369,23 @@ export default function Home() {
     sportMatches.find((m) => m.status === "upcoming") ||
     sportMatches[0], [sportMatches]); // If there are no matches, this is undefined. We do NOT fallback to another sport here to avoid bugs.
 
-  // Logic for upcoming matches: prioritize the 'current' sport selected by user
-  const currentSport = effectiveSport || "football";
-  
+  // Keep the upcoming carousel aligned with the sport selected for the hero.
+  const currentSport = heroMatch?.sport || effectiveSport || "football";
+  const belongsToCurrentSport = (match: any) => {
+    const declaredSport = String(match.sport || "").trim().toLowerCase();
+    const competition = String(match.competition || "").trim().toLowerCase();
+    const isBasketball = declaredSport
+      ? declaredSport.includes("basket") || declaredSport.includes("سلة")
+      : competition.includes("basketball") || competition.includes("كرة السلة");
+    return currentSport === "basketball" ? isBasketball : !isBasketball;
+  };
+
   const upcomingMatches = matches
     .filter(
-      (m) =>
-        m.status === "upcoming" &&
-        m.id !== heroMatch?.id &&
-        (m.sport === currentSport || (!m.sport && currentSport === "football")),
+      (match) =>
+        match.status === "upcoming" &&
+        match.id !== heroMatch?.id &&
+        belongsToCurrentSport(match),
     )
     .sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime())
     .slice(0, 4);
