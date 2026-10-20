@@ -333,7 +333,7 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [matches, isAdmin]);
 
-  const recentNews = news.slice(0, 5);
+  const recentNews = news.slice(0, 6);
   const recentMedia = media.slice(0, 5);
 
   const allFeatured = useMemo(() => matches
@@ -380,7 +380,7 @@ export default function Home() {
         (m.sport === currentSport || (!m.sport && currentSport === "football")),
     )
     .sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime())
-    .slice(0, 3);
+    .slice(0, 4);
 
   let timeLeft = { d: 0, h: 0, m: 0, s: 0 };
   let isUpcoming = false;
