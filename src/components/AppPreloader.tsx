@@ -7,7 +7,7 @@ interface AppPreloaderProps {
 }
 
 export default function AppPreloader({ fullScreen = true }: AppPreloaderProps) {
-  const appLogo = useAppStore(state => state.appSettings.headerLogoLight || state.appSettings.appLogo || '/icon.png');
+  const appLogo = 'https://res.cloudinary.com/dqj6gzwfg/image/upload/v1778009104/admin_headerLogoLight/wwc7cnjzvrod4xgzvrdb.png';
   useEffect(() => {
     if (!fullScreen) return;
     const previous = document.body.style.overflow;
