@@ -51,7 +51,7 @@ export default function BottomNav() {
                       {item.icon}
                     </span>
                   </div>
-                  <span className={`text-[10px] mt-1 font-black transition-colors duration-200 ${isActive ? 'text-accent' : 'text-slate-500 dark:text-slate-400'}`}>
+                  <span style={{ color: isActive ? '#b9df71' : inverseForeground }} className={`text-[10px] mt-1 font-black transition-colors duration-200 ${isActive ? 'text-accent' : 'text-slate-500 dark:text-slate-400'}`}>
                     {item.label}
                   </span>
                   {isActive && (
@@ -78,7 +78,7 @@ export default function BottomNav() {
                     {item.icon}
                   </span>
                 </div>
-                <span className={`text-[10px] mt-0.5 transition-colors duration-200 ${isActive ? 'font-black text-accent' : 'font-medium'}`}>
+                <span style={{ color: isActive ? '#b9df71' : inverseForeground }} className={`text-[10px] mt-0.5 transition-colors duration-200 ${isActive ? 'font-black text-accent' : 'font-medium'}`}>
                   {item.label}
                 </span>
                 {isActive ? (
