@@ -20,8 +20,8 @@ export default function BottomNav() {
       <nav
         dir="rtl"
         aria-label="شريط التنقل السفلي"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
-        className="fixed bottom-3 inset-x-3 sm:inset-x-6 z-50 max-w-md mx-auto glass-nav rounded-[28px] border border-white/35 dark:border-white/10 shadow-2xl px-2 py-1 md:hidden select-none"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 6px)' }}
+        className="fixed bottom-3 inset-x-3 sm:inset-x-6 z-50 max-w-md mx-auto glass-nav bottom-nav-inverse rounded-[28px] border border-white/35 dark:border-white/10 shadow-2xl px-2 py-1 md:hidden select-none"
       >
         <div className="flex items-center justify-around h-14 relative">
           {navItems.map((item, idx) => {
@@ -96,9 +96,9 @@ export default function BottomNav() {
       dir="rtl"
         aria-label="شريط التنقل السفلي"
       className="fixed inset-x-0 bottom-0 z-50 md:hidden px-4 pointer-events-none select-none"
-      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 10px)' }}
+      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 6px)' }}
     >
-      <div className="pointer-events-auto mx-auto max-w-md glass-nav rounded-full p-1.5 flex items-center justify-between gap-1 border border-black/5 dark:border-white/10 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.35)]">
+      <div className="pointer-events-auto mx-auto max-w-md glass-nav bottom-nav-inverse rounded-full p-1.5 flex items-center justify-between gap-1 border border-black/5 dark:border-white/10 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.35)]">
         {navItems.map((item) => {
           const isActive = path === item.path || (item.path !== '/' && path.startsWith(item.path));
 
@@ -111,7 +111,7 @@ export default function BottomNav() {
               className={`flex items-center justify-center gap-1.5 h-12 rounded-full transition-all duration-200 active:scale-95 ${
                 isActive
                   ? 'bg-primary text-white px-3 shrink-0 shadow-sm'
-                  : 'min-w-0 flex-1 max-w-12 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  : 'min-w-0 flex-1 max-w-12 text-white/70 dark:text-slate-600 hover:text-white dark:hover:text-slate-950'
               }`}
             >
               <span
