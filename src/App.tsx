@@ -108,7 +108,7 @@ function VercelAnalytics() {
 }
 
 function PageLoader() {
-  return <AppPreloader />;
+  return <div role="status" aria-live="polite" className="flex min-h-32 items-center justify-center text-xs font-light text-slate-500">جاري تحميل المحتوى…</div>;
 }
 
 interface ErrorBoundaryProps {
@@ -211,10 +211,10 @@ function MainContentWrapper({ children, showGoal, showWin, activeMatch, scoredTe
   }
 
   return (
-    <Suspense fallback={<PageLoader />}><div className="ds-app">
+    <div className="ds-app">
       <a href="#main-content" className="ds-skip-link">تخطّي إلى المحتوى</a>
       <TopHeader />
-      <PageFrame>{children}</PageFrame>
+      <PageFrame><Suspense fallback={<PageLoader />}>{children}</Suspense></PageFrame>
 
       {/* Non-blocking background and utility widgets */}
       <Suspense fallback={null}>
@@ -244,7 +244,7 @@ function MainContentWrapper({ children, showGoal, showWin, activeMatch, scoredTe
         </Suspense>
       )}
       <AppNav />
-    </div></Suspense>
+    </div>
   );
 }
 
@@ -258,6 +258,10 @@ export default function App() {
 
 function AppContent() {
   const { startupReady } = useFirestoreSync();
+  const [startupComplete, setStartupComplete] = useState(startupReady);
+  useEffect(() => {
+    if (startupReady) setStartupComplete(true);
+  }, [startupReady]);
   const matches = useAppStore(state => state.matches);
   const [showGoal, setShowGoal] = useState(false);
   const [showWin, setShowWin] = useState(false);
@@ -549,7 +553,7 @@ function GlobalSEOSynchronizer() {
 }
 
   // Keep all navigation and page chrome unmounted during startup.
-  if (!startupReady) return <AppPreloader />;
+  if (!startupReady && !startupComplete) return <AppPreloader />;
 
   // Auth Redirection Logic
   return (

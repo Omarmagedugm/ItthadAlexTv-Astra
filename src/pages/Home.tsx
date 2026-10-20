@@ -48,7 +48,6 @@ import {
 } from "lucide-react";
 import { onSnapshot, doc } from "firebase/firestore";
 import HomeSkeleton from "../components/HomeSkeleton";
-import AppPreloader from "../components/AppPreloader";
 import { SafeImage } from "../components/SafeImage";
 import { getOptimizedImage } from "../lib/cloudinary";
 
@@ -611,12 +610,12 @@ export default function Home() {
                               ].map((unit, idx, arr) => (
                                 <div key={unit.label} className="flex items-center gap-0.5 sm:gap-1">
                                   <div className="flex flex-col items-center gap-0.5">
-                                    <div className={`w-5 h-5 sm:w-6 sm:h-6 bg-black/30 rounded flex items-center justify-center border border-white/10 text-[12px] sm:text-xs font-mono font-bold tabular-nums backdrop-blur-md ${unit.accent ? 'text-accent' : ''}`}>
+                                    <div className={`w-5 h-5 sm:w-6 sm:h-6 bg-black/30 rounded flex items-center justify-center border border-white/10 text-[12px] sm:text-xs font-mono font-light tabular-nums backdrop-blur-md ${unit.accent ? 'text-accent' : ''}`}>
                                       {unit.val.toString().padStart(2, "0")}
                                     </div>
-                                    <span className="text-[12px] sm:text-[12px] opacity-70 leading-none tracking-widest font-bold">{unit.label}</span>
+                                    <span className="text-[12px] sm:text-[12px] opacity-70 leading-none tracking-widest font-light">{unit.label}</span>
                                   </div>
-                                  {idx < arr.length - 1 && <span className="text-white/30 text-[12px] mb-3 font-bold">:</span>}
+                                  {idx < arr.length - 1 && <span className="text-white/30 text-[12px] mb-3 font-light">:</span>}
                                 </div>
                               ))}
                             </div>
@@ -663,12 +662,12 @@ export default function Home() {
                             {heroMatch.status === "upcoming" ? (
                               <div className="flex flex-col items-center w-full justify-center gap-1 sm:gap-2">
                                 <div className="text-xl sm:text-3xl opacity-60">VS</div>
-                                <div className="w-fit max-w-full mx-auto text-center font-bold text-white/90 bg-black/40 px-3 py-1.5 sm:py-2 rounded-xl sm:rounded-lg border border-white/10 leading-tight overflow-hidden">
+                                <div className="w-fit max-w-full mx-auto text-center font-light text-white/90 bg-black/40 px-3 py-1.5 sm:py-2 rounded-xl sm:rounded-lg border border-white/10 leading-tight overflow-hidden">
                                   {heroMatch.date && !isNaN(new Date(heroMatch.date).getTime()) ? (
                                     <div className="flex flex-col items-center justify-center gap-0.5 max-w-full text-[11px] sm:text-xs">
                                       <span className="text-slate-200 whitespace-nowrap max-w-full">{format(new Date(heroMatch.date), "d MMMM yyyy", { locale: ar })}</span>
                                       <div className="flex items-center gap-1.5 whitespace-nowrap max-w-full">
-                                        <span className="text-amber-400 font-bold">{format(new Date(heroMatch.date), "h:mm a", { locale: ar })}</span>
+                                        <span className="text-amber-400 font-light">{format(new Date(heroMatch.date), "h:mm a", { locale: ar })}</span>
                                         <span className="text-white/60">-</span>
                                         <span className="text-white/90">{format(new Date(heroMatch.date), "EEEE", { locale: ar })}</span>
                                       </div>
@@ -2095,10 +2094,6 @@ export default function Home() {
 
   const hasContent = news.length > 0 || matches.length > 0;
   
-  // High-fidelity AppPreloader shown on initial startup to eliminate any flash of empty messages
-  if (!hasContent && !dataLoaded) {
-    return <AppPreloader />;
-  }
 
   const isEmpty = dataLoaded && news.length === 0 && matches.length === 0;
 
