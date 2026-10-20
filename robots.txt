@@ -1,0 +1,41 @@
+# Robots.txt for Ittihad Alex TV (قناة الاتحاد السكندري)
+# https://itthadalextv.com/
+
+User-agent: *
+Allow: /
+Allow: /sitemap.xml
+Allow: /news-sitemap.xml
+Allow: /news/
+Allow: /matches
+Allow: /media
+Allow: /live
+Allow: /history
+Allow: /fanzone
+Allow: /club-members
+Allow: /discounts
+Allow: /business
+Allow: /world-fans
+Allow: /services
+Allow: /privacy-policy
+Allow: /terms
+Allow: /assets/
+Allow: /icon.png
+Allow: /manifest.json
+
+# Block private, authenticated, administrative and utility paths from indexing
+Disallow: /admin
+Disallow: /admin/
+Disallow: /auth
+Disallow: /auth/
+Disallow: /profile
+Disallow: /profile/
+Disallow: /bookmarks
+Disallow: /bookmarks/
+Disallow: /jersey-tryon
+Disallow: /compress-images
+Disallow: /image-compressor
+Disallow: /compress
+
+# Sitemaps declaration
+Sitemap: https://itthadalextv.com/sitemap.xml
+Sitemap: https://itthadalextv.com/news-sitemap.xml

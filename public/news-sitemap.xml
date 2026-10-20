@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
+  <url>
+    <loc>https://itthadalextv.com/news/eafkAsEMNbzkYQoJaZKF</loc>
+    <news:news>
+      <news:publication>
+        <news:name>قناة الاتحاد السكندري</news:name>
+        <news:language>ar</news:language>
+      </news:publication>
+      <news:publication_date>2026-10-19T14:34:29Z</news:publication_date>
+      <news:title>مزق عضلي يُبعد محمد طه عن سلة الاتحاد السكندري</news:title>
+    </news:news>
+  </url>
+  <url>
+    <loc>https://itthadalextv.com/news/aaXTNqnUG3xMHhnfme2e</loc>
+    <news:news>
+      <news:publication>
+        <news:name>قناة الاتحاد السكندري</news:name>
+        <news:language>ar</news:language>
+      </news:publication>
+      <news:publication_date>2026-10-19T11:28:26Z</news:publication_date>
+      <news:title>الاتحاد السكندري في مواجهة غزل المحلة الأربعاء</news:title>
+    </news:news>
+  </url>
+</urlset>

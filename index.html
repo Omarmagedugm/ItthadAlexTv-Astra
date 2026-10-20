@@ -1,0 +1,80 @@
+<!doctype html>
+<html class="dark" dir="rtl" lang="ar">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" id="theme-color-meta" content="#072418" />
+    <meta name="description" content="تطبيق قناة الاتحاد السكندري - زعيم الثغر وسيد البلد">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <link rel="canonical" href="https://itthadalextv.com/" />
+    <meta property="og:url" content="https://itthadalextv.com/" />
+    <meta property="og:site_name" content="قناة الاتحاد السكندري" />
+    <meta property="og:locale" content="ar_EG" />
+    <meta property="og:title" content="قناة الاتحاد السكندري" />
+    <meta property="og:description" content="تطبيق قناة الاتحاد السكندري - زعيم الثغر وسيد البلد" />
+    <meta property="og:image" content="/icon.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="قناة الاتحاد السكندري" />
+    <meta name="twitter:description" content="تطبيق قناة الاتحاد السكندري - زعيم الثغر وسيد البلد" />
+    <meta name="twitter:image" content="/icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="قناة الاتحاد">
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" href="/icon.png?v=2" />
+    <link rel="apple-touch-icon" href="/icon.png?v=2" />
+    <script>
+      (function() {
+        if (typeof HTMLCanvasElement !== 'undefined' && HTMLCanvasElement.prototype.transferControlToOffscreen) {
+          try {
+            delete HTMLCanvasElement.prototype.transferControlToOffscreen;
+          } catch(e) {
+            HTMLCanvasElement.prototype.transferControlToOffscreen = undefined;
+          }
+        }
+        if (typeof OffscreenCanvas !== 'undefined' && !OffscreenCanvas.prototype.getBoundingClientRect) {
+          try {
+            OffscreenCanvas.prototype.getBoundingClientRect = function() {
+              return { top: 0, left: 0, right: this.width || 0, bottom: this.height || 0, width: this.width || 0, height: this.height || 0, x: 0, y: 0, toJSON: function() { return {}; } };
+            };
+          } catch(e) {}
+        }
+        var img = new Image();
+        img.onerror = function() {
+          var fallback = 'https://res.cloudinary.com/dqj6gzwfg/image/upload/v1777716805/favicon_gd0ic4.png';
+          var iconEl = document.querySelector('link[rel="icon"]');
+          if (iconEl) iconEl.href = fallback;
+        };
+        img.src = '/icon.png?v=2';
+      })();
+    </script>
+    <!-- Non-blocking font preconnect & stylesheet loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;600;700;800&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;600;700;800&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap" media="print" onload="this.media='all'" />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;600;700;800&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap" />
+    </noscript>
+    <title>قناة الاتحاد السكندري</title>
+    <!-- Google tag (gtag.js) loaded after page completion -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      window.addEventListener('load', function() {
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=G-XWSSXYDQN1';
+        document.head.appendChild(s);
+        gtag('js', new Date());
+        gtag('config', 'G-XWSSXYDQN1');
+      });
+    </script>
+    <!-- OneSignal Web Push SDK deferred -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  </head>
+  <body>
+    <div id="root"><div role="status" aria-label="جاري التحميل" dir="rtl" style="position:fixed;inset:0;z-index:2147483647;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;background:#082d23;color:#d7e8db;font-family:system-ui,sans-serif"><img src="/icon.png" alt="قناة الاتحاد" width="128" height="128" fetchpriority="high" style="object-fit:contain"/><span style="font-size:12px">جاري التحميل</span></div></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
