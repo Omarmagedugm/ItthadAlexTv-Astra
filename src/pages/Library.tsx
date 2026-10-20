@@ -180,13 +180,13 @@ export default function Library() {
   };
 
   useEffect(() => {
-    if (!selectedBook) return;
+    if (!selectedBook || !isBookLoading) return;
     const timeout = window.setTimeout(() => {
       setIsBookLoading(false);
       setBookLoadError(true);
     }, 15000);
     return () => window.clearTimeout(timeout);
-  }, [selectedBook?.id]);
+  }, [selectedBook?.id, isBookLoading]);
 
   // Filters
   const [songFilterCategory, setSongFilterCategory] = useState<string>('all');
