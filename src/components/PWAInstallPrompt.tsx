@@ -4,6 +4,17 @@ import { Download, Share, PlusSquare, X, Smartphone, Monitor } from 'lucide-reac
 
 type InstallDevice = 'android' | 'ios' | 'desktop';
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
+declare global {
+  interface Window {
+    deferredPwaInstallPrompt?: BeforeInstallPromptEvent;
+  }
+}
+
 const detectInstallDevice = (): InstallDevice => {
   const ua = navigator.userAgent;
   const isIOS = /iPad|iPhone|iPod/.test(ua) ||
@@ -15,9 +26,10 @@ const detectInstallDevice = (): InstallDevice => {
 
 const PWAInstallPrompt: React.FC = () => {
   const [device, setDevice] = useState<InstallDevice>('desktop');
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [showManualInstructions, setShowManualInstructions] = useState(false);
 
   useEffect(() => {
     const standalone = window.matchMedia('(display-mode: standalone)').matches ||
@@ -28,36 +40,53 @@ const PWAInstallPrompt: React.FC = () => {
     }
 
     setDevice(detectInstallDevice());
+    if (window.deferredPwaInstallPrompt) {
+      setDeferredPrompt(window.deferredPwaInstallPrompt);
+    }
     const showTimer = window.setTimeout(() => setVisible(true), 3000);
 
-    const handleBeforeInstallPrompt = (event: Event) => {
-      event.preventDefault();
-      setDeferredPrompt(event as any);
-      setVisible(true);
+    const handleInstallAvailable = () => {
+      if (window.deferredPwaInstallPrompt) {
+        setDeferredPrompt(window.deferredPwaInstallPrompt);
+        setVisible(true);
+      }
     };
 
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setVisible(false);
       setDeferredPrompt(null);
+      window.deferredPwaInstallPrompt = undefined;
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('pwa-install-available', handleInstallAvailable);
     window.addEventListener('appinstalled', handleAppInstalled);
     return () => {
       window.clearTimeout(showTimer);
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('pwa-install-available', handleInstallAvailable);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
+    if (!deferredPrompt) {
+      setShowManualInstructions(true);
+      return;
+    }
+
+    try {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      window.deferredPwaInstallPrompt = undefined;
       setDeferredPrompt(null);
-      setVisible(false);
+      if (outcome === 'accepted') {
+        setVisible(false);
+      } else {
+        setShowManualInstructions(true);
+      }
+    } catch (error) {
+      console.error('[PWA] Could not open the install prompt:', error);
+      setShowManualInstructions(true);
     }
   };
 
@@ -73,10 +102,8 @@ const PWAInstallPrompt: React.FC = () => {
   const subtitle = isIOS
     ? 'افتح قائمة المشاركة ثم اختر «إضافة إلى الشاشة الرئيسية».'
     : canInstallNow
-      ? 'وصول أسرع إلى أخبار ومباريات زعيم الثغر.'
-      : device === 'android'
-        ? 'من قائمة المتصفح ⋮ اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».'
-        : 'من قائمة المتصفح اختر «تثبيت التطبيق» أو «إنشاء اختصار».';
+      ? 'اضغط على الزر لفتح نافذة التثبيت على جهازك.'
+      : 'اضغط «تثبيت الآن»، وإذا لم تظهر نافذة التثبيت ستظهر لك خطوات المتصفح.';
 
   return (
     <AnimatePresence>
@@ -122,7 +149,7 @@ const PWAInstallPrompt: React.FC = () => {
               </div>
             )}
 
-            {canInstallNow && !isIOS && (
+            {!isIOS && (
               <button
                 type="button"
                 onClick={handleInstallClick}
@@ -131,6 +158,14 @@ const PWAInstallPrompt: React.FC = () => {
                 <Download size={17} />
                 تثبيت الآن
               </button>
+            )}
+
+            {!isIOS && showManualInstructions && (
+              <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-[12px] leading-5 font-bold text-slate-600 dark:border-emerald-600/20 dark:bg-[#0b3322] dark:text-slate-200">
+                {device === 'android'
+                  ? 'من متصفح Chrome اضغط ⋮ ثم «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».'
+                  : 'من Chrome أو Edge افتح قائمة المتصفح ثم اختر «تثبيت التطبيق» أو «إنشاء اختصار».'}
+              </div>
             )}
           </div>
         </motion.div>
