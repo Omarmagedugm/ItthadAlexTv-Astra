@@ -486,10 +486,12 @@ export default function BusinessDirectory() {
                   >
                     <div>
                       {/* Image Container */}
-                      <div className="relative h-44 w-full bg-slate-900 overflow-hidden">
+                      <div className="relative aspect-square w-full bg-slate-900 overflow-hidden">
                         <img
-                          src={bus.coverImage}
+                          src={getOptimizedImage(bus.coverImage, 640)}
                           alt={bus.businessName}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
