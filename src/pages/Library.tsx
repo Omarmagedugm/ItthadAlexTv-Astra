@@ -125,6 +125,11 @@ export default function Library() {
 
   const [activeTab, setActiveTabState] = useState<TabType>(getTabFromParam(searchParams.get('tab')));
   const [searchQuery, setSearchQuery] = useState('');
+  const [visibleBookCount, setVisibleBookCount] = useState(12);
+
+  useEffect(() => {
+    setVisibleBookCount(12);
+  }, [searchQuery, activeTab]);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   
   // Modals state
@@ -1180,7 +1185,7 @@ export default function Library() {
                 exit={{ opacity: 0, y: -15 }}
                 className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6"
               >
-                {filteredBooks.map((book) => (
+                {filteredBooks.slice(0, visibleBookCount).map((book) => (
                   <motion.div 
                     key={book.id}
                     whileHover={{ y: -6 }}
@@ -1188,7 +1193,7 @@ export default function Library() {
                   >
                     <div className="aspect-[3/4] rounded-xl overflow-hidden shadow-md group-hover:shadow-sm transition-all relative mb-3 bg-slate-900 border border-border-light dark:border-border-dark">
                       {book.coverUrl && book.coverUrl.trim() !== '' ? (
-                        <img src={book.coverUrl} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" alt={book.title} />
+                        <img src={book.coverUrl} loading="lazy" decoding="async" className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" alt={book.title} />
                       ) : (
                         <div className="w-full h-full bg-slate-100 dark:bg-surface-dark flex items-center justify-center">
                           <BookOpen size={48} className="text-slate-300" />
@@ -1216,6 +1221,21 @@ export default function Library() {
                     </div>
                   </motion.div>
                 ))}
+
+                {filteredBooks.length > visibleBookCount && (
+                  <div className="col-span-full flex flex-col items-center gap-2 py-3">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      يعرض {Math.min(visibleBookCount, filteredBooks.length)} من {filteredBooks.length} كتاب
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setVisibleBookCount((count) => count + 12)}
+                      className="ds-control rounded-xl border border-primary/20 bg-white dark:bg-card-dark px-6 py-3 text-sm font-bold text-primary shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                    >
+                      عرض المزيد من الكتب
+                    </button>
+                  </div>
+                )}
 
                 {filteredBooks.length === 0 && (
                   <div className="ds-content-card col-span-full py-16 text-center bg-white dark:bg-card-dark rounded-xl border-2 border-dashed border-slate-200 dark:border-border-dark p-6">
