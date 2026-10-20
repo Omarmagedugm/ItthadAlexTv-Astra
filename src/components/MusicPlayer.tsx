@@ -39,9 +39,11 @@ export default function MusicPlayer() {
 
   const handleNext = () => {
     if (!activePlaylist.length || !currentSong) return;
-    if (shuffle) {
-      const randomIndex = Math.floor(Math.random() * activePlaylist.length);
-      setCurrentSong(activePlaylist[randomIndex]);
+    if (shuffle && activePlaylist.length > 1) {
+      const alternatives = activePlaylist.filter(song => song.id !== currentSong.id);
+      const shufflePool = alternatives.length ? alternatives : activePlaylist;
+      const nextSong = shufflePool[Math.floor(Math.random() * shufflePool.length)];
+      if (nextSong) setCurrentSong(nextSong);
     } else {
       const currentIndex = activePlaylist.findIndex(s => s.id === currentSong.id);
       const nextIndex = (currentIndex + 1) % activePlaylist.length;
@@ -218,6 +220,9 @@ export default function MusicPlayer() {
 
   useEffect(() => {
     setError(null);
+    setCurrentTime(0);
+    setDuration(0);
+    setProgress(0);
   }, [currentSong]);
 
   useEffect(() => {
@@ -229,17 +234,17 @@ export default function MusicPlayer() {
   if (!currentSong) return null;
 
   const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-      const p = (audioRef.current.currentTime / audioRef.current.duration) * 100;
-      setProgress(p || 0);
-    }
+    const audio = audioRef.current;
+    if (!audio) return;
+    const nextDuration = Number.isFinite(audio.duration) ? audio.duration : 0;
+    setCurrentTime(audio.currentTime || 0);
+    setDuration(nextDuration);
+    setProgress(nextDuration > 0 ? Math.min(100, (audio.currentTime / nextDuration) * 100) : 0);
   };
 
   const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      setDuration(audioRef.current.duration);
-    }
+    const nextDuration = audioRef.current?.duration;
+    setDuration(nextDuration && Number.isFinite(nextDuration) ? nextDuration : 0);
   };
 
   const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -273,9 +278,13 @@ export default function MusicPlayer() {
       >
         <audio 
           ref={audioRef}
+          preload="none"
+          playsInline
+          aria-label={`تشغيل ${currentSong.title || 'الأغنية الحالية'}`}
           src={currentSong.audioUrl || undefined}
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
+          onDurationChange={handleLoadedMetadata}
           onEnded={handleEnded}
           onError={(e) => {
             const audio = e.currentTarget;
@@ -444,6 +453,8 @@ export default function MusicPlayer() {
                     max="100" 
                     step="0.1"
                     value={progress}
+                    aria-label="تقدم الأغنية"
+                    aria-valuetext={`${formatTime(currentTime)} من ${formatTime(duration)}`}
                     onChange={handleProgressChange}
                     className="ds-form-control absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                     dir="ltr"
@@ -502,6 +513,7 @@ export default function MusicPlayer() {
                    max="1" 
                    step="0.01"
                    value={isMuted ? 0 : volume}
+                   aria-label="مستوى الصوت"
                    onChange={(e) => setVolume(parseFloat(e.target.value))}
                    className="ds-form-control w-full h-1.5 bg-slate-100 dark:bg-surface-dark rounded-full appearance-none cursor-pointer accent-primary"
                    dir="ltr"
