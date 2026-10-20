@@ -223,20 +223,37 @@ export default function Matches() {
     }
   } as const;
 
-  const seasonStats = matches.filter(m => m.status === 'finished' && (m.homeTeam === 'الاتحاد' || m.awayTeam === 'الاتحاد')).reduce((acc, match) => {
-    const isHome = match.homeTeam === 'الاتحاد';
-    const homeScore = parseInt(match.homeScore);
-    const awayScore = parseInt(match.awayScore);
-    
-    if (homeScore === awayScore) {
-      acc.draws += 1;
-    } else if ((isHome && homeScore > awayScore) || (!isHome && awayScore > homeScore)) {
-      acc.wins += 1;
-    } else {
-      acc.losses += 1;
-    }
-    return acc;
-  }, { wins: 0, draws: 0, losses: 0 });
+  const isIttihadTeam = (name?: string) => {
+    const normalized = String(name || '')
+      .normalize('NFKC')
+      .replace(/[أإآ]/g, 'ا')
+      .trim()
+      .toLocaleLowerCase('ar');
+    return normalized === 'الاتحاد'
+      || normalized.includes('الاتحاد السكندري')
+      || normalized.includes('الاتحاد الاسكندري')
+      || normalized === 'ittihad'
+      || normalized.includes('ittihad alex');
+  };
+
+  const seasonStats = matches
+    .filter(match => match.status === 'finished')
+    .reduce((acc, match) => {
+      const homeIsIttihad = isIttihadTeam(match.homeTeam);
+      const awayIsIttihad = isIttihadTeam(match.awayTeam);
+      if (homeIsIttihad === awayIsIttihad) return acc;
+
+      const homeScore = Number(match.homeScore);
+      const awayScore = Number(match.awayScore);
+      if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) return acc;
+
+      const ittihadScore = homeIsIttihad ? homeScore : awayScore;
+      const opponentScore = homeIsIttihad ? awayScore : homeScore;
+      if (ittihadScore > opponentScore) acc.wins += 1;
+      else if (ittihadScore < opponentScore) acc.losses += 1;
+      else acc.draws += 1;
+      return acc;
+    }, { wins: 0, draws: 0, losses: 0 });
 
   const totalGames = (seasonStats.wins + seasonStats.draws + seasonStats.losses) || 1;
   const winRate = (seasonStats.wins / totalGames) * 100;
