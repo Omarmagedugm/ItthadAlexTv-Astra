@@ -156,6 +156,15 @@ export default function Library() {
     setIsFullscreenBook(false);
   };
 
+  useEffect(() => {
+    if (!selectedBook) return;
+    const timeout = window.setTimeout(() => {
+      setIsBookLoading(false);
+      setBookLoadError(true);
+    }, 15000);
+    return () => window.clearTimeout(timeout);
+  }, [selectedBook?.id]);
+
   // Filters
   const [songFilterCategory, setSongFilterCategory] = useState<string>('all');
   const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
