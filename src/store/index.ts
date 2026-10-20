@@ -22,7 +22,7 @@ export { DEFAULT_SECTION_FLAGS };
 
 export interface HomeSection {
   id: string;
-  type: 'hero' | 'matches' | 'news' | 'media' | 'history' | 'stadiums' | 'store' | 'polls' | 'live' | 'custom' | 'widget' | 'city' | 'ads' | 'advertise' | 'image' | 'ai_banner' | 'tickets' | 'club_members' | 'club_members_ad' | 'club_members_banner' | 'business' | 'business_directory' | 'ittihad_business' | 'social' | 'social_media' | 'world_fans' | 'world_association' | 'video' | 'video_embed' | 'youtube' | 'facebook' | 'services' | 'public_services';
+  type: 'welcome_intro' | 'welcome_matches' | 'welcome_links' | 'welcome_explore' | 'welcome_feed' | 'hero' | 'matches' | 'news' | 'media' | 'history' | 'stadiums' | 'store' | 'polls' | 'live' | 'custom' | 'widget' | 'city' | 'ads' | 'advertise' | 'image' | 'ai_banner' | 'tickets' | 'club_members' | 'club_members_ad' | 'club_members_banner' | 'business' | 'business_directory' | 'ittihad_business' | 'social' | 'social_media' | 'world_fans' | 'world_association' | 'video' | 'video_embed' | 'youtube' | 'facebook' | 'services' | 'public_services';
   title?: string;
   subtitle?: string;
   active: boolean;
@@ -1189,3 +1189,4 @@ export const useAppStore = create<AppState>()(
     }
   )
 );
+

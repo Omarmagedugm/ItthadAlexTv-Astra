@@ -1,3 +1,4 @@
+import { resolveHomeSections } from '../lib/homeSections';
 import UpcomingMatchesCarousel from "../components/UpcomingMatchesCarousel";
 import HomeNewsSlider from "../components/HomeNewsSlider";
 import ClubWelcome from "../components/ClubWelcome";
@@ -432,6 +433,12 @@ export default function Home() {
     switch (
       section.type === "custom" && section.id === "city" ? "city" : section.type
     ) {
+      case "welcome_intro":
+      case "welcome_matches":
+      case "welcome_links":
+      case "welcome_explore":
+      case "welcome_feed":
+        return <ClubWelcome part={section.type} />;
       case "hero": {
         const rawName = profile?.name || auth.currentUser?.displayName || (auth.currentUser ? 'عضو الاتحاد' : 'يا سيد البلد');
         const userAvatar = profile?.avatar || auth.currentUser?.photoURL || '';
@@ -447,7 +454,7 @@ export default function Home() {
             <div className="flex items-center justify-between px-2 pt-1 pb-0.5">
               <Link 
                 to={auth.currentUser ? "/profile" : "/profile"} 
-                className="flex items-center gap-3 group transition-transform active:scale-98"
+                className="home-greeting-link flex items-center gap-3 group transition-transform active:scale-98"
               >
                 <div className="relative shrink-0">
                   {userAvatar ? (
@@ -469,13 +476,14 @@ export default function Home() {
                   </span>
                 </div>
 
-                <div className="flex flex-col text-right">
-                  <div className="flex items-center gap-2 flex-wrap">
+                <div className="home-greeting-details flex flex-col text-right">
+                  <div className="home-greeting-row">
                     <h2 className="ds-content-heading text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight group-hover:text-primary transition-colors flex items-center gap-1.5">
                       <span className="text-slate-500 dark:text-slate-400 font-bold text-sm">أهلاً،</span>
-                      <span className="text-primary dark:text-emerald-400 font-bold">{rawName}</span>
+                      <span className="home-greeting-name text-primary dark:text-emerald-400 font-bold" title={rawName}>{rawName}</span>
                       <span className="text-sm">👋</span>
                     </h2>
+                    <span className="home-greeting-badges">
                     {userTier === 'premium' && (
                       <span className="bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[11px] font-bold px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-0.5 shadow-xs">
                         عضو ملكي 👑
@@ -487,6 +495,7 @@ export default function Home() {
                         إدارة
                       </span>
                     )}
+                    </span>
                   </div>
                 </div>
               </Link>
@@ -2044,35 +2053,9 @@ export default function Home() {
     }
   };
 
-  const sectionsToRender: HomeSection[] = homeSections && homeSections.length > 0 
-    ? [...homeSections]
-    : [
-        { id: 'hero', type: 'hero', active: true, order: 0, spacing: 20 },
-        { id: 'ads', type: 'ads', active: true, order: 1, spacing: 20 },
-        { id: 'live', type: 'live', active: true, order: 2, spacing: 16 },
-        { id: 'matches', type: 'matches', active: true, order: 3, spacing: 24 },
-        { id: 'ai_banner', type: 'ai_banner', active: true, order: 4, spacing: 20 },
-        { id: 'city', type: 'city', active: true, order: 5, spacing: 24 },
-        { id: 'news', type: 'news', active: true, order: 6, spacing: 24 },
-        { id: 'media', type: 'media', active: true, order: 7, spacing: 24 },
-        { id: 'club_members', type: 'club_members', active: true, order: 8, spacing: 24 },
-        { id: 'world_fans', type: 'world_fans', active: true, order: 9, spacing: 24 },
-        { id: 'business', type: 'business', active: true, order: 10, spacing: 24 },
-        { id: 'tickets', type: 'tickets', active: true, order: 11, spacing: 20 },
-        { id: 'polls', type: 'polls', active: true, order: 12, spacing: 24 },
-        { id: 'history', type: 'history', active: true, order: 13, spacing: 24 },
-      ];
-
-  const sortedSections = [...sectionsToRender].sort((a, b) => {
-    // Keep compact upcoming fixtures directly below the match hero.
-    const priority = (section: HomeSection) => section.type === 'hero' ? 0
-      : section.type === 'matches' ? 1 : section.type === 'city' || section.id === 'city' ? 2 : 3;
-    const priorityDifference = priority(a) - priority(b);
-    if (priorityDifference) return priorityDifference;
-    if (a.pinned && !b.pinned) return -1;
-    if (!a.pinned && b.pinned) return 1;
-    return (a.order ?? 0) - (b.order ?? 0);
-  });
+  const sortedSections = resolveHomeSections(homeSections).sort((a, b) =>
+    Number(!!b.pinned) - Number(!!a.pinned) || (a.order ?? 0) - (b.order ?? 0)
+  );
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -2092,7 +2075,6 @@ export default function Home() {
   } as const;
 
   const activeSections = sortedSections.filter(section => section.active !== false);
-  const isTopSection = (section: HomeSection) => section.type === 'hero' || section.type === 'matches' || section.type === 'city' || section.id === 'city';
   const renderHomeSections = (sections: HomeSection[]) => (
     <>
       {sections.map((section, index) => {
@@ -2128,8 +2110,7 @@ export default function Home() {
         animate="visible"
         className="club-home-main flex-1 overflow-x-hidden px-4 md:px-0 flex flex-col gap-0 pt-2 pb-6"
       >
-        {renderHomeSections(activeSections.filter(isTopSection))}
-        <ClubWelcome />
+        {renderHomeSections(activeSections)}
         {isEmpty && (
           <motion.div 
             variants={itemVariants}
@@ -2168,7 +2149,6 @@ export default function Home() {
         )}
 
         {/* Goal Celebration Trigger is in App.tsx */}
-        {renderHomeSections(activeSections.filter(section => !isTopSection(section)))}
       
 
 
@@ -2199,3 +2179,4 @@ export default function Home() {
     </div>
   );
 }
+

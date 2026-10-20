@@ -51,27 +51,14 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { isYouTubeUrl, isFacebookUrl, getYouTubeThumbnail, getYouTubeEmbedUrl, getFacebookEmbedUrl } from '../../lib/videoUtils';
 
-export const DEFAULT_HOME_SECTIONS_LIST: HomeSection[] = [
-  { id: 'hero', type: 'hero', active: true, order: 0, title: 'المباراة القادمة / الحية', spacing: 20 },
-  { id: 'ads', type: 'ads', active: true, order: 1, title: 'شريط الإعلانات والبانرات', spacing: 20 },
-  { id: 'live', type: 'live', active: true, order: 2, title: 'بث مباشر متاح (عند وجود بث)', spacing: 16 },
-  { id: 'matches', type: 'matches', active: true, order: 3, title: 'مباريات مرتقبة', spacing: 24 },
-  { id: 'ai_banner', type: 'ai_banner', active: true, order: 4, title: 'بانر استوديو التيشيرت (AI)', spacing: 20 },
-  { id: 'city', type: 'city', active: true, order: 5, title: 'عروس البحر المتوسط (طقس وتاريخ)', spacing: 24 },
-  { id: 'news', type: 'news', active: true, order: 6, title: 'آخر الأخبار الرسمية', spacing: 24 },
-  { id: 'media', type: 'media', active: true, order: 7, title: 'ميديا الاتحاد والملخصات', spacing: 24 },
-  { id: 'club_members', type: 'club_members', active: true, order: 8, title: 'بوابة الأعضاء والأنشطة', spacing: 24 },
-  { id: 'public_services', type: 'services', active: true, order: 8.5, title: 'خدمات الجمهور والتعليم المجاني 🟢', spacing: 24 },
-  { id: 'world_fans', type: 'world_fans', active: true, order: 9, title: 'رابطة اتحاداوية العالم (المغتربين)', spacing: 24 },
-  { id: 'business', type: 'business', active: true, order: 10, title: 'اتحاداوي بيزنس (دليل الأعمال)', spacing: 24 },
-  { id: 'tickets', type: 'tickets', active: true, order: 11, title: 'حجز وتذاكر المباريات (Live)', spacing: 20 },
-  { id: 'polls', type: 'polls', active: true, order: 12, title: 'توقعات واستطلاعات الجماهير', spacing: 24 },
-  { id: 'custom', type: 'custom', active: true, order: 13, title: 'مجتمع المشجعين (Fan Zone)', spacing: 24 },
-  { id: 'history', type: 'history', active: true, order: 14, title: 'تاريخ وعراقة زعيم الثغر', spacing: 24 },
-  { id: 'advertise', type: 'advertise', active: true, order: 15, title: 'ويدجت أعلن معنا', spacing: 24 }
-];
+import { WELCOME_SECTIONS, resolveHomeSections } from '../../lib/homeSections';
 
 export const SECTION_METADATA: Record<string, { label: string; icon: React.ReactNode; color: string; desc: string }> = {
+  welcome_intro: { label: 'الاتحاد يجمعنا — مقدمة الصفحة', icon: <Layers size={16} />, color: 'bg-emerald-500/10 text-emerald-600', desc: 'تحكم في ظهور الويدجت ومكانها في الصفحة الرئيسية' },
+  welcome_matches: { label: 'على موعد مع الاتحاد والبث المباشر', icon: <Layers size={16} />, color: 'bg-emerald-500/10 text-emerald-600', desc: 'تحكم في ظهور الويدجت ومكانها في الصفحة الرئيسية' },
+  welcome_links: { label: 'اختصارات اكتشف التطبيق', icon: <Layers size={16} />, color: 'bg-emerald-500/10 text-emerald-600', desc: 'تحكم في ظهور الويدجت ومكانها في الصفحة الرئيسية' },
+  welcome_explore: { label: 'أكتر من مجرد ماتش', icon: <Layers size={16} />, color: 'bg-emerald-500/10 text-emerald-600', desc: 'تحكم في ظهور الويدجت ومكانها في الصفحة الرئيسية' },
+  welcome_feed: { label: 'نبض النادي — عنوان الأقسام', icon: <Layers size={16} />, color: 'bg-emerald-500/10 text-emerald-600', desc: 'تحكم في ظهور الويدجت ومكانها في الصفحة الرئيسية' },
   hero: { 
     label: 'المباراة القادمة / الحية', 
     icon: <Flame size={16} />, 
@@ -226,16 +213,16 @@ export default function AdminHomeSectionsManager() {
 
   // Sync from store once mounted
   useEffect(() => {
-    if (homeSections && homeSections.length > 0) {
+    if (homeSections) {
       // Normalize and sort
-      const sorted = [...homeSections].sort((a, b) => {
+      const sorted = resolveHomeSections(homeSections).sort((a, b) => {
         if (a.pinned && !b.pinned) return -1;
         if (!a.pinned && b.pinned) return 1;
         return (a.order ?? 0) - (b.order ?? 0);
       });
       setSections(sorted);
     } else {
-      setSections(DEFAULT_HOME_SECTIONS_LIST);
+      setSections(resolveHomeSections());
     }
   }, [homeSections]);
 
@@ -321,7 +308,9 @@ export default function AdminHomeSectionsManager() {
   // Delete section
   const handleDelete = (id: string, title?: string) => {
     if (window.confirm(`هل أنت متأكد من حذف الويدجت "${title || id}" من الصفحة الرئيسية؟`)) {
-      const filtered = sections.filter(s => s.id !== id);
+      const filtered = WELCOME_SECTIONS.some(s => s.id === id)
+        ? sections.map(s => s.id === id ? { ...s, active: false } : s)
+        : sections.filter(s => s.id !== id);
       normalizeAndSetSections(filtered);
       toast.success('تم حذف الويدجت من القائمة');
     }
@@ -400,7 +389,7 @@ export default function AdminHomeSectionsManager() {
   // Reset to default layout
   const handleResetDefaults = () => {
     if (window.confirm('هل أنت متأكد من استعادة الترتيب والتسميات الافتراضية لقسم الصفحة الرئيسية؟')) {
-      normalizeAndSetSections(DEFAULT_HOME_SECTIONS_LIST);
+      normalizeAndSetSections(resolveHomeSections());
       toast.success('تمت استعادة التخطيط الافتراضي');
     }
   };
@@ -1523,3 +1512,4 @@ export default function AdminHomeSectionsManager() {
     </div>
   );
 }
+
