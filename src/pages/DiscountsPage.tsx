@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppStore, MemberDiscount } from '../store';
+import { defaultMemberDiscounts } from '../data/defaultMemberDiscounts';
 
 export function getHighestDiscountPercentage(text: string): number {
   if (!text) return 0;
@@ -93,10 +94,8 @@ export default function DiscountsPage() {
 
   // Source discounts list
   const sourceList = useMemo(() => {
-    if (memberDiscounts && memberDiscounts.length > 0) {
-      return memberDiscounts.filter(d => d.active !== false);
-    }
-    return [];
+    const discounts = memberDiscounts?.length ? memberDiscounts : defaultMemberDiscounts;
+    return discounts.filter(d => d.active !== false);
   }, [memberDiscounts]);
 
   // Filtered and Sorted list
