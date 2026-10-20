@@ -45,6 +45,27 @@ import { getOptimizedImage } from '../lib/cloudinary';
 
 type TabType = 'photos' | 'videos' | 'songs' | 'books';
 
+const getDriveFileId = (url: string) => {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname.includes('drive.google.com')) return null;
+    return parsed.pathname.match(/\/file\/d\/([^/]+)/)?.[1] || parsed.searchParams.get('id');
+  } catch {
+    return null;
+  }
+};
+
+const getBookReaderUrl = (url: string, page: number, zoom: number) => {
+  const fileId = getDriveFileId(url);
+  const base = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : url;
+  return `${base.split('#')[0]}#page=${page}&zoom=${zoom}&toolbar=1`;
+};
+
+const getBookExternalUrl = (url: string) => {
+  const fileId = getDriveFileId(url);
+  return fileId ? `https://drive.google.com/file/d/${fileId}/view` : url;
+};
+
 const safeFormatDate = (dateVal: any, formatStr = 'dd MMMM yyyy') => {
   if (!dateVal) return '';
   try {
@@ -137,6 +158,7 @@ export default function Library() {
   const [selectedVideo, setSelectedVideo] = useState<any | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<any | null>(null);
   const [isBookLoading, setIsBookLoading] = useState(true);
+  const [bookLoadError, setBookLoadError] = useState(false);
 
   // Book reader enhanced controls state
   const [bookPage, setBookPage] = useState<number>(1);
@@ -153,6 +175,7 @@ export default function Library() {
     setBookZoom(100);
     setBookViewMode('fit-width');
     setIsBookLoading(true);
+    setBookLoadError(false);
     setIsFullscreenBook(false);
   };
 
@@ -1450,11 +1473,11 @@ export default function Library() {
                   {selectedBook.pdfUrl && (
                     <>
                       <a 
-                        href={selectedBook.pdfUrl}
+                        href={getBookExternalUrl(selectedBook.pdfUrl)}
                         target="_blank"
                         rel="noreferrer"
                         title="فتح في نافذة جديدة"
-                        className="p-2 bg-slate-100 dark:bg-card-dark hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition-all hidden sm:flex items-center justify-center"
+                        className="p-2 bg-slate-100 dark:bg-card-dark hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition-all flex items-center justify-center"
                       >
                         <ExternalLink size={16} />
                       </a>
@@ -1614,6 +1637,14 @@ export default function Library() {
                   </div>
                 )}
 
+                {bookLoadError && !isBookLoading && selectedBook.pdfUrl && (
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-slate-900/95 p-6 text-center">
+                    <BookOpen size={36} className="text-emerald-300" />
+                    <p className="max-w-md text-sm font-bold leading-7 text-white">تعذّر عرض الملف داخل القارئ. افتحه مباشرة للقراءة أو نزّله.</p>
+                    <a href={getBookExternalUrl(selectedBook.pdfUrl)} target="_blank" rel="noreferrer" className="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white">فتح الكتاب مباشرة</a>
+                  </div>
+                )}
+
                 {/* Floating Side Page Flipping Controls */}
                 <button
                   onClick={() => {
@@ -1659,19 +1690,16 @@ export default function Library() {
                 >
                   {selectedBook.pdfUrl ? (
                     <iframe 
-                      key={`book-frame-p${bookPage}-z${bookZoom}-${selectedBook.id}`}
-                      src={
-                        selectedBook.pdfUrl.includes('drive.google.com')
-                          ? `${selectedBook.pdfUrl.replace('/view', '/preview')}#page=${bookPage}&zoom=${bookZoom}`
-                          : `${selectedBook.pdfUrl}#page=${bookPage}&zoom=${bookZoom}`
-                      } 
+                      key={selectedBook.id}
+                      src={getBookReaderUrl(selectedBook.pdfUrl, bookPage, bookZoom)}
                       className={`w-full h-full border-none rounded-xl shadow-sm bg-white ${
                         bookViewMode === 'fit-height' ? 'max-h-[85vh]' : 'min-h-[500px]'
                       }`}
                       title="book-reader"
                       allow="autoplay"
-                      onLoad={() => setIsBookLoading(false)}
-                      loading="lazy"
+                      onLoad={() => { setIsBookLoading(false); setBookLoadError(false); }}
+                      onError={() => { setIsBookLoading(false); setBookLoadError(true); }}
+                      loading="eager"
                     />
                   ) : (
                     <div className="text-center p-8 text-slate-400 font-bold">
