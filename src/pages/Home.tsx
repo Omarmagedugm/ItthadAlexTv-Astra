@@ -106,6 +106,51 @@ function LiveMatchTimeDisplay({ match }: { match: any }) {
   return <span>{`${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}'`}</span>;
 }
 
+function UpcomingMatchCountdown({ date }: { date: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const refresh = () => setNow(Date.now());
+    refresh();
+    const interval = window.setInterval(refresh, 1000);
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', refresh);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pageshow', refresh);
+    };
+  }, [date]);
+  const target = new Date(date).getTime();
+  const remaining = Number.isFinite(target) ? Math.max(0, Math.floor((target - now) / 1000)) : 0;
+  const timeLeft = {
+    d: Math.floor(remaining / 86400),
+    h: Math.floor((remaining % 86400) / 3600),
+    m: Math.floor((remaining % 3600) / 60),
+    s: remaining % 60,
+  };
+  return (
+                            <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5 text-white dir-ltr scale-[0.80] sm:scale-100" dir="ltr" style={{ transformOrigin: "center" }}>
+                              {[
+                                { val: timeLeft.d, label: "يوم" },
+                                { val: timeLeft.h, label: "ساعة" },
+                                { val: timeLeft.m, label: "دقيقة" },
+                                { val: timeLeft.s, label: "ثانية", accent: true }
+                              ].map((unit, idx, arr) => (
+                                <div key={unit.label} className="flex items-center gap-0.5 sm:gap-1">
+                                  <div className="flex flex-col items-center gap-0.5">
+                                    <div className={`w-5 h-5 sm:w-6 sm:h-6 bg-black/30 rounded flex items-center justify-center border border-white/10 text-[12px] sm:text-xs font-mono font-light tabular-nums backdrop-blur-md ${unit.accent ? 'text-accent' : ''}`}>
+                                      {unit.val.toString().padStart(2, "0")}
+                                    </div>
+                                    <span className="text-[12px] sm:text-[12px] opacity-70 leading-none tracking-widest font-light">{unit.label}</span>
+                                  </div>
+                                  {idx < arr.length - 1 && <span className="text-white/30 text-[12px] mb-3 font-light">:</span>}
+                                </div>
+                              ))}
+                            </div>
+  );
+}
+
 export default function Home() {
   const {
     news,
@@ -402,20 +447,8 @@ export default function Home() {
     .sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime())
     .slice(0, 4);
 
-  let timeLeft = { d: 0, h: 0, m: 0, s: 0 };
-  let isUpcoming = false;
-  if (heroMatch?.status === "upcoming" && heroMatch.date) {
-    const diff = new Date(heroMatch.date).getTime() - new Date().getTime();
-    if (diff > 0) {
-      isUpcoming = true;
-      timeLeft = {
-        d: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        h: Math.floor((diff / (1000 * 60 * 60)) % 24),
-        m: Math.floor((diff / 1000 / 60) % 60),
-        s: Math.floor((diff / 1000) % 60),
-      };
-    }
-  }
+  const isUpcoming = heroMatch?.status === "upcoming" && !!heroMatch.date
+    && new Date(heroMatch.date).getTime() > Date.now();
 
   const renderSection = (section: any) => {
     if (!section.active) return null;
@@ -601,24 +634,7 @@ export default function Home() {
                               <span className="text-white text-[11px] sm:text-[12px] font-bold tracking-widest leading-none">مباشر</span>
                             </div>
                           ) : isUpcoming ? (
-                            <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5 text-white dir-ltr scale-[0.80] sm:scale-100" dir="ltr" style={{ transformOrigin: "center" }}>
-                              {[
-                                { val: timeLeft.d, label: "يوم" },
-                                { val: timeLeft.h, label: "ساعة" },
-                                { val: timeLeft.m, label: "دقيقة" },
-                                { val: timeLeft.s, label: "ثانية", accent: true }
-                              ].map((unit, idx, arr) => (
-                                <div key={unit.label} className="flex items-center gap-0.5 sm:gap-1">
-                                  <div className="flex flex-col items-center gap-0.5">
-                                    <div className={`w-5 h-5 sm:w-6 sm:h-6 bg-black/30 rounded flex items-center justify-center border border-white/10 text-[12px] sm:text-xs font-mono font-light tabular-nums backdrop-blur-md ${unit.accent ? 'text-accent' : ''}`}>
-                                      {unit.val.toString().padStart(2, "0")}
-                                    </div>
-                                    <span className="text-[12px] sm:text-[12px] opacity-70 leading-none tracking-widest font-light">{unit.label}</span>
-                                  </div>
-                                  {idx < arr.length - 1 && <span className="text-white/30 text-[12px] mb-3 font-light">:</span>}
-                                </div>
-                              ))}
-                            </div>
+                            <UpcomingMatchCountdown date={heroMatch.date} />
                           ) : null}
                         </div>
 
