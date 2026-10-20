@@ -150,84 +150,44 @@ export default function ClubMembers() {
 
   return (
     <div className="club-portal min-h-screen bg-slate-50 dark:bg-background-dark pb-24 pt-2">
-      {/* Top Banner Identity */}
-      <div className="max-w-6xl md:max-w-4xl lg:max-w-5xl mx-auto px-4 mb-4">
-        <div className=" ds-feature-panel relative overflow-hidden rounded-xl bg-gradient-to-br from-primary-dark via-primary to-emerald-900 text-white p-5 shadow-sm border border-primary/30">
-          <div className="absolute -left-6 -bottom-6 w-32 h-32 bg-amber-400/15 rounded-full blur-2xl pointer-events-none"></div>
-          <div className="ds-content-card absolute right-0 top-0 w-28 h-28 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
-
-          <div className="relative z-10 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="ds-content-card w-10 h-10 rounded-lg bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 text-amber-300">
-                  <ShieldCheck size={24} />
-                </div>
-                <div>
-                  <h1 className="ds-content-heading text-lg font-bold tracking-tight text-white leading-tight">بوابة أعضاء النادي</h1>
-                  <p className="text-[12px] font-bold text-amber-300/90 tracking-wider">نادي الاتحاد السكندري - زعيم الثغر</p>
-                </div>
-              </div>
-              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center gap-1">
-                <Sparkles size={12} /> الخدمة الذاتية
-              </span>
-            </div>
-
-            <p className="text-xs font-semibold text-slate-100/90 leading-relaxed bg-white/5 p-2.5 rounded-lg border border-white/10">
-              {notice}
-            </p>
-
-            {/* Quick Stats/Hotline Bar */}
-            <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] font-bold text-slate-200">
-              <a href={`tel:${hotline.split('/')[0].trim()}`} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 transition-all p-2 rounded-xl border border-white/10">
-                <Phone size={14} className="text-amber-300 shrink-0" />
-                <div className="truncate">
-                  <span className="block text-[11px] text-slate-300 font-normal">الخط الساخن</span>
-                  <span className="font-bold text-amber-200">{hotline}</span>
-                </div>
-              </a>
-              <div className="ds-content-card flex items-center gap-2 bg-white/10 p-2 rounded-xl border border-white/10">
-                <Clock size={14} className="text-amber-300 shrink-0" />
-                <div className="truncate">
-                  <span className="block text-[11px] text-slate-300 font-normal">ساعات العمل</span>
-                  <span className="font-bold text-white text-[12px]">{hours}</span>
-                </div>
-              </div>
+      {/* Member Portal Hero */}
+      <section className="club-portal-hero">
+        <div className="club-portal-hero-copy">
+          <span className="club-portal-eyebrow"><ShieldCheck size={16} aria-hidden="true" /> بوابة أعضاء الاتحاد</span>
+          <h1>كل ما يخص عضويتك، في مكان واحد</h1>
+          <p>{notice}</p>
+          <div className="club-portal-contact">
+            <a href={`tel:${hotline.split('/')[0].trim()}`} aria-label={`اتصل بالخط الساخن: ${hotline}`}>
+              <span className="club-contact-icon"><Phone size={17} aria-hidden="true" /></span>
+              <span><small>الخط الساخن</small><strong>{hotline}</strong></span>
+            </a>
+            <div className="club-portal-hours">
+              <span className="club-contact-icon"><Clock size={17} aria-hidden="true" /></span>
+              <span><small>ساعات العمل</small><strong>{hours}</strong></span>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Discounts Feature Card Banner */}
-      <div className="max-w-6xl mx-auto px-4 mb-4">
-        <motion.div
-          whileTap={{ scale: 0.98 }}
-          onClick={() => navigate('/club-members/discounts')}
-          className=" ds-feature-panel bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 rounded-lg p-3.5 text-white shadow-md border border-emerald-500/30 cursor-pointer relative overflow-hidden flex items-center justify-between group"
-        >
-          <div className="flex items-center gap-3 z-10">
-            <div className="ds-content-card w-11 h-11 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20 text-amber-300 shrink-0 group-hover:scale-105 transition-transform">
-              <Percent size={22} />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h2 className="ds-content-heading text-sm font-bold text-white leading-tight">الخصومات</h2>
-                <span className="px-1.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-400 text-slate-900">جديد</span>
-              </div>
-              <p className="text-[11px] font-semibold text-emerald-100/90 mt-0.5">استفد من الخصومات والمزايا المتاحة للأعضاء</p>
-            </div>
-          </div>
-          <div className="ds-content-card w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0 group-hover:bg-white/30 transition-all z-10">
-            <ChevronLeft size={18} />
-          </div>
-        </motion.div>
-      </div>
+        <aside className="club-portal-hero-aside">
+          <div className="club-portal-aside-icon"><Percent size={27} aria-hidden="true" /></div>
+          <span className="club-portal-aside-label">مزايا العضوية</span>
+          <h2>خصومات وخدمات أقرب إليك</h2>
+          <p>تصفح المزايا والخدمات المتاحة لأعضاء النادي.</p>
+          <button type="button" onClick={() => navigate('/club-members/discounts')}>
+            <span>اكتشف خصومات الأعضاء</span><ChevronLeft size={18} aria-hidden="true" />
+          </button>
+          <div className="club-portal-aside-decoration" aria-hidden="true"><span /><span /><span /></div>
+        </aside>
+      </section>
 
       {/* Main Navigation Tabs */}
-      <div className="max-w-6xl md:max-w-4xl lg:max-w-5xl mx-auto px-4 mb-4">
-        <div className="ds-content-card flex items-center bg-white dark:bg-card-dark p-1.5 rounded-lg border border-border-light dark:border-border-dark shadow-sm">
+      <div className="club-portal-nav max-w-6xl md:max-w-4xl lg:max-w-5xl mx-auto px-4 mb-5">
+        <div className="club-portal-tablist ds-content-card flex items-center bg-white dark:bg-card-dark p-1.5 rounded-lg border border-border-light dark:border-border-dark shadow-sm" role="tablist" aria-label="أقسام بوابة الأعضاء">
           <button
             onClick={() => setActiveTab('committees')}
-            className={`ds-control flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+            role="tab"
+            aria-selected={activeTab === 'committees'}
+            aria-pressed={activeTab === 'committees'}
+            className={`club-portal-tab ds-control flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'committees' 
                 ? 'bg-primary text-white shadow-md' 
                 : 'text-slate-600 dark:text-slate-400 hover:text-primary'
@@ -239,7 +199,10 @@ export default function ClubMembers() {
           
           <button
             onClick={() => setActiveTab('services')}
-            className={`ds-control flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+            role="tab"
+            aria-selected={activeTab === 'services'}
+            aria-pressed={activeTab === 'services'}
+            className={`club-portal-tab ds-control flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'services' 
                 ? 'bg-primary text-white shadow-md' 
                 : 'text-slate-600 dark:text-slate-400 hover:text-primary'
@@ -251,7 +214,10 @@ export default function ClubMembers() {
 
           <button
             onClick={() => setActiveTab('noticeboard')}
-            className={`ds-control flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
+            role="tab"
+            aria-selected={activeTab === 'noticeboard'}
+            aria-pressed={activeTab === 'noticeboard'}
+            className={`club-portal-tab ds-control flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
               activeTab === 'noticeboard' 
                 ? 'bg-primary text-white shadow-md' 
                 : 'text-slate-600 dark:text-slate-400 hover:text-primary'
@@ -263,7 +229,10 @@ export default function ClubMembers() {
 
           <button
             onClick={() => setActiveTab('trips')}
-            className={`ds-control flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
+            role="tab"
+            aria-selected={activeTab === 'trips'}
+            aria-pressed={activeTab === 'trips'}
+            className={`club-portal-tab ds-control flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
               activeTab === 'trips' 
                 ? 'bg-primary text-white shadow-md' 
                 : 'text-slate-600 dark:text-slate-400 hover:text-primary'
