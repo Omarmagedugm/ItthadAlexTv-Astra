@@ -120,4 +120,3 @@ html.dark{--ds-bg:#141b1b;--ds-surface:#202a28;--ds-soft:#283330;--ds-line:#3541
 @media(max-width:1023px){.ds-mobile-brand .ds-header-logo{width:170px;height:62px}.ds-mobile-brand>a{display:flex;min-width:0}}
 @media(max-width:767px){.ds-topbar{gap:8px}.ds-mobile-brand{min-width:0;flex-shrink:1}.ds-mobile-brand .ds-header-logo{width:150px;height:58px}.ds-top-actions{flex-shrink:0}.ds-header-logo-fallback strong{font-size:14px}}
 @media(max-width:380px){.ds-mobile-brand .ds-header-logo{width:112px;height:56px}.ds-header-logo-fallback strong{font-size:12px}}
-@media(max-width:767px){.ds-topbar--admin .ds-mobile-brand .ds-header-logo{width:min(110px,calc(100vw - 233px))}.ds-topbar--admin .ds-top-actions{gap:4px}.ds-topbar--admin .ds-top-actions .ds-icon-button{width:30px;height:30px}}

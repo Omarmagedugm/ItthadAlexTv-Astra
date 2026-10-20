@@ -28,8 +28,8 @@ async function startServer() {
 
   const distPath = path.resolve(process.cwd(), 'dist');
   const isBundled = typeof __filename !== 'undefined' && __filename.endsWith('.cjs');
-  const isDev = process.env.npm_lifecycle_event === 'dev' && !isBundled;
-  const isProduction = !isDev || isBundled || process.env.NODE_ENV === 'production';
+  const isProduction = process.env.NODE_ENV === 'production' || isBundled;
+  const isDev = !isProduction;
 
   // The application container runs an nginx proxy on external port (8080) that strictly proxies to 3000.
   // Port 3000 is required by the container infrastructure in both dev and production.
@@ -1011,7 +1011,7 @@ OUTPUT: Return ONLY the transformed image.`;
     try {
       const { createServer: createViteServer } = await import('vite');
       const vite = await createViteServer({
-        server: { middlewareMode: true },
+        server: { middlewareMode: true, allowedHosts: true },
         appType: 'spa',
       });
       app.use(vite.middlewares);
