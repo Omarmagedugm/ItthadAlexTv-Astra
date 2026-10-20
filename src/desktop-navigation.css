@@ -9,3 +9,12 @@
  .ds-global-search{grid-area:search;width:100%;max-width:none;min-width:0;padding:10px 12px;gap:8px}
  .ds-top-actions{grid-area:actions;gap:6px;white-space:nowrap}
 }
+
+@media(min-width:1201px){
+ .ds-topbar--navigation{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"brand nav actions"}
+ .ds-global-search{display:none;grid-area:auto}
+ .ds-mobile-search{display:grid}
+ .ds-desktop-brand .ds-header-logo{width:210px}
+ .ds-desktop-brand .ds-header-logo img{max-height:58px}
+ .ds-desktop-brand .ds-header-logo-fallback strong{font-size:19px}
+}
