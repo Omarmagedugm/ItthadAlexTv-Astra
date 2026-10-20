@@ -12,7 +12,10 @@ const navItems = [
 export default function BottomNav() {
   const location = useLocation();
   const path = location.pathname;
-  const { appSettings } = useAppStore();
+  const { appSettings, theme } = useAppStore();
+  const inverseBackground = theme === 'dark' ? '#f7faf8' : '#111a17';
+  const inverseForeground = theme === 'dark' ? '#14201a' : '#f8fafc';
+  const inverseBorder = theme === 'dark' ? 'rgba(255,255,255,.8)' : 'rgba(0,0,0,.3)';
   const isClassic = appSettings?.bottomNavStyle === 'classic';
 
   if (isClassic) {
@@ -20,7 +23,7 @@ export default function BottomNav() {
       <nav
         dir="rtl"
         aria-label="شريط التنقل السفلي"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 6px)' }}
+        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 6px)', backgroundColor: inverseBackground, color: inverseForeground, borderColor: inverseBorder, backdropFilter: 'blur(20px)' }}
         className="fixed bottom-3 inset-x-3 sm:inset-x-6 z-50 max-w-md mx-auto glass-nav bottom-nav-inverse rounded-[28px] border border-white/35 dark:border-white/10 shadow-2xl px-2 py-1 md:hidden select-none"
       >
         <div className="flex items-center justify-around h-14 relative">
@@ -63,6 +66,7 @@ export default function BottomNav() {
                 key={item.path}
                 to={item.path}
                 aria-current={isActive ? 'page' : undefined}
+                style={{ color: isActive ? '#b9df71' : inverseForeground }}
                 className={`flex flex-col items-center justify-center flex-1 py-1 rounded-2xl transition-all duration-200 active:scale-90 ${
                   isActive
                     ? 'text-accent font-black'
@@ -98,7 +102,8 @@ export default function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-50 md:hidden px-4 pointer-events-none select-none"
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 6px)' }}
     >
-      <div className="pointer-events-auto mx-auto max-w-md glass-nav bottom-nav-inverse rounded-full p-1.5 flex items-center justify-between gap-1 border border-black/5 dark:border-white/10 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.35)]">
+      <div className="pointer-events-auto mx-auto max-w-md glass-nav rounded-full p-1.5 flex items-center justify-between gap-1 border shadow-[0_8px_24px_-8px_rgba(0,0,0,0.35)]"
+        style={{ backgroundColor: inverseBackground, color: inverseForeground, borderColor: inverseBorder, backdropFilter: "blur(20px)" }}>
         {navItems.map((item) => {
           const isActive = path === item.path || (item.path !== '/' && path.startsWith(item.path));
 
@@ -108,6 +113,7 @@ export default function BottomNav() {
               to={item.path}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
+              style={{ color: isActive ? '#ffffff' : inverseForeground }}
               className={`flex items-center justify-center gap-1.5 h-12 rounded-full transition-all duration-200 active:scale-95 ${
                 isActive
                   ? 'bg-primary text-white px-3 shrink-0 shadow-sm'
