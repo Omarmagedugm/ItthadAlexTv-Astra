@@ -60,11 +60,41 @@ import {
   arrayUnion,
   deleteDoc,
   where,
-  setDoc
+  setDoc,
+  documentId,
+  getDocs
 } from 'firebase/firestore';
 
 export default function FanZone() {
   const { polls, matches, clubs, profile, fanPosts, predictions, users } = useAppStore();
+  const [postAuthorProfiles, setPostAuthorProfiles] = useState<Record<string, any>>({});
+  const postAuthorKey = [...new Set(fanPosts.map(post => post.userId).filter(Boolean))].sort().join('|');
+
+  useEffect(() => {
+    const authorIds = postAuthorKey ? postAuthorKey.split('|') : [];
+    if (!authorIds.length) return;
+    let active = true;
+
+    const loadAuthorProfiles = async () => {
+      for (let index = 0; index < authorIds.length; index += 30) {
+        const batch = authorIds.slice(index, index + 30);
+        const snapshot = await getDocs(
+          query(collection(db, 'users'), where(documentId(), 'in', batch)),
+        );
+        if (!active) return;
+        const profiles = Object.fromEntries(
+          snapshot.docs.map(userDoc => [userDoc.id, userDoc.data()]),
+        );
+        setPostAuthorProfiles(previous => ({ ...previous, ...profiles }));
+      }
+    };
+
+    loadAuthorProfiles().catch(error => {
+      console.warn('Could not load fan post author ranks:', error);
+    });
+
+    return () => { active = false; };
+  }, [postAuthorKey]);
   
   // High-level admin check
   const isOmar = auth.currentUser?.email === 'omarmagedugm@ittihad.club';
@@ -506,6 +536,7 @@ export default function FanZone() {
         userId: auth.currentUser.uid,
         userName: profile.name || 'مشجع إتحادي',
         userAvatar: profile.avatar || '',
+        userTier: profile.tier || 'new',
         content: newPost.content,
         image: newPost.image || null,
         location: newPost.location || null,
@@ -1028,10 +1059,10 @@ export default function FanZone() {
                   <div className="flex items-center justify-between mb-6 relative z-10">
                     <div className="flex items-center gap-4">
                       {(() => {
-                        const postUser = users.find(u => u.uid === post.userId);
+                        const postUser = users.find(u => u.uid === post.userId || (u as any).id === post.userId) || postAuthorProfiles[post.userId] || (profile.uid === post.userId ? profile : undefined);
                         const displayAvatar = postUser?.avatar || post.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.userId}`;
                         const displayName = postUser?.name || post.userName;
-                        const tier = postUser?.tier || 'new';
+                        const tier = postUser?.tier || post.userTier || post.tier || 'new';
                         const role = postUser?.role || 'user';
                         const isManagement = role === 'admin' || post.userId === 'omarmagedugm' || post.userId === 'copyrightofficialco';
 
