@@ -185,6 +185,8 @@ export default function ClubMembers() {
           <button
             onClick={() => setActiveTab('committees')}
             role="tab"
+            id="club-tab-committees"
+            aria-controls="club-tab-panel"
             aria-selected={activeTab === 'committees'}
             aria-pressed={activeTab === 'committees'}
             className={`club-portal-tab ds-control flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
@@ -200,6 +202,8 @@ export default function ClubMembers() {
           <button
             onClick={() => setActiveTab('services')}
             role="tab"
+            id="club-tab-services"
+            aria-controls="club-tab-panel"
             aria-selected={activeTab === 'services'}
             aria-pressed={activeTab === 'services'}
             className={`club-portal-tab ds-control flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
@@ -215,6 +219,8 @@ export default function ClubMembers() {
           <button
             onClick={() => setActiveTab('noticeboard')}
             role="tab"
+            id="club-tab-noticeboard"
+            aria-controls="club-tab-panel"
             aria-selected={activeTab === 'noticeboard'}
             aria-pressed={activeTab === 'noticeboard'}
             className={`club-portal-tab ds-control flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
@@ -230,6 +236,8 @@ export default function ClubMembers() {
           <button
             onClick={() => setActiveTab('trips')}
             role="tab"
+            id="club-tab-trips"
+            aria-controls="club-tab-panel"
             aria-selected={activeTab === 'trips'}
             aria-pressed={activeTab === 'trips'}
             className={`club-portal-tab ds-control flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
@@ -319,7 +327,7 @@ export default function ClubMembers() {
       )}
 
       {/* CONTENT AREA */}
-      <div className="max-w-6xl md:max-w-4xl lg:max-w-5xl mx-auto px-4">
+      <div id="club-tab-panel" role="tabpanel" aria-labelledby={`club-tab-${activeTab}`} className="club-portal-content max-w-6xl md:max-w-4xl lg:max-w-5xl mx-auto px-4">
         {/* ----------------- TAB 1: COMMITTEES ----------------- */}
         {activeTab === 'committees' && (
           <div className="space-y-4">
