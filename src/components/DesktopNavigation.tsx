@@ -17,7 +17,7 @@ export default function DesktopNavigation(){
  const used=new Set(['/']);
  return <nav className="ds-desktop-navigation" dir="rtl" aria-label="التنقل الرئيسي">
  {home&&link(home)}
- {groups.map(group=>{const members=group.paths.map(path=>internal.find(item=>item.path===path)).filter(Boolean);members.forEach(item=>used.add(item.path));if(!members.length)return null;return <details key={group.title}><summary>{group.title}</summary><div className="ds-nav-dropdown">{members.map(link)}</div></details>;})}
+ {groups.map(group=>{const members=group.paths.map(path=>internal.find(item=>item.path===path)).filter((item): item is (typeof internal)[number] => Boolean(item));members.forEach(item=>used.add(item.path));if(!members.length)return null;return <details key={group.title}><summary>{group.title}</summary><div className="ds-nav-dropdown">{members.map(link)}</div></details>;})}
  {internal.filter(item=>!used.has(item.path)).map(link)}
  {items.filter(item=>item.path.startsWith('http')).map(item=><a key={item.id} href={item.path} target="_blank" rel="noopener noreferrer"><NavigationIcon path={item.path}/><span>{item.title}</span></a>)}
  {pages.length>0&&<details><summary>صفحات إضافية</summary><div className="ds-nav-dropdown">{pages.map(page=><Link key={page.id} to={'/page/'+page.slug} className={active('/page/'+page.slug)?'is-active':''}><NavigationIcon path="/page/"/><span>{page.title}</span></Link>)}</div></details>}
