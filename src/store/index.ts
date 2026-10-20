@@ -263,6 +263,7 @@ export interface FanPostItem {
   userId: string;
   userName: string;
   userAvatar: string;
+  userTier?: string;
   title?: string;
   content: string;
   image?: string;
