@@ -539,7 +539,11 @@ html.dark{--ds-bg:#141b1b;--ds-surface:#202a28;--ds-soft:#283330;--ds-line:#3541
   .club-portal-tab { min-height: 48px; font-size: 11px !important; }
   .history-page-modern { width: calc(100% - 1.25rem); margin-top: 10px; }
   .history-hero { min-height: 0; padding: 27px 20px; border-radius: 22px; }
-  .history-hero-mark { display: none; }
+  .history-hero { flex-direction: column; align-items: stretch; gap: 15px; }
+  .history-hero-mark { display: flex; flex: 0 0 auto; width: fit-content; min-height: 0; flex-direction: row; gap: 9px; padding: 8px 13px; border-radius: 999px; }
+  .history-hero-mark > span { font-size: 30px; letter-spacing: -2px; }
+  .history-hero-mark small { font-size: 9px; }
+  .history-hero-mark > div { display: none; }
   .history-hero h1 { font-size: 36px; }
   .history-hero-copy > p { font-size: 12px; }
   .history-summary-grid { gap: 8px; margin: 12px 0 17px; }
