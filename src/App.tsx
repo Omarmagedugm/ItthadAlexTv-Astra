@@ -419,7 +419,7 @@ function AppContent() {
           console.debug('Failed to sync user profile on auth change:', e);
         }
       } else {
-        updateProfile({ uid: undefined, role: 'user', roles: [] });
+        updateProfile({ uid: undefined, name: 'مشجع سكندري', displayName: 'مشجع سكندري', username: 'fan_ittihad', location: 'الإسكندرية، مصر', avatar: '/guest-fan-avatar.svg', email: '', role: 'user', roles: [], tier: 'new', isVerified: false, isVerifiedMember: false, points: 0, stats: { predictions: 0, comments: 0, favorites: 0 } });
       }
       setIsAuthReady(true);
     });
