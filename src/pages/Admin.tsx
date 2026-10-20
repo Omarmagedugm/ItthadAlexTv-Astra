@@ -1,3 +1,4 @@
+import BulkMemberPromotion from '../components/admin/BulkMemberPromotion';
 import { ADMIN_SECTIONS, canOpenAdminSection } from '../lib/adminSections';
 import AdminStart from '../components/admin/AdminStart';
 import AdminServicesHealth from '../components/admin/AdminServicesHealth';
@@ -4297,6 +4298,8 @@ export default function Admin() {
                   <span>{syncingUsers ? 'جاري المزامنة والتحديث...' : 'تحديث ومزامنة الأعضاء'}</span>
                 </button>
               </div>
+
+              <BulkMemberPromotion onComplete={() => handleSyncUsers(false)} />
 
               {/* Statistics & Classification Bar */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
