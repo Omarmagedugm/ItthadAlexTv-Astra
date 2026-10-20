@@ -336,56 +336,68 @@ export default function Home() {
   const recentNews = news.slice(0, 6);
   const recentMedia = media.slice(0, 5);
 
+  const isBasketballMatch = (match: any) => {
+    const sportDetails = [
+      match.sport,
+      match.competition,
+      match.league,
+      match.tournament,
+      match.category,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return /basket|كرة\s*السلة|السلة|سلة/.test(sportDetails);
+  };
+
+  const matchesSport = (match: any, sport: "football" | "basketball") =>
+    sport === "basketball" ? isBasketballMatch(match) : !isBasketballMatch(match);
+
   const allFeatured = useMemo(() => matches
     .filter((m) => m.featured === true)
     .sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime()), [matches]);
 
   const allLive = useMemo(() => matches.filter((m) => m.status === "live"), [matches]);
 
-  const defaultSport = useMemo(() => allFeatured[0]?.sport || allLive[0]?.sport || 'football', [allFeatured, allLive]);
-  
-  const effectiveSport = useMemo(() => selectedSport === "auto" ? defaultSport : selectedSport, [selectedSport, defaultSport]);
+  const defaultSport = useMemo(() => {
+    const defaultMatch = allFeatured[0] || allLive[0];
+    return defaultMatch && isBasketballMatch(defaultMatch) ? "basketball" : "football";
+  }, [allFeatured, allLive]);
+
+  const effectiveSport = useMemo(
+    () => selectedSport === "auto" ? defaultSport : selectedSport,
+    [selectedSport, defaultSport],
+  );
 
   const sportMatches = useMemo(() => {
-    const filtered = matches.filter(
-      (m) => m.sport === effectiveSport || (!m.sport && effectiveSport === "football")
-    );
+    const filtered = matches.filter((match) => matchesSport(match, effectiveSport));
     return filtered.sort((a, b) => {
       const timeA = new Date(a.date || 0).getTime();
       const timeB = new Date(b.date || 0).getTime();
-      if (a.status === 'live' && b.status !== 'live') return -1;
-      if (a.status !== 'live' && b.status === 'live') return 1;
-      if (a.status === 'upcoming' && b.status === 'finished') return -1;
-      if (a.status === 'finished' && b.status === 'upcoming') return 1;
-      if (a.status === 'upcoming') return timeA - timeB;
+      if (a.status === "live" && b.status !== "live") return -1;
+      if (a.status !== "live" && b.status === "live") return 1;
+      if (a.status === "upcoming" && b.status === "finished") return -1;
+      if (a.status === "finished" && b.status === "upcoming") return 1;
+      if (a.status === "upcoming") return timeA - timeB;
       return timeB - timeA;
     });
   }, [matches, effectiveSport]);
 
-  // Strict hero selection that respects active filter without cross-sport fallbacks
-  const heroMatch = useMemo(() => 
-    sportMatches.find((m) => m.status === "live") ||
-    sportMatches.find((m) => m.featured === true) ||
-    sportMatches.find((m) => m.status === "upcoming") ||
-    sportMatches[0], [sportMatches]); // If there are no matches, this is undefined. We do NOT fallback to another sport here to avoid bugs.
-
-  // Keep the upcoming carousel aligned with the sport selected for the hero.
-  const currentSport = heroMatch?.sport || effectiveSport || "football";
-  const belongsToCurrentSport = (match: any) => {
-    const declaredSport = String(match.sport || "").trim().toLowerCase();
-    const competition = String(match.competition || "").trim().toLowerCase();
-    const isBasketball = declaredSport
-      ? declaredSport.includes("basket") || declaredSport.includes("سلة")
-      : competition.includes("basketball") || competition.includes("كرة السلة");
-    return currentSport === "basketball" ? isBasketball : !isBasketball;
-  };
+  const heroMatch = useMemo(
+    () =>
+      sportMatches.find((match) => match.status === "live") ||
+      sportMatches.find((match) => match.featured === true) ||
+      sportMatches.find((match) => match.status === "upcoming") ||
+      sportMatches[0],
+    [sportMatches],
+  );
 
   const upcomingMatches = matches
     .filter(
       (match) =>
         match.status === "upcoming" &&
         match.id !== heroMatch?.id &&
-        belongsToCurrentSport(match),
+        matchesSport(match, effectiveSport),
     )
     .sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime())
     .slice(0, 4);
