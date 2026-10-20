@@ -18,3 +18,10 @@
  .ds-desktop-brand .ds-header-logo img{max-height:58px}
  .ds-desktop-brand .ds-header-logo-fallback strong{font-size:19px}
 }
+
+@media(min-width:1201px){
+ .ds-topbar--navigation{position:fixed;left:0!important;right:0!important;width:auto!important;box-sizing:border-box;display:flex;flex-direction:row;justify-content:space-between;gap:14px;padding-inline:12px}
+ .ds-desktop-brand{order:0;flex:0 0 auto;justify-self:auto}
+ .ds-desktop-navigation{order:1;flex:1 1 0;min-width:0;justify-content:space-around}
+ .ds-top-actions{order:2;flex:0 0 auto}
+}
