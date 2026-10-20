@@ -150,8 +150,7 @@ html.dark{--ds-bg:#141b1b;--ds-surface:#202a28;--ds-soft:#283330;--ds-line:#3541
 .club-portal > div:first-child p {
   line-height: 1.9;
 }
-.club-portal .ds-feature-panel,
-.club-portal .ds-content-card {
+.club-portal .ds-feature-panel {
   border-radius: 18px;
 }
 .club-portal > div:nth-child(2) .ds-feature-panel {
