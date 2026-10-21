@@ -4,6 +4,7 @@ import { useAppStore } from '../store';
 const navItems = [
   { path: '/', icon: 'home', label: 'الرئيسية' },
   { path: '/news', icon: 'newspaper', label: 'الأخبار' },
+  { path: '/game', icon: 'sports_esports', label: 'اللعبة 🎮', isNew: true },
   { path: '/fan-zone', icon: 'stadium', label: 'فان زون' },
   { path: '/library', icon: 'perm_media', label: 'الوسائط' },
   { path: '/profile', icon: 'person', label: 'حسابي' },
@@ -50,6 +51,9 @@ export default function BottomNav() {
                     <span className="material-symbols-outlined !text-[30px] drop-shadow-sm">
                       {item.icon}
                     </span>
+                    {item.isNew && !isActive && (
+                      <span className="absolute top-0 right-0 w-3 h-3 rounded-full bg-amber-400 ring-2 ring-emerald-950 animate-ping" />
+                    )}
                   </div>
                   <span style={{ color: isActive ? '#b9df71' : inverseForeground }} className={`text-[10px] mt-1 font-black transition-colors duration-200 ${isActive ? 'text-accent' : 'text-slate-500 dark:text-slate-400'}`}>
                     {item.label}
@@ -77,6 +81,9 @@ export default function BottomNav() {
                   <span className={`material-symbols-outlined !text-[24px] transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}>
                     {item.icon}
                   </span>
+                  {item.isNew && !isActive && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 ring-1 ring-slate-900 animate-pulse" />
+                  )}
                 </div>
                 <span style={{ color: isActive ? '#b9df71' : inverseForeground }} className={`text-[10px] mt-0.5 transition-colors duration-200 ${isActive ? 'font-black text-accent' : 'font-medium'}`}>
                   {item.label}
@@ -114,18 +121,23 @@ export default function BottomNav() {
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
               style={{ color: isActive ? '#ffffff' : inverseForeground }}
-              className={`flex items-center justify-center gap-1.5 h-12 rounded-full transition-all duration-200 active:scale-95 ${
+              className={`relative flex items-center justify-center gap-1.5 h-12 rounded-full transition-all duration-200 active:scale-95 ${
                 isActive
                   ? 'bg-primary text-white px-3 shrink-0 shadow-sm'
                   : 'min-w-0 flex-1 max-w-12 text-white/70 dark:text-slate-600 hover:text-white dark:hover:text-slate-950'
               }`}
             >
-              <span
-                className="material-symbols-outlined !text-[24px]"
-                style={{ fontVariationSettings: `'FILL' ${isActive ? 1 : 0}, 'wght' 400, 'GRAD' 0, 'opsz' 24` }}
-              >
-                {item.icon}
-              </span>
+              <div className="relative flex items-center justify-center">
+                <span
+                  className="material-symbols-outlined !text-[24px]"
+                  style={{ fontVariationSettings: `'FILL' ${isActive ? 1 : 0}, 'wght' 400, 'GRAD' 0, 'opsz' 24` }}
+                >
+                  {item.icon}
+                </span>
+                {item.isNew && !isActive && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 ring-1 ring-slate-900 animate-pulse" />
+                )}
+              </div>
               {isActive && <span className="text-[12px] font-bold whitespace-nowrap">{item.label}</span>}
             </Link>
           );

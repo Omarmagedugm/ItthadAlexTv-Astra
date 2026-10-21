@@ -23,7 +23,9 @@ import {
   Sparkles,
   MessageSquare,
   Maximize2,
-  EyeOff
+  EyeOff,
+  Gamepad2,
+  Play
 } from 'lucide-react';
 import LivePlayer from '../components/live/LivePlayer';
 import { parseLiveStreamUrl } from '../lib/videoUtils';
@@ -579,7 +581,17 @@ export default function Live() {
                   </div>
 
                   {/* Quick Action Buttons (Always Visible on Desktop & Mobile) */}
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+                    {/* Halftime Game Button */}
+                    <Link
+                      to="/game"
+                      className="ds-control p-2.5 sm:px-3 sm:py-2 rounded-xl bg-gradient-to-r from-amber-500/15 via-emerald-500/15 to-primary/15 hover:from-amber-500/25 hover:to-emerald-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
+                      title="العب بين الشوطين — لعبة زعيم الثغر"
+                    >
+                      <Gamepad2 size={15} className="text-amber-500 animate-pulse" />
+                      <span className="font-extrabold whitespace-nowrap">العب بين الشوطين 🎮</span>
+                    </Link>
+
                     <button
                       onClick={handleReloadPlayer}
                       className="ds-control p-2.5 sm:px-3 sm:py-2 rounded-xl bg-slate-50/80 dark:bg-surface-dark/80 backdrop-blur-md hover:bg-slate-100 dark:hover:bg-surface-dark text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200/80 dark:border-border-dark flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
@@ -601,6 +613,52 @@ export default function Live() {
                 </div>
               </div>
             )}
+
+            {/* 4. Halftime Game Card - العب بين الشوطين */}
+            <div className="ds-content-card relative overflow-hidden rounded-lg lg:rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-primary/10 backdrop-blur-xl p-4 sm:p-5 shadow-lg shadow-black/5 dark:shadow-black/20">
+              <div className="absolute top-0 left-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
+              <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5 text-right w-full sm:w-auto">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/20">
+                    <Gamepad2 size={24} className="animate-bounce" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                        استراحة الشوطين ⏳
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">تحدي جماهير الاتحاد</span>
+                    </div>
+                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-1">
+                      مستني الشوط التاني؟ العب واستمتع بين الشوطين!
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                      اهرب في شوارع الإسكندرية، اجمع الكؤوس والشعارات، وتحدّى أصحابك في لعبة اتحاداوي.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                  <Link
+                    to="/game"
+                    className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-amber-500/30 active:scale-95 transition-all"
+                  >
+                    <Play size={15} fill="currentColor" />
+                    <span>العب الآن في التطبيق</span>
+                  </Link>
+                  <a
+                    href="/games/ittihadawy/index.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2.5 rounded-xl bg-white/80 dark:bg-surface-dark/80 hover:bg-slate-100 dark:hover:bg-surface-dark text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+                    title="فتح اللعبة في نافذة جديدة بدون إيقاف البث"
+                  >
+                    <ExternalLink size={14} />
+                    <span className="hidden sm:inline">نافذة مستقلة</span>
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* RIGHT COLUMN: Interactive Live Chat (Sticky on Desktop) */}

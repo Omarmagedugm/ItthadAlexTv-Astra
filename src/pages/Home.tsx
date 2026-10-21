@@ -62,6 +62,7 @@ const BusinessWidget = lazy(() => import("../components/BusinessWidget"));
 const WorldFansWidget = lazy(() => import("../components/worldFans/WorldFansWidget"));
 const PublicServicesWidget = lazy(() => import("../components/widgets/PublicServicesWidget"));
 const VideoEmbedWidget = lazy(() => import("../components/widgets/VideoEmbedWidget"));
+const GameAdWidget = lazy(() => import("../components/widgets/GameAdWidget"));
 
 function WidgetSkeletonFallback() {
   return (
@@ -1475,54 +1476,9 @@ export default function Home() {
             key={section.id}
             variants={itemVariants}
           >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.98 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#04241b] via-[#074d39] to-[#0c6b4e] p-4 sm:p-5 shadow-md border border-emerald-500/30 group cursor-pointer"
-              onClick={() => navigate('/game')}
-            >
-              <div 
-                className="absolute inset-0 bg-cover bg-center opacity-25 mix-blend-overlay transition-transform duration-700 group-hover:scale-105"
-                style={{ backgroundImage: `url('/games/ittihadawy/references/aep_2012.jpg')` }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-l from-black/80 via-black/45 to-transparent pointer-events-none" />
-              <div className="absolute top-0 left-0 w-36 h-36 bg-amber-400/15 blur-2xl rounded-full pointer-events-none" />
-
-              <div className="relative z-10 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br from-amber-400/25 to-emerald-500/40 border border-amber-300/40 backdrop-blur-md flex items-center justify-center text-amber-300 shadow-md group-hover:scale-105 transition-transform shrink-0">
-                    <Gamepad2 size={26} className="text-amber-300" />
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-900 flex items-center justify-center">
-                      <Sparkles size={9} className="text-white" />
-                    </span>
-                  </div>
-
-                  <div className="space-y-1 text-right">
-                    <div className="flex items-center gap-2">
-                      <h3 className="ds-content-heading text-base sm:text-lg font-black text-white leading-tight">
-                        {section.title || "لعبة اتحاداوي — حكايات زعيم الثغر"}
-                      </h3>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950">
-                        جديد 🎮
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-200/90 font-medium">
-                      اختار عادل شكل أو جمال الدولي واهرب في شوارع ومعالم إسكندرية
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="hidden sm:inline-flex items-center gap-1 text-xs font-bold text-amber-300 group-hover:translate-x-1 transition-transform">
-                    العب الآن
-                  </span>
-                  <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white group-hover:bg-amber-400 group-hover:text-slate-950 transition-all">
-                    <ChevronLeft size={20} />
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+            <Suspense fallback={<WidgetSkeletonFallback />}>
+              <GameAdWidget title={section.title} />
+            </Suspense>
           </motion.section>
         );
 
@@ -2182,6 +2138,13 @@ export default function Home() {
         className="club-home-main flex-1 overflow-x-hidden px-4 md:px-0 flex flex-col gap-0 pt-2 pb-6"
       >
         {renderHomeSections(activeSections)}
+        {!activeSections.some(s => s.type === 'game' || s.id === 'game') && sectionFlags?.game !== false && (
+          <div className="ds-home-section ds-home-section--game mb-6">
+            <Suspense fallback={<WidgetSkeletonFallback />}>
+              <GameAdWidget />
+            </Suspense>
+          </div>
+        )}
         {isEmpty && (
           <motion.div 
             variants={itemVariants}

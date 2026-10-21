@@ -1,343 +1,271 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'motion/react';
+import React from 'react';
 import { 
   Gamepad2, 
-  Maximize2, 
-  Minimize2, 
-  RotateCcw, 
-  ExternalLink, 
+  Play, 
   Sparkles, 
-  Info, 
-  Volume2, 
-  VolumeX, 
-  ShieldCheck, 
-  Compass, 
-  Award,
-  ChevronLeft
+  Trophy, 
+  Smartphone, 
+  Monitor, 
+  ExternalLink,
+  ArrowRight,
+  Radio,
+  Flame,
+  Clock
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import SEOHead from '../components/SEOHead';
 
 export default function Game() {
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [iframeKey, setIframeKey] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const navigate = useNavigate();
+  const gameUrl = '/games/ittihadawy/index.html';
 
-  const handleRestart = () => {
-    setIsLoading(true);
-    setIframeKey(prev => prev + 1);
+  const handleStartGame = () => {
+    // Open the game in full window / standalone
+    window.location.href = gameUrl;
   };
 
-  const toggleFullscreen = () => {
-    if (!containerRef.current) return;
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().then(() => {
-        setIsFullscreen(true);
-      }).catch(err => {
-        console.warn('Fullscreen request failed:', err);
-      });
-    } else {
-      document.exitFullscreen().then(() => {
-        setIsFullscreen(false);
-      }).catch(() => {});
-    }
+  const handleOpenStandalone = () => {
+    window.open(gameUrl, '_blank', 'noopener,noreferrer');
   };
-
-  useEffect(() => {
-    const onFullscreenChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
-    };
-    document.addEventListener('fullscreenchange', onFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', onFullscreenChange);
-    };
-  }, []);
-
-  const characters = [
-    {
-      name: 'عادل شكل',
-      title: 'كبير مشجعي الثغر',
-      ability: '٦ إلا تلت ♬',
-      desc: 'زمارة إسكندرانية حماسية بصوت قوي تعطّل المطاردة وتفتح لك طريق الهروب.',
-      avatar: '/games/ittihadawy/references/adel-horn.png',
-      badge: 'القدرة: تجميد المطاردة',
-      color: 'from-emerald-700 to-green-900',
-      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-    },
-    {
-      name: 'جمال الدولي',
-      title: 'عاشق الأخضر',
-      ability: 'المبخرة ♨',
-      desc: 'دخان أخضر كثيف بالبخور الإسكندراني يشتّت المطاردة ويساعد على المناورة.',
-      avatar: '/games/ittihadawy/references/image(1).png',
-      badge: 'القدرة: دخان التمويه',
-      color: 'from-amber-700 to-yellow-900',
-      badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-    }
-  ];
-
-  const landmarks = [
-    {
-      title: 'استاد الإسكندرية التاريخي',
-      desc: 'أقدم ملاعب إفريقيا وأبراج الإضاءة العريقة التي شهدت تتويجات زعيم الثغر.',
-      img: '/games/ittihadawy/references/aep_2012.jpg'
-    },
-    {
-      title: 'مقر النادي بالشاطبي',
-      desc: 'قلب النادي النابض والذكريات التاريخية في أعرق أحياء المدينة الساحلية.',
-      img: '/games/ittihadawy/references/image(2).png'
-    },
-    {
-      title: 'المدرجات والمنصة الرئيسية',
-      desc: 'أمواج الجماهير الخضراء وأهازيج سيد البلد التي تهز المدرجات.',
-      img: '/games/ittihadawy/references/aep_2014.jpg'
-    }
-  ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-background-dark pb-24 pt-2" dir="rtl">
+    <div className="min-h-screen bg-slate-50 dark:bg-background-dark pb-24 pt-3" dir="rtl">
       <SEOHead 
         title="لعبة اتحاداوي — حكايات زعيم الثغر"
-        description="العب لعبة اتحاداوي ثلاثية الأبعاد واهرب في شوارع ومعالم الإسكندرية مع عادل شكل وجمال الدولي واكتشف معالم النادي التاريخية."
+        description="العب الآن لعبة اتحاداوي ثلاثية الأبعاد التفاعلية في شوارع الإسكندرية. اهرب واجمع الكؤوس والشعارات الخضراء وعِش أجواء سيد البلد."
       />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
-        {/* Breadcrumb & Navigation helper */}
-        <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-6">
+        {/* Top Navigation & Back to App Bar */}
+        <div className="flex items-center justify-between gap-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2">
-            <Link to="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+            <Link to="/" className="hover:text-primary transition-colors flex items-center gap-1">
+              <span>الرئيسية</span>
+            </Link>
             <span>/</span>
             <span className="text-primary dark:text-emerald-400 font-bold">لعبة اتحاداوي 🎮</span>
           </div>
-          <Link 
-            to="/games/ittihadawy/index.html" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-primary dark:text-emerald-400 hover:underline"
+
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-200/80 dark:bg-surface-dark hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer border border-slate-300/60 dark:border-white/10 active:scale-95"
+            title="العودة للصفحة الرئيسية للتطبيق"
           >
-            <span>فتح في نافذة كاملة</span>
-            <ExternalLink size={14} />
-          </Link>
+            <ArrowRight size={14} />
+            <span>العودة للتطبيق</span>
+          </button>
         </div>
 
-        {/* Hero Banner Header */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#073628] via-[#094d3a] to-[#04241b] text-white p-5 sm:p-7 shadow-lg border border-emerald-600/30">
-          <div className="absolute top-0 left-0 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 right-0 w-60 h-60 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
+        {/* Hero Card & Start Game Action */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-slate-900 to-emerald-950 border border-emerald-500/40 p-6 sm:p-10 shadow-2xl text-white">
+          {/* Background Glows & Accent */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3" />
+          <div className="absolute bottom-0 left-0 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none translate-y-1/3 -translate-x-1/3" />
 
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-            <div className="space-y-2 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-emerald-300 text-xs font-bold border border-white/15">
-                <Gamepad2 size={15} />
-                <span>لعبة النادي الرسمية التفاعلية</span>
-                <span className="bg-amber-400 text-slate-950 px-2 py-0.2 rounded-full text-[10px] font-black">جديد</span>
+          <div className="relative z-10 flex flex-col items-center text-center space-y-6">
+            {/* Badges */}
+            <div className="flex items-center gap-2 flex-wrap justify-center">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                <Sparkles size={13} className="text-amber-400" />
+                <span>إصدار ثلاثي الأبعاد 3D</span>
+              </span>
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                <Trophy size={13} />
+                <span>زعيم الثغر • سيد البلد</span>
+              </span>
+            </div>
+
+            {/* Icon + Title */}
+            <div className="space-y-3 max-w-2xl">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-emerald-500 to-green-400 text-slate-950 shadow-xl shadow-emerald-500/30 mb-2">
+                <Gamepad2 size={42} className="animate-pulse" />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+
+              <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight drop-shadow-md">
                 لعبة اتحاداوي — حكايات زعيم الثغر
               </h1>
-              <p className="text-xs sm:text-sm text-slate-200/90 leading-relaxed font-medium">
-                اختار شخصيتك المفضلة واستخدم قدراتها الخاصة في مطاردات شوارع الإسكندرية ومعالم نادي الاتحاد السكندري العريقة!
+
+              <p className="text-xs sm:text-base text-slate-300 font-medium leading-relaxed max-w-xl mx-auto">
+                عِش حماس شوارع الإسكندرية ومعالمها التاريخية! اركض، راوغ وتفادَ العوائق، واجمع الكؤوس والشعارات الخضراء لحصد أعلى نقاط لجماهير سيد البلد.
               </p>
             </div>
 
-            {/* Quick action buttons */}
-            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            {/* PRIMARY START GAME BUTTON (زر شاشة مستقلة وهو زر البدء) */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-md pt-2">
               <button
                 type="button"
-                onClick={toggleFullscreen}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-bold transition-all shadow-sm active:scale-95"
-                title={isFullscreen ? 'تصغير' : 'ملء الشاشة'}
+                onClick={handleStartGame}
+                className="w-full sm:flex-1 px-6 py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 text-base sm:text-lg font-black shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2.5 active:scale-95 transition-all cursor-pointer"
               >
-                {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                <span>{isFullscreen ? 'تصغير' : 'ملء الشاشة'}</span>
+                <Play size={22} fill="currentColor" />
+                <span>ابدأ اللعب الآن</span>
               </button>
 
               <button
                 type="button"
-                onClick={handleRestart}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-bold transition-all shadow-sm active:scale-95"
-                title="إعادة بدء اللعبة"
+                onClick={handleOpenStandalone}
+                className="w-full sm:w-auto px-5 py-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-sm font-bold border border-white/20 flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer backdrop-blur-md"
+                title="فتح اللعبة في نافذة جديدة مستقلة"
               >
-                <RotateCcw size={16} />
-                <span>إعادة التشغيل</span>
+                <ExternalLink size={17} />
+                <span className="whitespace-nowrap">نافذة جديدة</span>
               </button>
-
-              <a
-                href="/games/ittihadawy/index.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition-all shadow-md active:scale-95"
-              >
-                <ExternalLink size={16} />
-                <span>شاشة مستقلة</span>
-              </a>
             </div>
-          </div>
-        </div>
 
-        {/* Game Iframe Stage */}
-        <div 
-          ref={containerRef}
-          className={`relative w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-300 dark:border-emerald-600/30 shadow-2xl transition-all ${
-            isFullscreen ? 'fixed inset-0 z-[99999] rounded-none border-none h-screen' : 'aspect-[16/10] sm:aspect-[16/9] min-h-[460px] max-h-[720px]'
-          }`}
-        >
-          {isLoading && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-[#072418] text-white">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center animate-pulse">
-                <Gamepad2 size={32} className="text-emerald-400" />
+            {/* Halftime quick alert banner */}
+            <div className="w-full max-w-md p-3 rounded-2xl bg-emerald-900/60 border border-emerald-500/30 text-emerald-200 text-xs flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-right">
+                <Radio size={16} className="text-red-400 animate-pulse shrink-0" />
+                <span>بث الماتش شغال؟ العب واستمتع بين الشوطين</span>
               </div>
-              <div className="text-center space-y-1">
-                <p className="text-sm font-bold">جاري تحميل لعبة اتحاداوي…</p>
-                <p className="text-xs text-emerald-300/70">استعد للركض في شوارع الإسكندرية 🟢</p>
-              </div>
-            </div>
-          )}
-
-          {/* Floating bar inside fullscreen */}
-          {isFullscreen && (
-            <div className="absolute top-3 left-3 z-30 flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20">
-              <button
-                type="button"
-                onClick={handleRestart}
-                className="p-1.5 text-white hover:text-amber-300 transition-colors"
-                title="إعادة التشغيل"
+              <Link
+                to="/live"
+                className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 font-bold text-[11px] shrink-0 transition-colors"
               >
-                <RotateCcw size={18} />
-              </button>
-              <button
-                type="button"
-                onClick={toggleFullscreen}
-                className="p-1.5 text-white hover:text-rose-400 transition-colors"
-                title="الخروج من ملء الشاشة"
-              >
-                <Minimize2 size={18} />
-              </button>
+                البث المباشر ←
+              </Link>
             </div>
-          )}
-
-          <iframe
-            key={iframeKey}
-            ref={iframeRef}
-            src="/games/ittihadawy/index.html"
-            title="لعبة اتحاداوي — حكايات زعيم الثغر"
-            className="w-full h-full border-none select-none bg-slate-950"
-            allow="autoplay; fullscreen; accelerometer; gyroscope"
-            loading="eager"
-            onLoad={() => setIsLoading(false)}
-          />
-        </div>
-
-        {/* Game Features & Character Guide */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles size={18} className="text-amber-500" />
-              <h2 className="text-lg font-bold text-slate-800 dark:text-white">شخصيات وقدرات اللعبة</h2>
-            </div>
-            <span className="text-xs text-slate-500 dark:text-slate-400">اختر شخصيتك داخل اللعبة</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {characters.map((char, index) => (
-              <motion.div
-                key={char.name}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="relative overflow-hidden rounded-2xl bg-white dark:bg-card-dark p-5 border border-slate-200 dark:border-border-dark shadow-sm flex items-start gap-4"
-              >
-                <div className="relative shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-slate-900 border-2 border-emerald-500/40 shadow-md">
-                  <img 
-                    src={char.avatar} 
-                    alt={char.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = '/games/ittihadawy/references/ittihad-crest.png';
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 to-transparent" />
-                </div>
-
-                <div className="flex-1 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">{char.name}</h3>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${char.badgeColor}`}>
-                      {char.badge}
-                    </span>
-                  </div>
-                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{char.title} • مهارة {char.ability}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{char.desc}</p>
-                </div>
-              </motion.div>
-            ))}
           </div>
         </div>
 
-        {/* How to play card */}
-        <div className="rounded-2xl bg-white dark:bg-card-dark p-5 sm:p-6 border border-slate-200 dark:border-border-dark shadow-sm space-y-4">
-          <div className="flex items-center gap-2 text-slate-800 dark:text-white">
-            <Info size={18} className="text-primary dark:text-emerald-400" />
-            <h3 className="text-base font-bold">تعليمات وأزرار التحكم</h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div className="space-y-2 p-3.5 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200/70 dark:border-border-dark">
-              <p className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <span>💻</span> على أجهزة الكمبيوتر (Keyboard):
+        {/* Game Explanation & Controls (شرح اللعبة وأزرار التحكم) */}
+        <div className="rounded-3xl bg-white dark:bg-card-dark p-6 sm:p-8 border border-slate-200 dark:border-border-dark shadow-sm space-y-6">
+          <div className="flex items-center gap-3 text-slate-900 dark:text-white border-b border-slate-100 dark:border-border-dark/60 pb-4">
+            <div className="w-10 h-10 rounded-2xl bg-amber-400/15 text-amber-500 flex items-center justify-center shrink-0">
+              <Gamepad2 size={22} />
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-black">طريقة اللعب وأزرار التحكم</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                قواعد اللعبة البسيطة وطريقة اللعب على الموبايل والكمبيوتر
               </p>
-              <ul className="space-y-1.5 text-slate-600 dark:text-slate-300 list-disc list-inside">
-                <li><strong className="text-slate-800 dark:text-white">الأسهم (← / →):</strong> التحرك يميناً ويساراً في الشوارع.</li>
-                <li><strong className="text-slate-800 dark:text-white">السهم لأعلى (↑) أو W:</strong> القفز فوق الحواجز.</li>
-                <li><strong className="text-slate-800 dark:text-white">السهم لأسفل (↓) أو S:</strong> الزحف وتفادي العوائق العالية.</li>
-                <li><strong className="text-slate-800 dark:text-white">مسافة (Space):</strong> تفعيل المهارة الخاصة للشخصية.</li>
+            </div>
+          </div>
+
+          {/* Story & Rules */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            <div className="p-4 rounded-2xl bg-emerald-500/5 dark:bg-surface-dark border border-emerald-500/20 space-y-2">
+              <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-sm">
+                <Trophy size={18} />
+                <span>اجمع الكؤوس والشعارات</span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
+                التقط كؤوس النادي والشعارات الخضراء المنتشرة على المسار لزيادة رصيدك ومضاعفة نقاطك.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-amber-500/5 dark:bg-surface-dark border border-amber-500/20 space-y-2">
+              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-sm">
+                <Flame size={18} />
+                <span>تفادَ الحواجز والمطاردة</span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
+                اقفز فوق الحواجز أو ازحف تحتها، وحافظ على مسافة آمنة من المطاردة السريعة خلفك.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-blue-500/5 dark:bg-surface-dark border border-blue-500/20 space-y-2">
+              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 font-bold text-sm">
+                <Clock size={18} />
+                <span>العب بين الشوطين</span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
+                مثالية لقضاء وقت ممتع خلال استراحة الـ 15 دقيقة بين شوطي مباريات نادي الاتحاد.
+              </p>
+            </div>
+          </div>
+
+          {/* Controls: PC & Mobile */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            {/* Keyboard Controls */}
+            <div className="space-y-3 p-5 rounded-2xl bg-slate-50 dark:bg-surface-dark border border-slate-200/80 dark:border-border-dark">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
+                <Monitor size={18} className="text-primary dark:text-emerald-400" />
+                <span>الكمبيوتر واللابتوب (لوحة المفاتيح)</span>
+              </div>
+              <ul className="space-y-2.5 text-xs text-slate-600 dark:text-slate-300">
+                <li className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white dark:bg-card-dark border border-slate-200/60 dark:border-border-dark">
+                  <span>التحرك يميناً ويساراً</span>
+                  <span className="font-mono font-bold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs">
+                    ← → أو A / D
+                  </span>
+                </li>
+                <li className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white dark:bg-card-dark border border-slate-200/60 dark:border-border-dark">
+                  <span>القفز فوق الحواجز</span>
+                  <span className="font-mono font-bold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs">
+                    ↑ أو W
+                  </span>
+                </li>
+                <li className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white dark:bg-card-dark border border-slate-200/60 dark:border-border-dark">
+                  <span>الزحف وتفادي العوائق</span>
+                  <span className="font-mono font-bold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs">
+                    ↓ أو S
+                  </span>
+                </li>
+                <li className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white dark:bg-card-dark border border-slate-200/60 dark:border-border-dark">
+                  <span>تفعيل القدرة الخاصة</span>
+                  <span className="font-mono font-bold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs">
+                    المسافة (Space)
+                  </span>
+                </li>
               </ul>
             </div>
 
-            <div className="space-y-2 p-3.5 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200/70 dark:border-border-dark">
-              <p className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <span>📱</span> على الموبايل والتابلت (Touch):
-              </p>
-              <ul className="space-y-1.5 text-slate-600 dark:text-slate-300 list-disc list-inside">
-                <li><strong className="text-slate-800 dark:text-white">السحب لأعلى (Swipe Up):</strong> القفز السريع.</li>
-                <li><strong className="text-slate-800 dark:text-white">السحب لأسفل (Swipe Down):</strong> التدحرج والزحف.</li>
-                <li><strong className="text-slate-800 dark:text-white">السحب يميناً ويساراً:</strong> تغيير المسار بسلاسة.</li>
-                <li><strong className="text-slate-800 dark:text-white">زر المهارة:</strong> الضغط على أيقونة المهارة المدمجة في الشاشة.</li>
+            {/* Mobile / Touch Controls */}
+            <div className="space-y-3 p-5 rounded-2xl bg-slate-50 dark:bg-surface-dark border border-slate-200/80 dark:border-border-dark">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
+                <Smartphone size={18} className="text-amber-500" />
+                <span>الهواتف والأجهزة اللوحية (لمس / Touch)</span>
+              </div>
+              <ul className="space-y-2.5 text-xs text-slate-600 dark:text-slate-300">
+                <li className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white dark:bg-card-dark border border-slate-200/60 dark:border-border-dark">
+                  <span>تغيير مسار الركض</span>
+                  <span className="font-bold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs">
+                    سحب يميناً أو يساراً (Swipe)
+                  </span>
+                </li>
+                <li className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white dark:bg-card-dark border border-slate-200/60 dark:border-border-dark">
+                  <span>القفز السريع</span>
+                  <span className="font-bold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs">
+                    سحب لأعلى (Swipe Up)
+                  </span>
+                </li>
+                <li className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white dark:bg-card-dark border border-slate-200/60 dark:border-border-dark">
+                  <span>التدحرج والزحف</span>
+                  <span className="font-bold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs">
+                    سحب لأسفل (Swipe Down)
+                  </span>
+                </li>
+                <li className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white dark:bg-card-dark border border-slate-200/60 dark:border-border-dark">
+                  <span>استخدام القدرة</span>
+                  <span className="font-bold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs">
+                    زر القدرة على الشاشة
+                  </span>
+                </li>
               </ul>
             </div>
           </div>
-        </div>
 
-        {/* Alexandria Landmarks in the Game */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Compass size={18} className="text-primary dark:text-emerald-400" />
-            <h2 className="text-lg font-bold text-slate-800 dark:text-white">معالم زعيم الثغر في اللعبة</h2>
-          </div>
+          {/* Bottom Call to Action and Return to App */}
+          <div className="pt-4 border-t border-slate-100 dark:border-border-dark/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-emerald-400 transition-colors"
+            >
+              <ArrowRight size={14} />
+              <span>العودة للصفحة الرئيسية للتطبيق</span>
+            </button>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {landmarks.map(land => (
-              <div 
-                key={land.title}
-                className="group rounded-2xl overflow-hidden bg-white dark:bg-card-dark border border-slate-200 dark:border-border-dark shadow-sm"
-              >
-                <div className="relative h-36 w-full bg-slate-900 overflow-hidden">
-                  <img 
-                    src={land.img} 
-                    alt={land.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 to-transparent" />
-                </div>
-                <div className="p-4 space-y-1">
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">{land.title}</h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{land.desc}</p>
-                </div>
-              </div>
-            ))}
+            <button
+              type="button"
+              onClick={handleStartGame}
+              className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-light text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-primary/20 active:scale-95 transition-all cursor-pointer"
+            >
+              <Play size={14} fill="currentColor" />
+              <span>ابدأ اللعبة الآن</span>
+            </button>
           </div>
         </div>
       </div>

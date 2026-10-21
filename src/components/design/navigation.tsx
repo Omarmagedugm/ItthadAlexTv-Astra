@@ -4,7 +4,12 @@ import { getSectionKeyForPath } from '../../types/sections';
 export const routeIcons: Record<string, typeof Home> = {'/':Home,'/news':Newspaper,'/matches':Trophy,'/live':Radio,'/fan-zone':Users,'/game':Gamepad2,'/jersey-tryon':Sparkles,'/club-members':ShieldCheck,'/library':Library,'/history':History,'/store':ShoppingBag,'/profile':UserRound,'/bookmarks':Bookmark,'/world-fans':Globe2,'/services':HeartHandshake,'/business':Building2,'/social':Facebook};
 export function useNavigation() {
  const { sidebarMenuItems, sectionFlags, aiConfig, customPages } = useAppStore();
- const source = sidebarMenuItems?.length ? sidebarMenuItems : DEFAULT_SIDEBAR_ITEMS;
+ const rawSource = sidebarMenuItems?.length ? sidebarMenuItems : DEFAULT_SIDEBAR_ITEMS;
+ const source = [...rawSource];
+ if (!source.some(i => i.path === '/game' || i.id === 'game')) {
+   const gameItem = DEFAULT_SIDEBAR_ITEMS.find(i => i.id === 'game');
+   if (gameItem) source.push(gameItem);
+ }
  const items = source.filter(i=>i.active!==false).filter(i=>{
   const key=getSectionKeyForPath(i.path); return (!key || sectionFlags[key]!==false) && !(i.path==='/jersey-tryon' && aiConfig?.enabled===false);
  }).sort((a,b)=>(a.order??0)-(b.order??0));

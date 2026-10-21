@@ -5,6 +5,7 @@ import { useAppStore } from '../store';
 const destinations = [
   { to: '/news', title: 'أخبار زعيم الثغر', text: 'كل جديد عن نادينا', Icon: Newspaper, section: 'news' },
   { to: '/matches', title: 'مركز المباريات', text: 'المواعيد والنتائج', Icon: Trophy, section: 'matches' },
+  { to: '/game', title: 'لعبة اتحاداوي 🎮', text: 'عادل شكل وجمال الدولي', Icon: Gamepad2, section: 'game' },
   { to: '/live', title: 'شاهد الاتحاد', text: 'البث المباشر', Icon: Radio, section: 'live' },
   { to: '/fan-zone', title: 'مدرج الاتحاد', text: 'صوتك وسط الجمهور', Icon: Users, section: 'fan-zone' },
 ];

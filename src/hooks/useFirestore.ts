@@ -181,6 +181,7 @@ export function useFirestoreSync() {
           worldFans: data.worldFans !== false,
           fanStore: data.fanStore !== false,
           itthadawyBusiness: data.itthadawyBusiness !== false,
+          game: data.game !== false,
           ...data
         };
         getStore().setSectionFlags(flags);

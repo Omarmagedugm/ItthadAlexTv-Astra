@@ -935,6 +935,7 @@ export const useAppStore = create<AppState>()(
       worldApplications: [],
       homeSections: [
         { id: 'hero', type: 'hero', active: true, order: 0 },
+        { id: 'game', type: 'game', active: true, order: 0.9, title: 'لعبة اتحاداوي 🎮' },
         { id: 'matches', type: 'matches', active: true, order: 1 },
         { id: 'world_fans', type: 'world_fans', active: true, order: 1.1, title: 'رابطة اتحاداوية العالم' },
         { id: 'public_services', type: 'services', active: true, order: 1.15, title: 'خدمات الجمهور' },
@@ -1181,6 +1182,12 @@ export const useAppStore = create<AppState>()(
           }
           if (Array.isArray(state.clubServices)) {
             state.clubServices = state.clubServices.filter((s: any) => !s.id?.startsWith('serv-'));
+          }
+          if (state.sectionFlags && state.sectionFlags.game === undefined) {
+            state.sectionFlags.game = true;
+          }
+          if (Array.isArray(state.homeSections) && !state.homeSections.some((s: any) => s.type === 'game' || s.id === 'game')) {
+            state.homeSections.splice(1, 0, { id: 'game', type: 'game', active: true, order: 0.9, title: 'لعبة اتحاداوي 🎮' });
           }
           if (Array.isArray(state.clubTrips)) {
             state.clubTrips = state.clubTrips.filter((t: any) => !t.id?.startsWith('trip-'));
