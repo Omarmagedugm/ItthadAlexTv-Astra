@@ -176,6 +176,36 @@ export default function Game() {
             </div>
           </div>
 
+          {/* Quick Character Abilities Highlight */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-red-500/10 border border-slate-200/80 dark:border-border-dark space-y-2.5">
+            <h3 className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <span>أبطال زعيم الثغر في اللعبة:</span>
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+              <div className="p-2.5 rounded-xl bg-white/80 dark:bg-card-dark border border-emerald-500/30 flex items-center gap-2">
+                <span className="text-base">♬</span>
+                <div>
+                  <span className="font-bold text-slate-900 dark:text-white block">عادل شكل</span>
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">قدرة «٦ إلا تلت»</span>
+                </div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white/80 dark:bg-card-dark border border-amber-500/30 flex items-center gap-2">
+                <span className="text-base">♨</span>
+                <div>
+                  <span className="font-bold text-slate-900 dark:text-white block">جمال الدولي</span>
+                  <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">قدرة «المبخرة»</span>
+                </div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white/80 dark:bg-card-dark border border-red-500/30 flex items-center gap-2">
+                <span className="text-base">🦀</span>
+                <div>
+                  <span className="font-bold text-slate-900 dark:text-white block">حميدو البرنس</span>
+                  <span className="text-[11px] text-red-600 dark:text-red-400 font-medium">قدرة «أبو جلمبو»</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Controls: PC & Mobile */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             {/* Keyboard Controls */}
