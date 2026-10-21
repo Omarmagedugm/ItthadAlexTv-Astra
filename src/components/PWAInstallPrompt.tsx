@@ -1,3 +1,4 @@
+import { INSTALL_KEY, hasInstalledApp, isStandaloneApp, rememberAppInstalled } from '../lib/pwaInstallation';
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Download, Share, PlusSquare, X, Smartphone, Monitor } from 'lucide-react';
@@ -32,21 +33,24 @@ const PWAInstallPrompt: React.FC = () => {
   const [showManualInstructions, setShowManualInstructions] = useState(false);
 
   useEffect(() => {
-    const standalone = window.matchMedia('(display-mode: standalone)').matches ||
-      Boolean((navigator as any).standalone);
-    if (standalone) {
+    if (hasInstalledApp()) {
+      if (isStandaloneApp()) rememberAppInstalled();
       setIsInstalled(true);
       return;
     }
 
-    setDevice(detectInstallDevice());
+    const detectedDevice = detectInstallDevice();
+    setDevice(detectedDevice);
     if (window.deferredPwaInstallPrompt) {
       setDeferredPrompt(window.deferredPwaInstallPrompt);
     }
-    const showTimer = window.setTimeout(() => setVisible(true), 3000);
+    let cancelled = false;
+    const showTimer = window.setTimeout(() => {
+      if (!cancelled && !hasInstalledApp() && (detectedDevice === 'ios' || window.deferredPwaInstallPrompt)) setVisible(true);
+    }, 3000);
 
     const handleInstallAvailable = () => {
-      if (window.deferredPwaInstallPrompt) {
+      if (!hasInstalledApp() && window.deferredPwaInstallPrompt) {
         setDeferredPrompt(window.deferredPwaInstallPrompt);
         setVisible(true);
       }
@@ -59,16 +63,38 @@ const PWAInstallPrompt: React.FC = () => {
       window.deferredPwaInstallPrompt = undefined;
     };
 
+    const syncInstallation = () => {
+      if (isStandaloneApp()) rememberAppInstalled();
+      if (hasInstalledApp()) handleAppInstalled();
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === INSTALL_KEY || event.key === null) syncInstallation();
+    };
+    const standaloneQuery = window.matchMedia('(display-mode: standalone)');
+    standaloneQuery.addEventListener?.('change', syncInstallation);
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('focus', syncInstallation);
+    window.addEventListener('pwa-install-state-changed', syncInstallation);
     window.addEventListener('pwa-install-available', handleInstallAvailable);
     window.addEventListener('appinstalled', handleAppInstalled);
     return () => {
+      cancelled = true;
       window.clearTimeout(showTimer);
+      standaloneQuery.removeEventListener?.('change', syncInstallation);
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('focus', syncInstallation);
+      window.removeEventListener('pwa-install-state-changed', syncInstallation);
       window.removeEventListener('pwa-install-available', handleInstallAvailable);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
   const handleInstallClick = async () => {
+    if (hasInstalledApp()) {
+      setIsInstalled(true);
+      setVisible(false);
+      return;
+    }
     if (!deferredPrompt) {
       setShowManualInstructions(true);
       return;
@@ -90,7 +116,7 @@ const PWAInstallPrompt: React.FC = () => {
     }
   };
 
-  if (isInstalled) return null;
+  if (isInstalled || hasInstalledApp()) return null;
 
   const isIOS = device === 'ios';
   const canInstallNow = Boolean(deferredPrompt);
@@ -159,6 +185,10 @@ const PWAInstallPrompt: React.FC = () => {
                 تثبيت الآن
               </button>
             )}
+
+            <button type="button" onClick={rememberAppInstalled} className="mt-3 w-full text-center text-xs text-slate-500 underline">
+              التطبيق مثبت بالفعل
+            </button>
 
             {!isIOS && showManualInstructions && (
               <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-[12px] leading-5 font-bold text-slate-600 dark:border-emerald-600/20 dark:bg-[#0b3322] dark:text-slate-200">

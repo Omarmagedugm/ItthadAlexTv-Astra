@@ -1,3 +1,4 @@
+import { hasInstalledApp, rememberAppInstalled, isStandaloneApp } from './lib/pwaInstallation';
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
@@ -16,15 +17,19 @@ declare global {
   }
 }
 
+if (isStandaloneApp()) rememberAppInstalled();
+
 // Capture this before lazy-loaded UI mounts so the install prompt is not missed.
 window.addEventListener('beforeinstallprompt', (event: Event) => {
   event.preventDefault();
+  if (hasInstalledApp()) return;
   window.deferredPwaInstallPrompt = event as BeforeInstallPromptEvent;
   window.dispatchEvent(new Event('pwa-install-available'));
 });
 
 window.addEventListener('appinstalled', () => {
   window.deferredPwaInstallPrompt = undefined;
+  rememberAppInstalled();
 });
 
 // Handle service worker registration safely in background
