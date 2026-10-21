@@ -64,6 +64,7 @@ const Matches = safeLazy(() => import('./pages/Matches'));
 const Profile = safeLazy(() => import('./pages/Profile'));
 const Admin = safeLazy(() => import('./pages/Admin'));
 const FanZone = safeLazy(() => import('./pages/FanZone'));
+const Game = safeLazy(() => import('./pages/Game'));
 const JerseyTryOn = safeLazy(() => import('./pages/JerseyTryOn'));
 const History = safeLazy(() => import('./pages/History'));
 const Store = safeLazy(() => import('./pages/Store'));
@@ -595,6 +596,8 @@ function GlobalSEOSynchronizer() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/fan-zone" element={<FanZone />} />
+            <Route path="/game" element={<FeatureGuardRoute sectionKey="game" component={Game} />} />
+            <Route path="/games/ittihadawy" element={<FeatureGuardRoute sectionKey="game" component={Game} />} />
             <Route path="/jersey-tryon" element={<JerseyTryOn />} />
             <Route path="/history" element={<History />} />
             <Route path="/store" element={<FeatureGuardRoute sectionKey="fanStore" component={Store} />} />

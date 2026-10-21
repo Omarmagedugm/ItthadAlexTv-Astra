@@ -1,10 +1,11 @@
-export type ManagedSectionKey = 'fanServices' | 'worldFans' | 'fanStore' | 'itthadawyBusiness';
+export type ManagedSectionKey = 'fanServices' | 'worldFans' | 'fanStore' | 'itthadawyBusiness' | 'game';
 
 export interface SectionFlags {
   fanServices: boolean;
   worldFans: boolean;
   fanStore: boolean;
   itthadawyBusiness: boolean;
+  game?: boolean;
   [key: string]: boolean | undefined;
 }
 
@@ -13,6 +14,7 @@ export const DEFAULT_SECTION_FLAGS: SectionFlags = {
   worldFans: true,
   fanStore: true,
   itthadawyBusiness: true,
+  game: true,
 };
 
 export interface SectionConfig {
@@ -56,6 +58,14 @@ export const MANAGED_SECTIONS: Record<ManagedSectionKey, SectionConfig> = {
     badge: 'دليل الأعمال',
     icon: 'Building2',
     paths: ['/business']
+  },
+  game: {
+    key: 'game',
+    name: 'لعبة اتحاداوي',
+    description: 'لعبة اتحاداوي ثلاثية الأبعاد التفاعلية في شوارع ومعالم الإسكندرية ومطاردات المشجعين (/game)',
+    badge: 'لعبة جديدة 🎮',
+    icon: 'Gamepad2',
+    paths: ['/game']
   }
 };
 
@@ -74,6 +84,13 @@ export function isSectionEnabled(flags: SectionFlags | undefined, sectionKey: st
 export function getSectionKeyForPath(pathname: string): ManagedSectionKey | null {
   const normalized = pathname.toLowerCase();
   
+  if (
+    normalized === '/game' ||
+    normalized.startsWith('/game/')
+  ) {
+    return 'game';
+  }
+
   if (
     normalized === '/services' || 
     normalized === '/public-services' || 

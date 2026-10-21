@@ -1062,7 +1062,7 @@ export default function FanZone() {
                         const postUser = users.find(u => u.uid === post.userId || (u as any).id === post.userId) || postAuthorProfiles[post.userId] || (profile.uid === post.userId ? profile : undefined);
                         const displayAvatar = postUser?.avatar || post.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.userId}`;
                         const displayName = postUser?.name || post.userName;
-                        const tier = postUser?.tier || post.userTier || post.tier || 'new';
+                        const tier = postUser?.tier || post.userTier || (post as any).tier || 'new';
                         const role = postUser?.role || 'user';
                         const isManagement = role === 'admin' || post.userId === 'omarmagedugm' || post.userId === 'copyrightofficialco';
 

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowUpLeft, Radio, Trophy, Newspaper, Users, Play, BookOpen, ShoppingBag, Globe2, CalendarDays } from 'lucide-react';
+import { ArrowUpLeft, Radio, Trophy, Newspaper, Users, Play, BookOpen, ShoppingBag, Globe2, CalendarDays, Gamepad2 } from 'lucide-react';
 import { useAppStore } from '../store';
 
 const destinations = [
@@ -23,7 +23,7 @@ export default function ClubWelcome({ part }: { part: string }) {
     </div>
     }
     {part === 'welcome_links' && <nav className="club-destinations" aria-label="اكتشف التطبيق">{destinations.filter(d=>enabled(d.section)).map(({to,title,text,Icon})=><Link to={to} key={to}><span className="club-destination-icon"><Icon size={23}/></span><div><h3>{title}</h3><p>{text}</p></div><ArrowUpLeft className="club-destination-arrow" size={17}/></Link>)}</nav>}
-    {part === 'welcome_explore' && <div className="club-explore"><span>أكتر من مجرد ماتش</span><div>{[{to:'/library',t:'المكتبة الرقمية',I:BookOpen},{to:'/store',t:'متجر الجماهير',I:ShoppingBag},{to:'/world-fans',t:'اتحاداوية العالم',I:Globe2}].filter(d => d.to === '/store' ? enabled('fanStore') : d.to === '/world-fans' ? enabled('worldFans') : true).map(({to,t,I})=><Link to={to} key={to}><I size={16}/>{t}<ArrowUpLeft size={14}/></Link>)}</div></div>
+    {part === 'welcome_explore' && <div className="club-explore"><span>أكتر من مجرد ماتش</span><div>{[{to:'/game',t:'لعبة اتحاداوي 🎮',I:Gamepad2},{to:'/library',t:'المكتبة الرقمية',I:BookOpen},{to:'/store',t:'متجر الجماهير',I:ShoppingBag},{to:'/world-fans',t:'اتحاداوية العالم',I:Globe2}].filter(d => d.to === '/game' ? enabled('game') : d.to === '/store' ? enabled('fanStore') : d.to === '/world-fans' ? enabled('worldFans') : true).map(({to,t,I})=><Link to={to} key={to}><I size={16}/>{t}<ArrowUpLeft size={14}/></Link>)}</div></div>
     }
     {part === 'welcome_feed' && <div className="club-feed-heading"><div><span className="club-overline">نبض النادي</span><h2>كل الاتحاد، في مكان واحد</h2></div><span className="club-feed-line"/></div>
     }

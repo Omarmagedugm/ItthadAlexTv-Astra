@@ -46,7 +46,8 @@ import {
   Maximize2,
   Minimize2,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  Gamepad2
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { isYouTubeUrl, isFacebookUrl, getYouTubeThumbnail, getYouTubeEmbedUrl, getFacebookEmbedUrl } from '../../lib/videoUtils';
@@ -64,6 +65,12 @@ export const SECTION_METADATA: Record<string, { label: string; icon: React.React
     icon: <Flame size={16} />, 
     color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
     desc: 'البطاقة الرئيسية للمباراة الحالية أو القادمة مع العداد والتشكيلة'
+  },
+  game: {
+    label: 'لعبة اتحاداوي 🎮',
+    icon: <Gamepad2 size={16} />,
+    color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+    desc: 'ويدجت وبانر ترويجي للعبة اتحاداوي التفاعلية في شوارع الإسكندرية'
   },
   video: { 
     label: 'فيديو يوتيوب أو فيسبوك', 

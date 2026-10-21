@@ -22,7 +22,7 @@ export { DEFAULT_SECTION_FLAGS };
 
 export interface HomeSection {
   id: string;
-  type: 'welcome_intro' | 'welcome_matches' | 'welcome_links' | 'welcome_explore' | 'welcome_feed' | 'hero' | 'matches' | 'news' | 'media' | 'history' | 'stadiums' | 'store' | 'polls' | 'live' | 'custom' | 'widget' | 'city' | 'ads' | 'advertise' | 'image' | 'ai_banner' | 'tickets' | 'club_members' | 'club_members_ad' | 'club_members_banner' | 'business' | 'business_directory' | 'ittihad_business' | 'social' | 'social_media' | 'world_fans' | 'world_association' | 'video' | 'video_embed' | 'youtube' | 'facebook' | 'services' | 'public_services';
+  type: 'welcome_intro' | 'welcome_matches' | 'welcome_links' | 'welcome_explore' | 'welcome_feed' | 'hero' | 'matches' | 'news' | 'media' | 'history' | 'stadiums' | 'store' | 'polls' | 'live' | 'custom' | 'widget' | 'city' | 'ads' | 'advertise' | 'image' | 'ai_banner' | 'tickets' | 'club_members' | 'club_members_ad' | 'club_members_banner' | 'business' | 'business_directory' | 'ittihad_business' | 'social' | 'social_media' | 'world_fans' | 'world_association' | 'video' | 'video_embed' | 'youtube' | 'facebook' | 'services' | 'public_services' | 'game';
   title?: string;
   subtitle?: string;
   active: boolean;
@@ -66,6 +66,7 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarMenuItem[] = [
   { id: 'world-fans', title: 'رابطة اتحاداوية العالم', path: '/world-fans', icon: 'Globe', iconType: 'lucide', active: true, order: 3.5, highlighted: false, group: 'main' },
   { id: 'public-services', title: 'خدمات الجمهور', path: '/services', icon: 'volunteer_activism', iconType: 'material', active: true, order: 3.8, badge: 'جديد', badgeColor: '#10b981', highlighted: true, highlightColor: 'emerald', group: 'main' },
   { id: 'fan-zone', title: 'منطقة الجماهير', path: '/fan-zone', icon: 'stadium', iconType: 'material', active: true, order: 4, highlighted: false, group: 'main' },
+  { id: 'game', title: 'لعبة اتحاداوي 🎮', path: '/game', icon: 'Gamepad2', iconType: 'lucide', active: true, order: 4.2, badge: 'جديد', badgeColor: '#10b981', highlighted: true, highlightColor: 'emerald', group: 'main' },
   { id: 'jersey-tryon', title: 'استوديو المشجع (AI)', path: '/jersey-tryon', icon: 'bolt', iconType: 'material', active: true, order: 5, highlighted: false, group: 'main' },
   { id: 'club-members', title: 'أعضاء النادي', path: '/club-members', icon: 'ShieldCheck', iconType: 'lucide', active: true, order: 6, highlighted: false, group: 'main' },
   { id: 'library', title: 'المكتبة الرقمية والوسائط', path: '/library', icon: 'perm_media', iconType: 'material', active: true, order: 7, highlighted: false, group: 'main' },

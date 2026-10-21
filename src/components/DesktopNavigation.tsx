@@ -5,7 +5,7 @@ import '../desktop-navigation.css';
 const groups=[
  {title:'المباريات',paths:['/matches','/live']},
  {title:'الأخبار والنادي',paths:['/news','/history','/social']},
- {title:'الجماهير والخدمات',paths:['/fan-zone','/world-fans','/club-members','/services','/jersey-tryon']},
+ {title:'الجماهير والألعاب',paths:['/game','/fan-zone','/world-fans','/club-members','/services','/jersey-tryon']},
  {title:'المكتبة والتسوق',paths:['/library','/business','/store']},
 ];
 export default function DesktopNavigation(){

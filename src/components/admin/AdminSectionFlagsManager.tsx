@@ -19,7 +19,8 @@ import {
   EyeOff, 
   Sparkles,
   Layers,
-  Database
+  Database,
+  Gamepad2
 } from 'lucide-react';
 
 export default function AdminSectionFlagsManager() {
@@ -83,7 +84,8 @@ export default function AdminSectionFlagsManager() {
       fanServices: targetState,
       worldFans: targetState,
       fanStore: targetState,
-      itthadawyBusiness: targetState
+      itthadawyBusiness: targetState,
+      game: targetState
     };
 
     setSectionFlags(newFlags);
@@ -208,6 +210,26 @@ export default function AdminSectionFlagsManager() {
         'إخفاء اتحاداوي بيزنس من القائمة الجانبية (Sidebar)',
         'حظر مسارات /business وحماية صفحات التفاصيل',
         'إيقاف استعلامات الشركات وتقارير الأعمال من Firestore'
+      ]
+    },
+    {
+      key: 'game',
+      title: 'لعبة اتحاداوي 🎮',
+      englishKey: 'game',
+      description: 'لعبة اتحاداوي ثلاثية الأبعاد التفاعلية في شوارع ومعالم الإسكندرية',
+      icon: <Gamepad2 size={24} />,
+      colorTheme: {
+        activeBg: 'bg-emerald-500/10 dark:bg-emerald-950/30',
+        activeBorder: 'border-emerald-500/30',
+        activeText: 'text-emerald-700 dark:text-emerald-400',
+        badgeBg: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+        iconBg: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+      },
+      paths: ['/game'],
+      detailsOnDisabled: [
+        'إخفاء ويدجت اللعبة من الصفحة الرئيسية (Home)',
+        'إخفاء قسم اللعبة من القوائم العلوية والجانبية',
+        'حظر مسار /game وإعادة توجيه الزوار إلى الرئيسية'
       ]
     }
   ];

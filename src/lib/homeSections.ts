@@ -5,6 +5,7 @@ export const DEFAULT_HOME_SECTIONS_LIST: HomeSection[] = [
   { id: 'ads', type: 'ads', active: true, order: 1, title: 'شريط الإعلانات والبانرات', spacing: 20 },
   { id: 'live', type: 'live', active: true, order: 2, title: 'بث مباشر متاح (عند وجود بث)', spacing: 16 },
   { id: 'matches', type: 'matches', active: true, order: 3, title: 'مباريات مرتقبة', spacing: 24 },
+  { id: 'game', type: 'game', active: true, order: 3.5, title: 'لعبة اتحاداوي 🎮', spacing: 20 },
   { id: 'ai_banner', type: 'ai_banner', active: true, order: 4, title: 'بانر استوديو التيشيرت (AI)', spacing: 20 },
   { id: 'city', type: 'city', active: true, order: 5, title: 'عروس البحر المتوسط (طقس وتاريخ)', spacing: 24 },
   { id: 'news', type: 'news', active: true, order: 6, title: 'آخر الأخبار الرسمية', spacing: 24 },

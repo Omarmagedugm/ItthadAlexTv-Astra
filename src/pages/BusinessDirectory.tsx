@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppStore, BusinessItem } from '../store';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { getOptimizedImage } from '../lib/cloudinary';
 import { 
   Building2, 
   Store, 
