@@ -43,6 +43,7 @@ const groups: [string, [string, string, string, AppRole[]][]][] = [
  ['sections-control','إظهار أقسام التطبيق','تفعيل وإيقاف الأقسام',['layout_editor']],
  ['city','طقس الإسكندرية','معلومات المدينة والطقس',['layout_editor']],
  ['ai-studio','استوديو الصور','إعدادات تجربة الصور',['layout_editor']],
+ ['game','لعبة هروب اتحاداوي','تحميل اللعبة ورفع وتحديث النسخ الجديدة',['layout_editor','admin']],
  ]],
  ['النظام والصلاحيات', [
  ['users','الأعضاء والصلاحيات','إدارة حسابات فريق العمل',['user_manager']],

@@ -121,6 +121,7 @@ import AdminWorldFans from '../components/admin/AdminWorldFans';
 import AdminAuditLogs from '../components/admin/AdminAuditLogs';
 import AdminAnalytics from '../components/admin/AdminAnalytics';
 import AdminMigrationTools from '../components/admin/AdminMigrationTools';
+import AdminGameManager from '../components/admin/AdminGameManager';
 import ScoreSelector from '../components/ScoreSelector';
 import ImageUploader from '../components/ImageUploader';
 import LivePlayer from '../components/live/LivePlayer';
@@ -6152,6 +6153,7 @@ export default function Admin() {
            {(activeTab === 'audit-logs' || activeTab === 'audit_logs') && <AdminAuditLogs />}
 
            {activeTab === 'migration' && <AdminMigrationTools onHealth={() => setActiveTab('service-health')} />}
+           {activeTab === 'game' && <AdminGameManager />}
         </div>
       </main>
       </div>

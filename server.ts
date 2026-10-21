@@ -20,6 +20,14 @@ import {
 import { fetchNewsMetadata, injectNewsMetaTags } from './server/newsMetaHandler.ts';
 import { generateSitemapXml, generateNewsSitemapXml } from './server/sitemapHandler.ts';
 import { authenticateUser, requireAdmin, setUserRoleInFirestore } from './server/authMiddleware.ts';
+import {
+  getGameInfo,
+  createGameZipBuffer,
+  createBackup,
+  extractAndDeployGameZip,
+  restoreGameBackup,
+  deleteGameBackup
+} from './server/gameHandler.ts';
 
 dotenv.config();
 
@@ -40,6 +48,10 @@ async function startServer() {
   const upload = multer({ 
     storage,
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  });
+  const gameZipUpload = multer({ 
+    storage,
+    limits: { fileSize: 60 * 1024 * 1024 } // 60MB limit for game bundle
   });
 
   // Cloudinary Initialization
@@ -574,6 +586,79 @@ OUTPUT: Return ONLY the transformed image.`;
         url: downloadUrl,
         filename
       });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Game Management Endpoints (Protected: requireAdmin)
+  app.get('/api/game/info', requireAdmin, (req: any, res: any) => {
+    try {
+      const info = getGameInfo();
+      res.json({ success: true, ...info });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/game/download', requireAdmin, async (req: any, res: any) => {
+    try {
+      const { buffer, filename } = await createGameZipBuffer();
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', buffer.length);
+      res.send(buffer);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/game/upload', requireAdmin, gameZipUpload.single('file'), async (req: any, res: any) => {
+    try {
+      if (!req.file || !req.file.buffer) {
+        return res.status(400).json({ error: 'يرجى اختيار ملف ZIP صالح للعبة' });
+      }
+      const result = await extractAndDeployGameZip(req.file.buffer);
+      console.log(`[Admin Game] Game updated successfully by admin (${req.user?.uid}): ${result.filesCount} files deployed`);
+      res.json({ success: true, ...result });
+    } catch (e: any) {
+      console.error('[Game Upload Error]', e);
+      res.status(500).json({ error: e.message || 'فشل استخراج وتحديث اللعبة' });
+    }
+  });
+
+  app.post('/api/game/create-backup', requireAdmin, async (req: any, res: any) => {
+    try {
+      const note = req.body?.note || 'manual';
+      const backup = await createBackup(note);
+      res.json({ success: true, backup });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/game/restore', requireAdmin, async (req: any, res: any) => {
+    try {
+      const backupId = req.body?.backupId;
+      if (!backupId) {
+        return res.status(400).json({ error: 'معرف النسخة الاحتياطية مطلوب' });
+      }
+      const result = await restoreGameBackup(backupId);
+      console.log(`[Admin Game] Backup restored by admin (${req.user?.uid}): ${backupId}`);
+      res.json({ success: true, ...result });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/game/delete-backup', requireAdmin, (req: any, res: any) => {
+    try {
+      const backupId = req.body?.backupId;
+      if (!backupId) {
+        return res.status(400).json({ error: 'معرف النسخة الاحتياطية مطلوب' });
+      }
+      const ok = deleteGameBackup(backupId);
+      res.json({ success: ok });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
