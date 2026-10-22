@@ -188,3 +188,29 @@ test('arrest transition dispatches Adel caught voice once before the capture sce
  end.call(engine);end.call(engine);
  assert.deepEqual(events,['caught:adel','FALLING']);
 });
+
+test('running speed increases faster and keeps rising on successive route loops',()=>{
+ const variables=new Map<string,ts.VariableDeclaration>();
+ for(const statement of source.statements)if(ts.isVariableStatement(statement))for(const d of statement.declarationList.declarations)variables.set(d.name.getText(source),d);
+ const extended=new Function('return '+variables.get('_0')!.initializer!.getText(source))();
+ const route=new Function('_0','return '+variables.get('Mr')!.initializer!.getText(source))(extended);
+ const lap=route.at(-1).end;
+ const speed=new Function('Uf','return '+variables.get('Wy')!.initializer!.getText(source))(lap);
+ assert.equal(speed(0),24);assert.equal(speed(-100),24);
+ assert.ok(speed(1000)>24+1000/130);
+ assert.ok(speed(lap)>=66);
+ for(let loop=1;loop<=10;loop++)assert.ok(speed((loop+1)*lap)>speed(loop*lap));
+ for(const d of [lap,lap*2])assert.ok(speed(d)-speed(d-.01)<.01);
+});
+
+test('speed pickups are spaced farther apart while normal coin rows remain',()=>{
+ const game=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
+ const method=game.members.find(n=>n.name?.getText(source)==='spawn')!;
+ const spawn=new Function('SC','vr','yC','return ({'+method.getText(source)+'}).spawn')(()=>[0],()=> 'shatby',()=>60);
+ const pickups:number[]=[];let coins=0;
+ const engine={spawnAt:75,nextBoostAt:300,getObject(type:string,_lane:number,at:number){if(type==='boost')pickups.push(at);if(type==='coin')coins++}};
+ for(let i=0;i<100;i++)spawn.call(engine);
+ assert.ok(pickups.length<=15);assert.ok(pickups[0]>=300);
+ for(let i=1;i<pickups.length;i++)assert.ok(pickups[i]-pickups[i-1]>=420);
+ assert.equal(coins,400);
+});
