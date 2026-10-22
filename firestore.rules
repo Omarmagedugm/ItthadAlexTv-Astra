@@ -112,6 +112,17 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Anonymous game-entry events contain no names or contact details.
+    match /game_visits/{visitId} {
+      allow read: if isAdmin();
+      allow create: if isValidId(visitId) && incoming().keys().hasOnly(['visitorId', 'member', 'createdAt']) &&
+        incoming().visitorId is string && incoming().visitorId.size() <= 150 &&
+        incoming().member is bool && incoming().createdAt == request.time &&
+        ((!incoming().member && incoming().visitorId.matches('^guest_[a-zA-Z0-9_-]+$')) ||
+          (isSignedIn() && incoming().member && incoming().visitorId == 'member_' + request.auth.uid));
+      allow update, delete: if false;
+    }
+
     // App Settings
     match /settings/{settingId} {
       allow read: if true;

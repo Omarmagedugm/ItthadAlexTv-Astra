@@ -42,7 +42,9 @@ async function startServer() {
 
   // The application container runs an nginx proxy on external port (8080) that strictly proxies to 3000.
   // Port 3000 is required by the container infrastructure in both dev and production.
-  const PORT = 3000;
+  const portArgument = process.argv.indexOf('--port');
+  const requestedPort = Number(portArgument >= 0 ? process.argv[portArgument + 1] : process.env.PORT || 3000);
+  const PORT = Number.isInteger(requestedPort) && requestedPort > 0 && requestedPort < 65536 ? requestedPort : 3000;
 
   // Multer setup for memory storage
   const storage = multer.memoryStorage();

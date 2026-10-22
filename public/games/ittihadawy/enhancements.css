@@ -1,0 +1,13 @@
+/* Keep actions above the HUD and away from roadside region signs. */
+.back-app-link{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 12px)!important;left:12px!important;right:auto!important;width:40px!important;height:40px!important;padding:0!important;justify-content:center;font-size:0!important;z-index:12!important;border-radius:50%!important}
+.back-app-link:before{content:'←';font-size:22px;line-height:1}
+.playing header,.paused header,.intro header,.falling header{left:auto!important;right:12px!important;top:calc(env(safe-area-inset-top,0px) + 12px)!important;width:auto}
+.playing .topactions,.paused .topactions{flex-direction:row!important;gap:7px}
+.playing .topactions button,.paused .topactions button{width:37px;height:37px}
+.runner-hud{top:calc(env(safe-area-inset-top,0px) + 70px)!important}
+.mini-route{top:calc(env(safe-area-inset-top,0px) + 75px)!important;right:14px!important}
+.road-sign{display:none!important}
+.game-account-status{border-top:1px solid #ffffff25;margin-top:18px;padding-top:12px}
+.game-account-status p{font-size:11px}.game-account-status a{display:inline-block;color:#8ce2b3;font-size:12px;padding:8px;text-decoration:none}
+input[type=range]{direction:ltr;touch-action:none;min-height:36px}
+@media(max-height:500px){.runner-hud{top:60px!important}.velocity b{font-size:34px}.hud-chip{margin-top:3px;padding:4px 7px}.mini-route{top:64px!important;width:62px;height:62px}.boost-status{top:220px}}

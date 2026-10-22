@@ -17,24 +17,6 @@ import Home from './pages/Home';
 import MaintenanceScreen from './components/MaintenanceScreen';
 import { updateClientSEO, buildWebsiteSchema } from './lib/seo';
 
-function isStaleChunkError(error: any) {
-  const message = String(error?.message || error || '');
-  return /failed to fetch dynamically imported module|importing a module script failed|chunkloaderror|loading chunk .* failed/i.test(message);
-}
-
-function reloadForStaleChunkOnce() {
-  try {
-    const key = 'stale-chunk-reload-at';
-    const lastAttempt = Number(sessionStorage.getItem(key) || 0);
-    if (Date.now() - lastAttempt < 30_000) return false;
-    sessionStorage.setItem(key, String(Date.now()));
-    window.location.reload();
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function safeLazy<T extends React.ComponentType<any>>(
   factory: () => Promise<{ default: T }>
 ) {
@@ -47,7 +29,7 @@ function safeLazy<T extends React.ComponentType<any>>(
         return await factory();
       } catch (retryErr) {
         console.error('Route chunk failed to load:', retryErr);
-        if (isStaleChunkError(retryErr)) reloadForStaleChunkOnce();
+        // Keep the current page in place; recovery is an explicit user action.
         throw retryErr;
       }
     }
@@ -132,10 +114,10 @@ class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBound
     console.error("APP CRASH:", error, errorInfo);
   }
 
-  handleReload = () => {
-    sessionStorage.clear();
+  handleReload = async () => {
+    // Preserve session state, including the one-time startup screen.
     if ('caches' in window) {
-      caches.keys().then(keys => keys.forEach(k => caches.delete(k))).catch(() => {});
+      await caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(() => {});
     }
     window.location.reload();
   };
@@ -259,9 +241,14 @@ export default function App() {
 
 function AppContent() {
   const { startupReady } = useFirestoreSync();
-  const [startupComplete, setStartupComplete] = useState(startupReady);
+  const [startupComplete, setStartupComplete] = useState(() => {
+    try { return startupReady || sessionStorage.getItem('ittihad-startup-complete') === '1'; } catch { return startupReady; }
+  });
   useEffect(() => {
-    if (startupReady) setStartupComplete(true);
+    if (startupReady) {
+      setStartupComplete(true);
+      try { sessionStorage.setItem('ittihad-startup-complete', '1'); } catch {}
+    }
   }, [startupReady]);
   const matches = useAppStore(state => state.matches);
   const [showGoal, setShowGoal] = useState(false);

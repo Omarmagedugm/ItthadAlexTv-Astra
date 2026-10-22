@@ -1,3 +1,4 @@
+import GameAnalytics from './GameAnalytics';
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   BarChart3, 
@@ -314,6 +315,7 @@ export default function AdminAnalytics() {
 
   return (
     <div className="space-y-6">
+      <GameAnalytics since={cutoffDate}/>
       {/* Top Banner & Control Bar */}
       <div className=" ds-feature-panel bg-gradient-to-br from-slate-900 via-primary-950 to-slate-900 rounded-xl p-6 text-white border border-primary/20 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/20 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>

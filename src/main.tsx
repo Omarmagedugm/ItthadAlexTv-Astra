@@ -4,6 +4,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import './lib/confetti';
+import toast from 'react-hot-toast';
 import { registerSW } from 'virtual:pwa-register';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -33,9 +34,9 @@ window.addEventListener('appinstalled', () => {
 });
 
 // Handle service worker registration safely in background
-registerSW({
+const applyAppUpdate = registerSW({
   onNeedRefresh() {
-    console.log('[PWA] New background service worker available.');
+    toast(t => <span dir="rtl" className="flex items-center gap-3 text-sm">تحديث جديد جاهز<button className="whitespace-nowrap rounded-lg bg-emerald-600 px-3 py-2 text-white" onClick={() => { toast.dismiss(t.id); void applyAppUpdate(true); }}>تحديث الآن</button></span>, { id: 'app-update', duration: Infinity });
   },
   onOfflineReady() {
     console.log('[PWA] App is ready for offline use');
