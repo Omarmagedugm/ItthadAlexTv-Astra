@@ -1,16 +1,6 @@
 import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { 
-  Gamepad2, 
-  Play, 
-  Sparkles, 
-  Trophy, 
-  Smartphone, 
-  ExternalLink,
-  ChevronLeft,
-  Flame
-} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, ExternalLink, Gamepad2, Play, Trophy } from 'lucide-react';
 import { useAppStore } from '../../store';
 
 interface GameAdWidgetProps {
@@ -19,109 +9,73 @@ interface GameAdWidgetProps {
 }
 
 export default function GameAdWidget({ title, className = '' }: GameAdWidgetProps) {
-  const navigate = useNavigate();
-  const { sectionFlags } = useAppStore();
-
-  if (sectionFlags?.game === false) {
-    return null;
-  }
-
-  const handleOpenStandalone = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    window.open('/games/ittihadawy/index.html', '_blank', 'noopener,noreferrer');
-  };
+  const enabled = useAppStore(state => state.sectionFlags?.game !== false);
+  if (!enabled) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      className={`relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#04241b] via-[#074d39] to-[#0c6b4e] dark:from-[#021811] dark:via-[#053b2b] dark:to-[#084e38] text-white p-5 sm:p-7 shadow-xl border border-emerald-500/40 group cursor-pointer ${className}`}
-      onClick={() => navigate('/game')}
-      dir="rtl"
-    >
-      {/* Background Decorative Lighting */}
-      <div className="absolute top-0 left-0 w-72 h-72 bg-emerald-400/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-56 h-56 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
-      <div 
-        className="absolute inset-0 bg-cover bg-center opacity-20 mix-blend-overlay transition-transform duration-700 group-hover:scale-105 pointer-events-none"
-        style={{ backgroundImage: `url('/games/ittihadawy/references/aep_2012.jpg')` }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-l from-black/70 via-black/40 to-transparent pointer-events-none" />
-
-      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-        {/* Left Side: Game Info & Badges */}
-        <div className="space-y-3.5 max-w-xl text-right">
-          {/* Badges Bar */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-emerald-300 text-xs font-bold border border-white/15">
-              <Gamepad2 size={15} />
-              <span>لعبة النادي الرسمية</span>
-            </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-400 text-slate-950 shadow-sm animate-pulse">
-              <Sparkles size={11} className="fill-slate-950" />
-              <span>جديد 3D</span>
-            </span>
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-              ⚡ مجاناً بدون تحميل
-            </span>
-          </div>
-
-          {/* Heading */}
-          <div className="space-y-1.5">
-            <h3 className="text-xl sm:text-2xl font-black text-white leading-tight tracking-tight flex items-center gap-2 flex-wrap">
-              <span>{title || "لعبة اتحاداوي — حكايات زعيم الثغر"}</span>
-              <span className="text-amber-400 text-lg sm:text-xl">🎮</span>
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-200/90 font-medium leading-relaxed">
-              عِش مغامرة الركض ثلاثية الأبعاد في شوارع ومعالم الإسكندرية الخضراء! تفادَ الحواجز، اجمع كؤوس وشعارات الاتحاد، وسجل أعلى سكور.
-            </p>
-          </div>
-
-          {/* Feature Highlights Pills */}
-          <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-200 font-semibold">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/25 backdrop-blur-sm border border-white/10">
-              <Trophy size={13} className="text-amber-400" />
-              <span>تحدي النقاط</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/25 backdrop-blur-sm border border-white/10">
-              <Smartphone size={13} className="text-emerald-400" />
-              <span>للموبايل والكمبيوتر</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/25 backdrop-blur-sm border border-white/10">
-              <Flame size={13} className="text-rose-400" />
-              <span>أهازيج جماهيرية</span>
-            </div>
+    <section dir="rtl" aria-label={title || 'لعبة اتحاداوي'} className={`ittihad-game-card ${className}`}>
+      <style>{`
+        .ittihad-game-card{--game-surface:#fff;--game-ink:#153c30;--game-muted:#667b71;--game-line:#dce6de;position:relative;overflow:hidden;border:1px solid var(--game-line);border-radius:18px;background:var(--game-surface);color:var(--game-ink);isolation:isolate}
+        .dark .ittihad-game-card{--game-surface:#102a25;--game-ink:#f3f6ee;--game-muted:#acc2b5;--game-line:#294039}
+        .ittihad-game-card .game-main{display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:24px;align-items:center;padding:24px}
+        .ittihad-game-card .game-label{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--game-muted)}
+        .ittihad-game-card .game-label svg{color:#38986c}
+        .ittihad-game-card .game-title{font-size:clamp(20px,2.5vw,27px);font-weight:750;line-height:1.6;margin:9px 0 6px;overflow-wrap:anywhere}
+        .ittihad-game-card .game-description{max-width:440px;font-size:12px;line-height:1.9;color:var(--game-muted);margin:0}
+        .ittihad-game-card .game-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:19px}
+        .ittihad-game-card .game-play{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:44px;padding:10px 18px;border-radius:10px;background:#176447;color:#fff;font-size:12px;font-weight:700;white-space:nowrap;transition:background .2s}
+        .dark .ittihad-game-card .game-play{background:#cddd9d;color:#143b2b}
+        .ittihad-game-card .game-play:hover{background:#207c59}
+        .dark .ittihad-game-card .game-play:hover{background:#e0edb7}
+        .ittihad-game-card .game-external{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:10px 12px;color:var(--game-muted);font-size:11px;white-space:nowrap;border-radius:10px}
+        .ittihad-game-card .game-external:hover{color:var(--game-ink);background:color-mix(in srgb,var(--game-muted) 10%,transparent)}
+        .ittihad-game-card a:focus-visible{outline:2px solid #3ca876;outline-offset:4px}
+        .ittihad-game-card .game-art{position:relative;height:166px;display:grid;place-items:center;border-radius:16px;background:#edf3e6;overflow:hidden}
+        .dark .ittihad-game-card .game-art{background:#193e30}
+        .ittihad-game-card .game-orbit{position:absolute;width:130px;height:130px;border:1px solid #86a87844;border-radius:50%}
+        .ittihad-game-card .game-orbit:after{content:"";position:absolute;inset:15px;border:1px solid #86a87833;border-radius:50%}
+        .ittihad-game-card .game-controller{position:relative;color:#276347;transform:rotate(-12deg);filter:drop-shadow(0 9px 0 #1c513011)}
+        .dark .ittihad-game-card .game-controller{color:#cddd9d}
+        .ittihad-game-card .game-trophy{position:absolute;top:17px;left:17px;display:grid;place-items:center;width:33px;height:33px;border-radius:10px;background:var(--game-surface);color:#a57b2b;transform:rotate(10deg)}
+        .ittihad-game-card .game-art-label{position:absolute;bottom:13px;font-size:9px;letter-spacing:2px;color:var(--game-muted)}
+        .ittihad-game-card .game-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 24px;border-top:1px solid var(--game-line);font-size:10px;color:var(--game-muted)}
+        .ittihad-game-card .game-footer span{display:inline-flex;align-items:center;gap:6px}
+        .ittihad-game-card .game-dot{width:5px;height:5px;border-radius:50%;background:#38986c}
+        @media(max-width:480px){
+          .ittihad-game-card .game-main{grid-template-columns:minmax(0,1fr) 78px;gap:10px;padding:18px 16px}
+          .ittihad-game-card .game-art{height:100px;border-radius:12px;align-self:start;margin-top:30px}
+          .ittihad-game-card .game-controller{width:59px;height:59px}
+          .ittihad-game-card .game-orbit{width:90px;height:90px}
+          .ittihad-game-card .game-trophy,.ittihad-game-card .game-art-label{display:none}
+          .ittihad-game-card .game-title{font-size:20px}
+          .ittihad-game-card .game-description{font-size:11px}
+          .ittihad-game-card .game-actions{gap:4px;margin-top:14px}
+          .ittihad-game-card .game-play{padding:9px 12px;gap:7px}
+          .ittihad-game-card .game-external{padding:8px 4px;font-size:10px}
+          .ittihad-game-card .game-footer{padding:11px 16px;flex-wrap:wrap;gap:7px}
+        }
+      `}</style>
+      <div className="game-main">
+        <div className="min-w-0">
+          <div className="game-label"><Gamepad2 size={15} aria-hidden="true" /><span>استراحة المشجع</span></div>
+          <h3 className="game-title">{title || 'لعبة اتحاداوي'}</h3>
+          <p className="game-description">شوارع إسكندرية مستنياك. اختار بطلك، اجمع الكؤوس وتحدّى نفسك في كل جولة.</p>
+          <div className="game-actions">
+            <Link to="/game" className="game-play"><Play size={14} fill="currentColor" aria-hidden="true" /><span>العب الآن</span><ArrowLeft size={15} aria-hidden="true" /></Link>
+            <a href="/games/ittihadawy/index.html" target="_blank" rel="noopener noreferrer" className="game-external" aria-label="فتح اللعبة في نافذة مستقلة"><span>شاشة مستقلة</span><ExternalLink size={13} aria-hidden="true" /></a>
           </div>
         </div>
-
-        {/* Right Side: CTA Action Buttons */}
-        <div className="shrink-0 flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10">
-          {/* Main Action Button */}
-          <Link
-            to="/game"
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-300 hover:from-amber-300 hover:to-amber-400 text-slate-950 text-xs sm:text-sm font-black shadow-lg shadow-amber-500/20 active:scale-95 transition-all group-hover:scale-105"
-          >
-            <div className="w-6 h-6 rounded-lg bg-slate-950 text-amber-400 flex items-center justify-center">
-              <Play size={14} className="fill-amber-400 ml-0.5" />
-            </div>
-            <span>العب الآن</span>
-            <ChevronLeft size={16} />
-          </Link>
-
-          {/* Standalone Button */}
-          <button
-            type="button"
-            onClick={handleOpenStandalone}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-[11px] font-bold transition-all active:scale-95"
-            title="فتح اللعبة في نافذة مستقلة كاملة"
-          >
-            <ExternalLink size={13} />
-            <span>شاشة مستقلة</span>
-          </button>
+        <div className="game-art" aria-hidden="true">
+          <div className="game-orbit" />
+          <Gamepad2 className="game-controller" size={100} strokeWidth={1.25} />
+          <span className="game-trophy"><Trophy size={18} strokeWidth={1.6} /></span>
+          <span className="game-art-label">ITTIHADAWY</span>
         </div>
       </div>
-    </motion.div>
+      <div className="game-footer">
+        <span><span className="game-dot" />العب مباشرة · بدون تحميل</span>
+        <span>مغامرة في قلب إسكندرية</span>
+      </div>
+    </section>
   );
 }
