@@ -29,6 +29,30 @@ import toast from 'react-hot-toast';
 import { auth } from '../../lib/firebase';
 import JSZip from 'jszip';
 
+// Static hosts may return index.html with status 200 for missing API routes.
+async function readGameResponse(res: Response) {
+  const contentType = res.headers.get('content-type') || '';
+  if (res.status === 413) {
+    throw new Error('حجم الملف أكبر من الحد المسموح على الاستضافة.');
+  }
+  if (!contentType.includes('application/json')) {
+    throw new Error('خدمة إدارة اللعبة غير متصلة على هذه الاستضافة. تعذر تنفيذ العملية؛ لم يتم تأكيد أي تحديث للعبة.');
+  }
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error('وصل رد غير صالح من خدمة إدارة اللعبة. أعد المحاولة لاحقاً.');
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('وصل رد غير صالح من خدمة إدارة اللعبة.');
+  }
+  if (!res.ok || data.success !== true) {
+    throw new Error(typeof data.error === 'string' ? data.error : 'تعذر تنفيذ العملية على خادم اللعبة.');
+  }
+  return data;
+}
+
 interface GameFileInfo {
   path: string;
   size: number;
@@ -60,6 +84,7 @@ export default function AdminGameManager() {
   const [activeSubTab, setActiveSubTab] = useState<'download' | 'upload' | 'backups' | 'ai-guide'>('download');
   const [loading, setLoading] = useState(true);
   const [gameData, setGameData] = useState<GameData | null>(null);
+  const [serviceError, setServiceError] = useState('');
   
   // Download states
   const [downloading, setDownloading] = useState(false);
@@ -93,15 +118,15 @@ export default function AdminGameManager() {
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
       const res = await fetch('/api/game/info', { headers });
-      if (!res.ok) {
-        throw new Error(`خطأ ${res.status}: تعذر جلب معلومات اللعبة`);
-      }
-      const data = await res.json();
+      const data = await readGameResponse(res);
       if (data.success) {
         setGameData(data);
+        setServiceError('');
       }
     } catch (err: any) {
       console.error(err);
+      setGameData(null);
+      setServiceError(err.message || 'فشل الاتصال بخادم اللعبة');
       toast.error(err.message || 'فشل الاتصال بخادم اللعبة');
     } finally {
       setLoading(false);
@@ -121,7 +146,10 @@ export default function AdminGameManager() {
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
       const res = await fetch('/api/game/download', { headers });
-      if (!res.ok) throw new Error('تعذر تحميل حزمة اللعبة من الخادم');
+      if (!res.ok || !(res.headers.get('content-type') || '').includes('application/zip')) {
+        await readGameResponse(res);
+        throw new Error('لم تصل حزمة ZIP صالحة من خادم اللعبة.');
+      }
 
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
@@ -144,6 +172,10 @@ export default function AdminGameManager() {
 
   // Inspect uploaded zip client-side before sending
   const handleZipSelection = async (file: File) => {
+    if (file.size > 60 * 1024 * 1024) {
+      toast.error('حجم ملف اللعبة يجب ألا يتجاوز 60 ميجابايت.');
+      return;
+    }
     setUploadFile(file);
     setZipInspecting(true);
     setZipContents([]);
@@ -182,6 +214,10 @@ export default function AdminGameManager() {
 
   // Upload and Deploy New Version
   const handleDeployGame = async () => {
+    if (serviceError || !gameData) {
+      toast.error(serviceError || 'انتظر التحقق من اتصال خدمة إدارة اللعبة أولاً.');
+      return;
+    }
     if (!uploadFile) {
       toast.error('يرجى اختيار ملف ZIP أولاً');
       return;
@@ -210,7 +246,7 @@ export default function AdminGameManager() {
       });
 
       setUploadProgress(90);
-      const result = await res.json();
+      const result = await readGameResponse(res);
 
       if (!res.ok || !result.success) {
         throw new Error(result.error || 'فشل رفع وتحديث اللعبة');
@@ -361,6 +397,12 @@ export default function AdminGameManager() {
 
   return (
     <div className="space-y-6" dir="rtl">
+      {serviceError && (
+        <div role="alert" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-200">
+          <p className="font-bold">تعذر الاتصال بخدمة إدارة اللعبة</p>
+          <p className="mt-1 leading-relaxed">{serviceError}</p>
+        </div>
+      )}
       {/* Top Header Card */}
       <div className="bg-white dark:bg-card-dark p-6 rounded-2xl border border-slate-200/80 dark:border-border-dark shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -425,7 +467,7 @@ export default function AdminGameManager() {
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200/60 dark:border-border-dark">
             <span className="text-xs text-slate-500 dark:text-slate-400 block mb-1">الحالة والمسار</span>
             <strong className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 block truncate" title="public/games/ittihadawy">
-              جاهزة ونشطة
+              {loading ? 'جاري التحقق…' : serviceError ? 'الخدمة غير متصلة' : gameData?.exists ? 'جاهزة ونشطة' : 'لا توجد حزمة لعبة'}
             </strong>
           </div>
         </div>
@@ -578,7 +620,7 @@ export default function AdminGameManager() {
                         {file.formattedSize}
                       </td>
                       <td className="p-3 text-slate-400 text-[11px]">
-                        {new Date(file.lastModified).toLocaleDateString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}
+                        {new Date(file.lastModified).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}
                       </td>
                     </tr>
                   ))}
