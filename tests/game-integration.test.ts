@@ -214,3 +214,55 @@ test('speed pickups are spaced farther apart while normal coin rows remain',()=>
  for(let i=1;i<pickups.length;i++)assert.ok(pickups[i]-pickups[i-1]>=420);
  assert.equal(coins,400);
 });
+
+function regionScenery(id:string,index=0) {
+ const declaration=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='addRegionDetails')!;
+ const decorate=new Function('return ('+declaration.getText(source)+')')();
+ const shapes:{kind:string,args:any[]}[]=[];
+ const primitives=Object.fromEntries(['box','cylinder','ball','label'].map(kind=>[kind,(_group:any,...args:any[])=>{shapes.push({kind,args});return {rotation:{}}}]));
+ decorate({}, {id}, index, primitives);
+ return shapes;
+}
+
+test('Dekheila has an open left seafront with dock, cargo ship and cranes',()=>{
+ const shapes=regionScenery('dekheila',8);
+ assert.ok(shapes.some(s=>s.kind==='ball'&&s.args[0]===-45));
+ assert.ok(shapes.filter(s=>s.kind==='cylinder'&&s.args[1]===6&&s.args[5]===12).length===4);
+ assert.ok(shapes.some(s=>s.kind==='label'&&s.args[0]==='ميناء الدخيلة'));
+ for(const shape of shapes.filter(s=>s.kind!=='label'))assert.ok(shape.args[0]<-20);
+ const variable=source.statements.filter(ts.isVariableStatement).flatMap(n=>Array.from(n.declarationList.declarations)).find(n=>n.name.getText(source)==='_0')!;
+ const regions=new Function('return '+variable.initializer!.getText(source))();
+ assert.equal(regions.find((r:any)=>r.id==='dekheila').sea,true);
+});
+
+test('Agamy villa gardens have extra leafy trees and Wardian has striped smoking stacks',()=>{
+ const declaration=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='plantVillaTrees')!;
+ const plant=new Function('return ('+declaration.getText(source)+')')();
+ const trunks:any[][]=[],leaves:any[][]=[];
+ plant({}, {cylinder:(_g:any,...args:any[])=>trunks.push(args),ball:(_g:any,...args:any[])=>leaves.push(args)});
+ assert.deepEqual(trunks.map(s=>s[0]),[-8.5,8.5]);assert.equal(leaves.length,4);
+ const villa=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='jR')!;
+ assert.match(villa.getText(source),/plantVillaTrees\(m,/);
+ const industrial=regionScenery('wardian');
+ assert.equal(industrial.filter(s=>s.kind==='cylinder').length,18);
+ assert.equal(industrial.filter(s=>s.kind==='ball').length,6);
+});
+
+test('Hadra vegetable stalls occupy all four left lanes and leave runner lanes clear',()=>{
+ const shapes=regionScenery('hadra');
+ const stalls=shapes.filter(s=>s.kind==='box'&&s.args[1]===.55);
+ assert.equal(stalls.length,20);
+ assert.deepEqual([...new Set(stalls.map(s=>s.args[0]))],[-17.5,-14.5,-11.5,-8.5]);
+ assert.equal(shapes.filter(s=>s.kind==='ball').length,180);
+ for(const shape of shapes)assert.ok(shape.args[0]<-6);
+});
+
+test('Mex has one black and white lighthouse per region pass, and HUD names the current region',()=>{
+ const shapes=Array.from({length:10},(_,i)=>regionScenery('mex',i+107)).flat();
+ const bands=shapes.filter(s=>s.kind==='cylinder'&&s.args[5]===1.6);
+ assert.equal(bands.length,8);
+ assert.deepEqual(bands.map(s=>s.args[6]),[0xf6f4ea,0x202729,0xf6f4ea,0x202729,0xf6f4ea,0x202729,0xf6f4ea,0x202729]);
+ assert.ok(shapes.every(s=>s.args[0]<-25));
+ const ui=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='WC')!.getText(source);
+ assert.match(ui,/className:"current-region",title:z\.current\.name},z\.current\.name/);
+});

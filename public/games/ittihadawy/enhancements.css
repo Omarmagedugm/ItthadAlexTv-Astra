@@ -13,7 +13,9 @@ html,body{position:fixed;inset:0;width:100%;height:100%;overscroll-behavior:none
 .runner-hud{top:calc(env(safe-area-inset-top,0px) + 70px)!important}
 .mini-route{top:calc(env(safe-area-inset-top,0px) + 75px)!important;right:14px!important}
 .road-sign{display:none!important}
+.mini-route{top:calc(env(safe-area-inset-top,0px) + 110px)!important}
+.current-region{position:absolute;bottom:calc(100% + 7px);right:0;display:block;width:max-content;max-width:165px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 10px;border:1px solid #b9d5bb66;border-radius:9px;background:#123e32ed;color:#ffe28a;font-size:10px;line-height:1.6;box-shadow:0 3px 12px #0003}
 .game-account-status{border-top:1px solid #ffffff25;margin-top:18px;padding-top:12px}
 .game-account-status p{font-size:11px}.game-account-status a{display:inline-block;color:#8ce2b3;font-size:12px;padding:8px;text-decoration:none}
 input[type=range]{direction:ltr;touch-action:none;min-height:36px}
-@media(max-height:500px){.runner-hud{top:60px!important}.velocity b{font-size:34px}.hud-chip{margin-top:3px;padding:4px 7px}.mini-route{top:64px!important;width:62px;height:62px}.boost-status{top:220px}}
+@media(max-height:500px){.runner-hud{top:60px!important}.velocity b{font-size:34px}.hud-chip{margin-top:3px;padding:4px 7px}.mini-route{top:100px!important;width:62px;height:62px}.boost-status{top:220px}}
