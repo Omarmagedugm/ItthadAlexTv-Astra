@@ -597,7 +597,7 @@ export default function AdminGameManager() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Track 1 */}
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200/70 dark:border-border-dark space-y-3">
                 <div className="flex items-center justify-between">
@@ -641,7 +641,7 @@ export default function AdminGameManager() {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center">♬</span>
-                    <span>زمارة عادل شكل (٦ إلا تلت)</span>
+                    <span>زمارة عادل (٦ إلا تلت)</span>
                   </span>
                   <span className="text-[11px] font-mono text-slate-400">adel-horn.mp3</span>
                 </div>
@@ -651,6 +651,82 @@ export default function AdminGameManager() {
                   <label className="cursor-pointer text-amber-600 font-bold hover:underline">
                     <span>استبدال</span>
                     <input type="file" accept=".mp3,.m4a" className="hidden" onChange={(e) => handleUploadAudio(e, 'adel-horn.mp3')} />
+                  </label>
+                </div>
+              </div>
+
+              {/* Hamido Crab */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200/70 dark:border-border-dark space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-cyan-600 text-white text-[10px] flex items-center justify-center">🦀</span>
+                    <span>حميدو (أبو جلمبو)</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-400">hamido-crab.mp3</span>
+                </div>
+                <audio controls className="w-full h-8" preload="none" src="/games/ittihadawy/audio/hamido-crab.mp3" />
+                <div className="flex items-center justify-between pt-1 text-[11px]">
+                  <span className="text-slate-500">صوت أبو جلمبو عند القدرة</span>
+                  <label className="cursor-pointer text-cyan-600 font-bold hover:underline">
+                    <span>استبدال</span>
+                    <input type="file" accept=".mp3,.m4a" className="hidden" onChange={(e) => handleUploadAudio(e, 'hamido-crab.mp3')} />
+                  </label>
+                </div>
+              </div>
+
+              {/* Adel Shakl Hit (بطني بتتحرق) */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200/70 dark:border-border-dark space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center">💥</span>
+                    <span>عادل (بطني بتتحرق - خبطة)</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-400">adel-hit.mp3</span>
+                </div>
+                <audio controls className="w-full h-8" preload="none" src="/games/ittihadawy/audio/adel-hit.mp3" />
+                <div className="flex items-center justify-between pt-1 text-[11px]">
+                  <span className="text-slate-500">صوت الصدمة عند العائق</span>
+                  <label className="cursor-pointer text-rose-600 font-bold hover:underline">
+                    <span>استبدال / رفع</span>
+                    <input type="file" accept=".mp3,.m4a" className="hidden" onChange={(e) => handleUploadAudio(e, 'adel-hit.mp3')} />
+                  </label>
+                </div>
+              </div>
+
+              {/* Adel Shakl Caught (الشرطة مسكتك) */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200/70 dark:border-border-dark space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center">🚨</span>
+                    <span>عادل (لما يتمسك - Game Over)</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-400">adel-caught.mp3</span>
+                </div>
+                <audio controls className="w-full h-8" preload="none" src="/games/ittihadawy/audio/adel-caught.mp3" />
+                <div className="flex items-center justify-between pt-1 text-[11px]">
+                  <span className="text-slate-500">صوت القفش ونهاية الجولة</span>
+                  <label className="cursor-pointer text-red-600 font-bold hover:underline">
+                    <span>استبدال / رفع</span>
+                    <input type="file" accept=".mp3,.m4a" className="hidden" onChange={(e) => handleUploadAudio(e, 'adel-caught.mp3')} />
+                  </label>
+                </div>
+              </div>
+
+              {/* Adel Shakl Boost (يا واد يا زعيم - السرعة والبرق) */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200/70 dark:border-border-dark space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center">⚡</span>
+                    <span>عادل (يا واد يا زعيم - السرعة)</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-400">adel-boost.mp3</span>
+                </div>
+                <audio controls className="w-full h-8" preload="none" src="/games/ittihadawy/audio/adel-boost.mp3" />
+                <div className="flex items-center justify-between pt-1 text-[11px]">
+                  <span className="text-slate-500">صوت البرق والسرعة الخارقة</span>
+                  <label className="cursor-pointer text-amber-600 font-bold hover:underline">
+                    <span>استبدال / رفع</span>
+                    <input type="file" accept=".mp3,.m4a" className="hidden" onChange={(e) => handleUploadAudio(e, 'adel-boost.mp3')} />
                   </label>
                 </div>
               </div>
