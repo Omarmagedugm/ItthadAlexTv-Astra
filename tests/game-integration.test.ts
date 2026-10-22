@@ -105,25 +105,38 @@ test('account bridge rejects outside frames and cannot credit a run to a differe
  message('ittihadawy:run-end','valid',result);await instance.flush();assert.equal(writes.length,1);
 });
 
-test('advertising boards face the runner and stay in front of building facades in streets and alleys',()=>{
+test('ads are smaller and stay beside the player corridor instead of overhead',()=>{
  const ad=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='jp')!;
- class Group {name='';children:any[]=[];position={x:0,y:0,z:0,set(x:number,y:number,z:number){Object.assign(this,{x,y,z})}};rotation={y:0};add(child:any){this.children.push(child)}}
- class Mesh extends Group {userData:any={};constructor(public geometry:any,public material:any){super()}}
+ class Group {name='';userData:any={};children:any[]=[];position={x:0,y:0,z:0,set(x:number,y:number,z:number){Object.assign(this,{x,y,z})}};rotation={y:0};add(child:any){this.children.push(child)}traverse(callback:Function){callback(this);for(const child of this.children)child.traverse(callback)}}
+ class Mesh extends Group {isMesh=true;constructor(public geometry:any,public material:any){super()}}
  class Plane {constructor(public width:number,public height:number){}}
  const makeAd=new Function('oe','Mt','Vs','iC','return ('+ad.getText(source)+')')(Group,Mesh,Plane,()=>({ad:true}));
- for(const [zone,index] of [['shatby',3],['komeldikka',4],['agamy',6]] as const){
+ for(const [zone,index] of [['shatby',18],['komeldikka',18],['agamy',36]] as const){
   const group=new Group(),boxes:number[][]=[];
   makeAd(group,index,zone,{box:(_g:any,...args:number[])=>boxes.push(args),label:()=>{}});
-  const stand=group.children[0],face=stand.children[0];
-  assert.equal(stand.rotation.y,0);assert.equal(stand.position.x,0);
-  assert.ok(face.position.x+face.geometry.width/2<4.2);
-  assert.ok(face.position.x-face.geometry.width/2>-4.2);
-  assert.ok(face.position.y-face.geometry.height/2>4.5);
-  assert.equal(stand.position.z,14);
-  assert.ok(boxes.every(([x,_y,_z,width])=>x+width/2<4.2&&x-width/2>-4.2));
+  const stand=group.children[0],face=stand.children[0],right=stand.position.x+face.position.x+face.geometry.width/2;
+  assert.equal(stand.rotation.y,0);assert.equal(stand.userData.channelAd,true);
+  assert.ok(face.geometry.width<=2.7);assert.equal(face.userData.noBatch,true);
+  if(zone==='komeldikka'){assert.ok(right<4.2);assert.ok(stand.position.x>=3)}else{assert.ok(right<-5);assert.equal(stand.position.x,-6.5)}
  }
+ const root=new Group();for(let index=-2;index<360;index++)makeAd(root,index,'shatby',{box:()=>{},label:()=>{}});
+ assert.equal(root.children.length,20); // One per 1080 m rather than every 180 m.
 });
-test('region sign plate and support stay clear of facades and do not overlap the nearby ad',()=>{
+test('the entire advertisement disappears before approaching the camera',()=>{
+ const game=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
+ const method=game.members.find(n=>n.name?.getText(source)==='updateAdVisibility')!;
+ const update=new Function('return ({'+method.getText(source)+'}).updateAdVisibility')();
+ const ad={userData:{channelAd:true},position:{z:0},visible:true},frame={userData:{noBatch:true}};
+ const segment={group:{position:{z:0},children:[ad]}};
+ for(const [z,expected] of [[-11,false],[-12,true],[-50,true],[-161,false],[10,false]]){
+  segment.group.position.z=z as number;update.call({segments:[segment]});assert.equal(ad.visible,expected);
+ }
+ const world=game.members.find(n=>n.name?.getText(source)==='updateWorld')!;
+ assert.match(world.getText(source),/this\.updateAdVisibility\(\)/);
+ const batch=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='Kp')!;
+ assert.match(batch.getText(source),/o\.userData\.noBatch/);
+});
+test('region sign plate and support stay clear of facades',()=>{
  const game=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
  const method=game.members.find(n=>n.name?.getText(source)==='regionSign')!;
  const region={name:'الشاطبي',end:300},boxes:number[][]=[],labels:any[][]=[];
@@ -131,5 +144,5 @@ test('region sign plate and support stay clear of facades and do not overlap the
  sign({},0);assert.equal(labels.length,1);
  assert.ok(boxes.every(([x,_y,_z,width])=>x+width/2<4.2&&x-width/2>-4.2));
  const board=boxes[2];assert.ok(board[1]-board[4]/2>4.5);
- assert.ok(Math.abs(board[2]-14)>=30);
+
 });
