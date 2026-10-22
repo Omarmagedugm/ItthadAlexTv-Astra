@@ -712,18 +712,18 @@ export default function AdminGameManager() {
                 </div>
               </div>
 
-              {/* Adel Shakl Boost (يا واد يا زعيم - السرعة والبرق) */}
+              {/* Adel Shakl ball collision (legacy audio asset key) */}
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200/70 dark:border-border-dark space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center">⚡</span>
-                    <span>عادل (يا واد يا زعيم - السرعة)</span>
+                    <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center">⚽</span>
+                    <span>عادل (يا واد يا زعيم - خبط الكور)</span>
                   </span>
                   <span className="text-[11px] font-mono text-slate-400">adel-boost.mp3</span>
                 </div>
                 <audio controls className="w-full h-8" preload="none" src="/games/ittihadawy/audio/adel-boost.mp3" />
                 <div className="flex items-center justify-between pt-1 text-[11px]">
-                  <span className="text-slate-500">صوت البرق والسرعة الخارقة</span>
+                  <span className="text-slate-500">فويس عادل عند الاصطدام بالكور</span>
                   <label className="cursor-pointer text-amber-600 font-bold hover:underline">
                     <span>استبدال / رفع</span>
                     <input type="file" accept=".mp3,.m4a" className="hidden" onChange={(e) => handleUploadAudio(e, 'adel-boost.mp3')} />

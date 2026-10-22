@@ -9,7 +9,7 @@ const source=ts.createSourceFile('game.js',readFileSync('public/games/ittihadawy
 const sound=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='gC') as ts.ClassDeclaration;
 const makeSound=(saved:Record<string,string>={})=>{
  const store={getItem:(key:string)=>saved[key]??null,setItem:(key:string,value:string)=>saved[key]=value};
- const Sound=new Function('window','localStorage','return ('+sound.getText(source)+')')({},store);
+ const Sound=new Function('window','localStorage','Audio','return ('+sound.getText(source)+')')({},store,class {currentTime=0;plays=0;preload="";pause(){}play(){this.plays++;return Promise.resolve()}});
  return new Sound(false);
 };
 const gain=()=>({gain:{value:1,setTargetAtTime(value:number){this.value=value}},connect(){return this}});
@@ -35,9 +35,30 @@ test('iOS media gain follows live sliders independently and reaches silence',()=
  s.muted=false;s.applyVolumes();assert.equal(s.mediaNodes.get(s.soundtrack).gain.gain.value,.18);
  assert.equal(s.mediaNodes.size,2);
 });
-test('Adel speed voice is not overridden by a duplicate method',()=>{
+test('speed pickup uses a sound effect without speech for every character',()=>{
  const boosts=sound.members.filter(n=>n.name?.getText(source)==='boost');
- assert.equal(boosts.length,1);assert.match(boosts[0].getText(source),/adel-boost.mp3/);
+ assert.equal(boosts.length,1);
+ assert.doesNotMatch(boosts[0].getText(source),/new Audio|\.play\(|adel-boost/);
+ assert.match(boosts[0].getText(source),/createOscillator/);
+});
+test('only Adel plays the moved clip when hitting a ball, and mute is respected',()=>{
+ const s=makeSound();s.ctx=context();s.master=gain();let genericHits=0;s.hit=()=>genericHits++;
+ s.ballHit('gamal');s.ballHit('hamido');assert.equal(genericHits,2);assert.equal(s.adelBoostAudio,undefined);
+ s.ballHit('adel');assert.equal(s.adelBoostAudio.plays,1);assert.equal(s.adelBoostAudio.currentTime,0);
+ assert.equal(s.mediaNodes.get(s.adelBoostAudio).gain.gain.value,.95);
+ s.muted=true;s.ballHit('adel');assert.equal(s.adelBoostAudio.plays,1);
+ s.muted=false;s.effectsEnabled=false;s.ballHit('adel');assert.equal(s.adelBoostAudio.plays,1);
+});
+test('collision dispatch selects ball voice separately from ordinary obstacles',()=>{
+ let expression:ts.ConditionalExpression|undefined;
+ const visit=(node:ts.Node)=>{if(ts.isConditionalExpression(node)&&node.whenTrue.getText(source)==='this.sound.ballHit(this.characterId)')expression=node;ts.forEachChild(node,visit)};
+ visit(source);assert.ok(expression);
+ const dispatch=new Function('g','return '+expression!.getText(source));
+ for(const characterId of ['adel','gamal','hamido'])for(const type of ['ball','low','high','block']){
+   const calls:string[]=[];
+   dispatch.call({characterId,sound:{ballHit:()=>calls.push('ball'),hit:()=>calls.push('obstacle')}},{type});
+   assert.deepEqual(calls,[type==='ball'?'ball':'obstacle']);
+ }
 });
 test('lower or equal runs cannot replace a members highest score',()=>{
  const result={score:500,distance:200,character:'adel'};
@@ -82,4 +103,33 @@ test('account bridge rejects outside frames and cannot credit a run to a differe
  message('ittihadawy:run-start','valid');await instance.flush();message('ittihadawy:run-end','valid',result);await instance.flush();
  assert.equal(writes.length,1);assert.equal(writes[0][0].uid,'member-b');assert.equal(replies.at(-1).status,'saved');
  message('ittihadawy:run-end','valid',result);await instance.flush();assert.equal(writes.length,1);
+});
+
+test('advertising boards face the runner and stay in front of building facades in streets and alleys',()=>{
+ const ad=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='jp')!;
+ class Group {name='';children:any[]=[];position={x:0,y:0,z:0,set(x:number,y:number,z:number){Object.assign(this,{x,y,z})}};rotation={y:0};add(child:any){this.children.push(child)}}
+ class Mesh extends Group {userData:any={};constructor(public geometry:any,public material:any){super()}}
+ class Plane {constructor(public width:number,public height:number){}}
+ const makeAd=new Function('oe','Mt','Vs','iC','return ('+ad.getText(source)+')')(Group,Mesh,Plane,()=>({ad:true}));
+ for(const [zone,index] of [['shatby',3],['komeldikka',4],['agamy',6]] as const){
+  const group=new Group(),boxes:number[][]=[];
+  makeAd(group,index,zone,{box:(_g:any,...args:number[])=>boxes.push(args),label:()=>{}});
+  const stand=group.children[0],face=stand.children[0];
+  assert.equal(stand.rotation.y,0);assert.equal(stand.position.x,0);
+  assert.ok(face.position.x+face.geometry.width/2<4.2);
+  assert.ok(face.position.x-face.geometry.width/2>-4.2);
+  assert.ok(face.position.y-face.geometry.height/2>4.5);
+  assert.equal(stand.position.z,14);
+  assert.ok(boxes.every(([x,_y,_z,width])=>x+width/2<4.2&&x-width/2>-4.2));
+ }
+});
+test('region sign plate and support stay clear of facades and do not overlap the nearby ad',()=>{
+ const game=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
+ const method=game.members.find(n=>n.name?.getText(source)==='regionSign')!;
+ const region={name:'الشاطبي',end:300},boxes:number[][]=[],labels:any[][]=[];
+ const sign=new Function('x0','Mr','Uf','Xt','Be','return ({'+method.getText(source)+'}).regionSign')(()=>({current:region}),[region],300,(_g:any,...args:number[])=>boxes.push(args),(...args:any[])=>labels.push(args));
+ sign({},0);assert.equal(labels.length,1);
+ assert.ok(boxes.every(([x,_y,_z,width])=>x+width/2<4.2&&x-width/2>-4.2));
+ const board=boxes[2];assert.ok(board[1]-board[4]/2>4.5);
+ assert.ok(Math.abs(board[2]-14)>=30);
 });
