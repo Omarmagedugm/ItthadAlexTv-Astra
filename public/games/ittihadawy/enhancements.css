@@ -1,3 +1,9 @@
+/* Fill the visible viewport even when iOS rotation is locked. */
+html,body{position:fixed;inset:0;width:100%;height:100%;overscroll-behavior:none}
+#root{position:fixed;inset:0;width:100%;height:100%;height:100dvh;max-width:none;max-height:none}
+#root>main{position:absolute;inset:0;width:100%;height:100%;max-width:none;max-height:none}
+.scene{display:block;width:100%;height:100%}
+.scene canvas{display:block;width:100%!important;height:100%!important;max-width:none;max-height:none}
 /* Keep actions above the HUD and away from roadside region signs. */
 .back-app-link{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 12px)!important;left:12px!important;right:auto!important;width:40px!important;height:40px!important;padding:0!important;justify-content:center;font-size:0!important;z-index:12!important;border-radius:50%!important}
 .back-app-link:before{content:'←';font-size:22px;line-height:1}

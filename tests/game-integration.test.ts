@@ -159,3 +159,32 @@ test('Adel arrest immediately stops and rewinds the hit voice before playing the
  events.length=0;s.muted=false;s.tone=()=>events.push('generic-arrest');
  s.caught('hamido');assert.deepEqual(events,['generic-arrest']);
 });
+
+test('canvas follows the scene size in portrait, landscape and after initially hidden layout',()=>{
+ const game=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
+ const method=game.members.find(n=>n.name?.getText(source)==='resize')!;
+ const resize=new Function('return ({'+method.getText(source)+'}).resize')();
+ const sizes:number[][]=[];let projections=0;
+ const engine={disposed:false,el:{clientWidth:0,clientHeight:0},renderer:{setSize:(...size:number[])=>sizes.push(size)},camera:{aspect:1,updateProjectionMatrix:()=>projections++}};
+ resize.call(engine);assert.equal(sizes.length,0);
+ for(const [width,height] of [[393,852],[852,393],[393,760]]){
+  engine.el.clientWidth=width;engine.el.clientHeight=height;resize.call(engine);
+  assert.deepEqual(sizes.at(-1),[width,height]);assert.equal(engine.camera.aspect,width/height);
+ }
+ assert.equal(projections,3);engine.disposed=true;resize.call(engine);assert.equal(projections,3);
+ const constructor=game.members.find(ts.isConstructorDeclaration)!.getText(source);
+ assert.match(constructor,/viewportObserver\?\.observe\(this\.el\)/);
+ assert.match(constructor,/window\.visualViewport,"resize"/);
+ const destroy=game.members.find(n=>n.name?.getText(source)==='destroy')!.getText(source);
+ assert.match(destroy,/viewportObserver\?\.disconnect\(\)/);
+});
+
+test('arrest transition dispatches Adel caught voice once before the capture scene',()=>{
+ const game=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
+ const method=game.members.find(n=>n.name?.getText(source)==='end')!;
+ const end=new Function('localStorage','return ({'+method.getText(source)+'}).end')({setItem(){}});
+ const events:string[]=[];
+ const engine={state:'PLAYING',characterId:'adel',player:{position:{x:0},rotation:{z:0},userData:{}},run:{boostTime:0,smoke:0,distance:100,points:50},best:{distance:0,score:0},boostAura:{visible:false},cb:{best(){}},sound:{whistle(){},caught:(id:string)=>events.push('caught:'+id)},setState(state:string){this.state=state;events.push(state)}};
+ end.call(engine);end.call(engine);
+ assert.deepEqual(events,['caught:adel','FALLING']);
+});

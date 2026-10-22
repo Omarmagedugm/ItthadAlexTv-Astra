@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import ts from 'typescript';
 import { retargetAdelAudio } from './lib/game-collision-audio.mjs';
 import { keepSignsClear } from './lib/game-sign-placement.mjs';
+import { fitGameViewport } from './lib/game-viewport.mjs';
 const root=new URL('../public/games/ittihadawy/',import.meta.url);
 let html=readFileSync(new URL('index.html',root),'utf8');
 const old=html.match(/src="\/games\/ittihadawy\/(assets\/index-[^"]+\.js)"/)[1];
@@ -45,7 +46,7 @@ patch('this.master.gain.setTargetAtTime(this.muted?0:.7,this.ctx.currentTime,.02
 patch('this.sound.muted=t,this.sound.opening','this.sound.muted=t,this.sound.applyVolumes(),this.sound.opening');
 patch('},[]);const z=x0(o.distance)','},[]);di.useEffect(()=>{const engine=t.current;if(!engine)return;if(audioModalOpen){if(["INTRO","PLAYING","FALLING"].includes(engine.state)){engine.audioSettingsResume=true;engine.action("pause")}}else if(engine.audioSettingsResume){engine.audioSettingsResume=false;if(engine.state==="PAUSED")engine.action("resume")}},[audioModalOpen]);const z=x0(o.distance)');
 code=code.replaceAll('حكايات زعيم الثغر','قناة الاتحاد');
-code=keepSignsClear(retargetAdelAudio(code));
+code=fitGameViewport(keepSignsClear(retargetAdelAudio(code)));
 const hash=createHash('sha256').update(code).digest('hex').slice(0,8),name=`assets/index-${hash}.js`;
 writeFileSync(new URL(name,root),code);unlinkSync(new URL(old,root));
 html=html.replace(old,name).replaceAll('حكايات زعيم الثغر','قناة الاتحاد').replace('</head>','<link rel="stylesheet" href="/games/ittihadawy/enhancements.css?v=1"><script type="module" src="/games/ittihadawy/enhancements.js?v=1"></script></head>');writeFileSync(new URL('index.html',root),html);
