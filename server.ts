@@ -26,7 +26,8 @@ import {
   createBackup,
   extractAndDeployGameZip,
   restoreGameBackup,
-  deleteGameBackup
+  deleteGameBackup,
+  saveGameAudio
 } from './server/gameHandler.ts';
 
 dotenv.config();
@@ -659,6 +660,20 @@ OUTPUT: Return ONLY the transformed image.`;
       }
       const ok = deleteGameBackup(backupId);
       res.json({ success: ok });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/game/upload-audio', requireAdmin, gameZipUpload.single('file'), (req: any, res: any) => {
+    try {
+      if (!req.file || !req.file.buffer) {
+        return res.status(400).json({ error: 'يرجى اختيار ملف صوتي MP3 صالح' });
+      }
+      const filename = req.body?.trackName || req.file.originalname || 'alexandria-theme-2.mp3';
+      const result = saveGameAudio(filename, req.file.buffer);
+      console.log(`[Admin Game] Audio track uploaded by admin (${req.user?.uid}): ${result.filename}`);
+      res.json({ success: true, ...result });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

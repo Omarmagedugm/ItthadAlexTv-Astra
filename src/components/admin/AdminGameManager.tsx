@@ -271,6 +271,37 @@ export default function AdminGameManager() {
     }
   };
 
+  // Upload Single Audio Track
+  const handleUploadAudio = async (e: React.ChangeEvent<HTMLInputElement>, trackName: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('trackName', trackName);
+
+      toast.loading(`جاري رفع ${trackName}...`, { id: 'audio-upload' });
+      const res = await fetch('/api/game/upload-audio', {
+        method: 'POST',
+        headers,
+        body: formData
+      });
+      const data = await readGameResponse(res);
+      if (data.success) {
+        toast.success(`تم تحديث المقطع الصوتي ${trackName} بنجاح!`, { id: 'audio-upload' });
+        await fetchGameInfo();
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'فشل رفع الملف الصوتي', { id: 'audio-upload' });
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   // Create Manual Backup
   const handleCreateBackup = async () => {
     try {
@@ -549,6 +580,80 @@ export default function AdminGameManager() {
                 <Download size={19} className={downloading ? 'animate-bounce' : ''} />
                 <span>{downloading ? 'جاري تجهيز التحميل…' : `تحميل الحزمة الآن (${gameData?.formattedSize || '...'})`}</span>
               </button>
+            </div>
+          </div>
+
+          {/* Soundtrack Playlist Card */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-card-dark border border-slate-200/80 dark:border-border-dark space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                  <Music size={18} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm">الموسيقى التصويرية للعبة (Soundtrack Playlist)</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">مقطعان موسيقيان يعملان وراء بعضهما تلقائياً بالتتابع في حلقة مستمرة</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Track 1 */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200/70 dark:border-border-dark space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] flex items-center justify-center">١</span>
+                    <span>المقطع الأول (Track 1)</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-400">alexandria-theme.mp3</span>
+                </div>
+                <audio controls className="w-full h-8" preload="none" src="/games/ittihadawy/audio/alexandria-theme.mp3" />
+                <div className="flex items-center justify-between pt-1 text-[11px]">
+                  <span className="text-slate-500">موسيقى البداية والركض</span>
+                  <label className="cursor-pointer text-emerald-600 font-bold hover:underline">
+                    <span>استبدال</span>
+                    <input type="file" accept=".mp3,.m4a" className="hidden" onChange={(e) => handleUploadAudio(e, 'alexandria-theme.mp3')} />
+                  </label>
+                </div>
+              </div>
+
+              {/* Track 2 */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200/70 dark:border-border-dark space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] flex items-center justify-center">٢</span>
+                    <span>المقطع الثاني (Track 2)</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-400">alexandria-theme-2.mp3</span>
+                </div>
+                <audio controls className="w-full h-8" preload="none" src="/games/ittihadawy/audio/alexandria-theme-2.mp3" />
+                <div className="flex items-center justify-between pt-1 text-[11px]">
+                  <span className="text-slate-500">يعمل بعد المقطع الأول</span>
+                  <label className="cursor-pointer text-emerald-600 font-bold hover:underline">
+                    <span>استبدال</span>
+                    <input type="file" accept=".mp3,.m4a" className="hidden" onChange={(e) => handleUploadAudio(e, 'alexandria-theme-2.mp3')} />
+                  </label>
+                </div>
+              </div>
+
+              {/* Adel Shakl Horn */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200/70 dark:border-border-dark space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center">♬</span>
+                    <span>زمارة عادل شكل (٦ إلا تلت)</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-400">adel-horn.mp3</span>
+                </div>
+                <audio controls className="w-full h-8" preload="none" src="/games/ittihadawy/audio/adel-horn.mp3" />
+                <div className="flex items-center justify-between pt-1 text-[11px]">
+                  <span className="text-slate-500">صوت الزمارة عند القدرة</span>
+                  <label className="cursor-pointer text-amber-600 font-bold hover:underline">
+                    <span>استبدال</span>
+                    <input type="file" accept=".mp3,.m4a" className="hidden" onChange={(e) => handleUploadAudio(e, 'adel-horn.mp3')} />
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
 

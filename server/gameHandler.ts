@@ -318,3 +318,26 @@ export function deleteGameBackup(backupId: string) {
   }
   return false;
 }
+
+export function saveGameAudio(trackFilename: string, buffer: Buffer) {
+  const safeName = path.basename(trackFilename);
+  if (!safeName.endsWith('.mp3')) {
+    throw new Error('الملف يجب أن يكون بصيغة MP3');
+  }
+  const audioDir = path.join(GAME_DIR, 'audio');
+  if (!fs.existsSync(audioDir)) {
+    fs.mkdirSync(audioDir, { recursive: true });
+  }
+  const destPath = path.join(audioDir, safeName);
+  fs.writeFileSync(destPath, buffer);
+
+  if (fs.existsSync(DIST_GAME_DIR)) {
+    const distAudioDir = path.join(DIST_GAME_DIR, 'audio');
+    if (!fs.existsSync(distAudioDir)) {
+      fs.mkdirSync(distAudioDir, { recursive: true });
+    }
+    fs.writeFileSync(path.join(distAudioDir, safeName), buffer);
+  }
+
+  return { success: true, filename: safeName, size: buffer.length };
+}
