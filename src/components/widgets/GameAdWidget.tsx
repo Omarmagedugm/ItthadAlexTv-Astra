@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Gamepad2, Play, Trophy } from 'lucide-react';
+import { ArrowLeft, Gamepad2, Play, Trophy } from 'lucide-react';
 import { useAppStore } from '../../store';
 
 interface GameAdWidgetProps {
@@ -27,8 +27,6 @@ export default function GameAdWidget({ title, className = '' }: GameAdWidgetProp
         .dark .ittihad-game-card .game-play{background:#cddd9d;color:#143b2b}
         .ittihad-game-card .game-play:hover{background:#207c59}
         .dark .ittihad-game-card .game-play:hover{background:#e0edb7}
-        .ittihad-game-card .game-external{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:10px 12px;color:var(--game-muted);font-size:11px;white-space:nowrap;border-radius:10px}
-        .ittihad-game-card .game-external:hover{color:var(--game-ink);background:color-mix(in srgb,var(--game-muted) 10%,transparent)}
         .ittihad-game-card a:focus-visible{outline:2px solid #3ca876;outline-offset:4px}
         .ittihad-game-card .game-art{position:relative;height:166px;display:grid;place-items:center;border-radius:16px;background:#edf3e6;overflow:hidden}
         .dark .ittihad-game-card .game-art{background:#193e30}
@@ -51,7 +49,6 @@ export default function GameAdWidget({ title, className = '' }: GameAdWidgetProp
           .ittihad-game-card .game-description{font-size:11px}
           .ittihad-game-card .game-actions{gap:4px;margin-top:14px}
           .ittihad-game-card .game-play{padding:9px 12px;gap:7px}
-          .ittihad-game-card .game-external{padding:8px 4px;font-size:10px}
           .ittihad-game-card .game-footer{padding:11px 16px;flex-wrap:wrap;gap:7px}
         }
       `}</style>
@@ -62,7 +59,6 @@ export default function GameAdWidget({ title, className = '' }: GameAdWidgetProp
           <p className="game-description">شوارع إسكندرية مستنياك. اختار بطلك، اجمع الكؤوس وتحدّى نفسك في كل جولة.</p>
           <div className="game-actions">
             <Link to="/game" className="game-play"><Play size={14} fill="currentColor" aria-hidden="true" /><span>العب الآن</span><ArrowLeft size={15} aria-hidden="true" /></Link>
-            <a href="/games/ittihadawy/index.html" target="_blank" rel="noopener noreferrer" className="game-external" aria-label="فتح اللعبة في نافذة مستقلة"><span>شاشة مستقلة</span><ExternalLink size={13} aria-hidden="true" /></a>
           </div>
         </div>
         <div className="game-art" aria-hidden="true">
