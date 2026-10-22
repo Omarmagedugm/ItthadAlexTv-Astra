@@ -4,7 +4,6 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import './lib/confetti';
-import toast from 'react-hot-toast';
 import { registerSW } from 'virtual:pwa-register';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -33,10 +32,14 @@ window.addEventListener('appinstalled', () => {
   rememberAppInstalled();
 });
 
-// Handle service worker registration safely in background
-const applyAppUpdate = registerSW({
-  onNeedRefresh() {
-    toast(t => <span dir="rtl" className="flex items-center gap-3 text-sm">تحديث جديد جاهز<button className="whitespace-nowrap rounded-lg bg-emerald-600 px-3 py-2 text-white" onClick={() => { toast.dismiss(t.id); void applyAppUpdate(true); }}>تحديث الآن</button></span>, { id: 'app-update', duration: Infinity });
+// Activate published updates automatically, without a notification or confirmation.
+// Workbox only requests a reload after a new worker activates.
+let updateReloadStarted = false;
+registerSW({
+  onNeedReload() {
+    if (updateReloadStarted) return;
+    updateReloadStarted = true;
+    window.location.reload();
   },
   onOfflineReady() {
     console.log('[PWA] App is ready for offline use');

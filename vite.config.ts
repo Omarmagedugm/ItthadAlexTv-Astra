@@ -15,13 +15,13 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       VitePWA({
-        registerType: 'prompt',
+        registerType: 'autoUpdate',
         injectRegister: null,
         workbox: {
           importScripts: ['https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js'],
           cleanupOutdatedCaches: true,
-          skipWaiting: false,
-          clientsClaim: false,
+          skipWaiting: true,
+          clientsClaim: true,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,json,woff2,webmanifest}'],
           globIgnores: ['**/storage/**', '**/vendor-charts*', '**/Admin*'],
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // Increase to 5MB
