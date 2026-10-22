@@ -22,5 +22,7 @@ export function retargetAdelAudio(code) {
   swap('this.sound.boost(this.characterId)', 'this.sound.boost()');
   swap('this.cb.toast(this.characterId==="adel"?"يا واد يا زعيم! هتعورنا يا زعيم! ⚡":"انطلاقة البرق! سرعة وحماية لمدة ٣ ثواني")', 'this.cb.toast("انطلاقة البرق! سرعة وحماية لمدة ٣ ثواني")');
   swap('this.cb.toast(this.characterId==="adel"?"بطني بتتحرق!":"حاسب يا اتحاداوي! الشرطة قربت")', 'this.cb.toast(this.characterId==="adel"?(g.type==="ball"?"يا واد يا زعيم!":"بطني بتتحرق!"):"حاسب يا اتحاداوي! الشرطة قربت")');
+  // The arrest line takes priority over Adel's obstacle-hit reaction.
+  swap('caught(charId){if(this.muted)return;','caught(charId){if(charId==="adel"&&this.adelHitAudio){try{this.adelHitAudio.pause();this.adelHitAudio.currentTime=0}catch{}}if(this.muted)return;');
   return code;
 }

@@ -146,3 +146,16 @@ test('region sign plate and support stay clear of facades',()=>{
  const board=boxes[2];assert.ok(board[1]-board[4]/2>4.5);
 
 });
+
+test('Adel arrest immediately stops and rewinds the hit voice before playing the arrest clip',()=>{
+ const s=makeSound();s.ctx=context();s.master=gain();const events:string[]=[];
+ s.adelHitAudio={currentTime:2.3,pause(){events.push('stop-hit')}};
+ s.adelCaughtAudio={currentTime:1.1,volume:1,muted:false,pause(){events.push('restart-arrest')},play(){events.push('play-arrest');return Promise.resolve()}};
+ s.caught('adel');
+ assert.equal(s.adelHitAudio.currentTime,0);assert.equal(s.adelCaughtAudio.currentTime,0);
+ assert.deepEqual(events,['stop-hit','restart-arrest','play-arrest']);
+ events.length=0;s.muted=true;s.adelHitAudio.currentTime=2;
+ s.caught('adel');assert.equal(s.adelHitAudio.currentTime,0);assert.deepEqual(events,['stop-hit']);
+ events.length=0;s.muted=false;s.tone=()=>events.push('generic-arrest');
+ s.caught('hamido');assert.deepEqual(events,['generic-arrest']);
+});
