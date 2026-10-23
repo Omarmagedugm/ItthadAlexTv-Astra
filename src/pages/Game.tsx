@@ -1,15 +1,48 @@
 import { useState, useEffect, useRef } from 'react';
 import { Gamepad2, Play, ArrowRight, Trophy, Zap, Move } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import SEOHead from '../components/SEOHead';
 import GameLeaderboard from '../components/game/GameLeaderboard';
 import { auth, db } from '../lib/firebase';
 
 export default function Game() {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isCheckingMember, setIsCheckingMember] = useState(false);
+  const [loginRequired, setLoginRequired] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const latestResultRef = useRef<{ score: number; distance: number; character: string } | null>(null);
+
+  useEffect(() => auth.onAuthStateChanged((user) => {
+    if (!user) setIsPlaying(false);
+  }), []);
+
+  const startGameForMember = async () => {
+    setIsCheckingMember(true);
+    setLoginRequired(false);
+    try {
+      await auth.authStateReady();
+      if (!auth.currentUser) {
+        setLoginRequired(true);
+        return;
+      }
+      latestResultRef.current = null;
+      setIsPlaying(true);
+    } catch (error) {
+      console.warn('[GamePage] Could not verify the signed-in member:', error);
+      setLoginRequired(true);
+    } finally {
+      setIsCheckingMember(false);
+    }
+  };
+
+  const authorizeGameFrame = () => {
+    if (!auth.currentUser) return;
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: 'ittihadawy:member-access', authorized: true },
+      window.location.origin
+    );
+  };
 
   const saveScoreForUser = async (result: { score: number; distance?: number; character?: string }, requestId?: string) => {
     if (typeof result?.score !== 'number' || result.score < 1) return false;
@@ -27,7 +60,7 @@ export default function Game() {
       if (requestId) {
         iframeRef.current?.contentWindow?.postMessage(
           { type: 'ittihadawy:account', status: 'guest', id: requestId },
-          '*'
+          window.location.origin
         );
       }
       return false;
@@ -36,7 +69,7 @@ export default function Game() {
     if (requestId) {
       iframeRef.current?.contentWindow?.postMessage(
         { type: 'ittihadawy:account', status: 'saving', id: requestId },
-        '*'
+        window.location.origin
       );
     }
 
@@ -88,7 +121,7 @@ export default function Game() {
     if (requestId) {
       iframeRef.current?.contentWindow?.postMessage(
         { type: 'ittihadawy:account', status: saved ? 'saved' : 'error', id: requestId },
-        '*'
+        window.location.origin
       );
     }
 
@@ -107,6 +140,7 @@ export default function Game() {
   // Direct game listener: guarantees any score made by an authenticated member is saved instantly
   useEffect(() => {
     const handleGameMessage = async (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== iframeRef.current?.contentWindow) return;
       const data = event.data;
       if (!data) return;
 
@@ -145,6 +179,7 @@ export default function Game() {
           <iframe
             ref={iframeRef}
             src="/games/ittihadawy/index.html"
+            onLoad={authorizeGameFrame}
             title="لعبة اتحاداوي"
             className="h-full w-full border-0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
@@ -174,8 +209,9 @@ export default function Game() {
               <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-[#d3ed9b]"><Gamepad2 size={15}/>اللعبة الرسمية لجمهور الاتحاد</span>
               <h1 className="mt-4 text-4xl font-black sm:text-5xl">اتحاداوي<span className="text-[#cee991]">.</span></h1>
               <p className="mt-4 max-w-sm text-sm leading-7 text-emerald-50/75">من قلب المدرج لقلب المنافسة. اختار شخصيتك، عدّي العوائق، وخلي اسمك في الصدارة.</p>
-              <button type="button" onClick={() => setIsPlaying(true)} className="mt-5 flex w-full items-center justify-center gap-3 whitespace-nowrap rounded-2xl bg-[#cee991] px-6 py-4 font-bold text-[#102b23] transition hover:bg-[#dff4b3] active:scale-[.98] sm:w-auto"><Play size={20} fill="currentColor"/>ابدأ اللعب</button>
-              <div className="mt-4 flex gap-5 text-xs text-emerald-100/70"><span>٤ شخصيات</span><span>٣٧ منطقة</span><span>تحدّي بلا نهاية</span></div>
+              <button type="button" onClick={startGameForMember} disabled={isCheckingMember} className="mt-5 flex w-full items-center justify-center gap-3 whitespace-nowrap rounded-2xl bg-[#cee991] px-6 py-4 font-bold text-[#102b23] transition hover:bg-[#dff4b3] active:scale-[.98] disabled:cursor-wait disabled:opacity-70 sm:w-auto"><Play size={20} fill="currentColor"/>{isCheckingMember ? 'جارٍ التحقق من الحساب…' : 'ابدأ اللعب'}</button>
+              {loginRequired && <p role="alert" className="mt-3 text-sm text-amber-100">اللعب متاح للأعضاء المسجلين فقط. <Link to="/auth" className="font-bold underline underline-offset-4">سجّل الدخول أو أنشئ حسابًا</Link>.</p>}
+              <div className="mt-4 flex gap-5 text-xs text-emerald-100/70"><span>٤ شخصيات</span><span>٢٨ منطقة</span><span>تحدّي بلا نهاية</span></div>
             </div>
           </div>
         </section>

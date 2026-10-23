@@ -7,6 +7,16 @@ import { validGameResult, improvedGameStats } from '../src/lib/gameScores';
 const html=readFileSync('public/games/ittihadawy/index.html','utf8');
 const asset=html.match(/src="\/games\/ittihadawy\/(assets\/index-[^"]+.js)"/)![1];
 const source=ts.createSourceFile('game.js',readFileSync('public/games/ittihadawy/'+asset,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
+test('only a signed-in app member can open the game or unlock its standalone frame',()=>{
+ const page=readFileSync('src/pages/Game.tsx','utf8');
+ const html=readFileSync('public/games/ittihadawy/index.html','utf8');
+ const bridge=readFileSync('public/games/ittihadawy/enhancements.js','utf8');
+ assert.match(page,/await auth\.authStateReady\(\)[\s\S]*if \(!auth\.currentUser\)[\s\S]*setLoginRequired\(true\)/);
+ assert.match(page,/type: 'ittihadawy:member-access', authorized: true/);
+ assert.match(html,/id="member-access-gate"/);
+ assert.match(bridge,/event\.source !== window\.parent \|\| event\.origin !== location\.origin/);
+ assert.match(bridge,/event\.data\?\.type !== 'ittihadawy:member-access' \|\| event\.data\.authorized !== true/);
+});
 const sound=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='gC') as ts.ClassDeclaration;
 const makeSound=(saved:Record<string,string>={}, Bank=GameVoiceBank)=>{
  const store={getItem:(key:string)=>saved[key]??null,setItem:(key:string,value:string)=>saved[key]=value};
@@ -81,8 +91,14 @@ test('one blue entrance sign per region in each route loop, never repeated down 
  const sign=new Function('x0','Mr','Uf','Xt','Be','return ({'+method.getText(source)+'}).regionSign')(
    (distance:number)=>({current:route.find((r:any)=>distance%length<r.end)}),route,length,()=>{},(_group:any,name:string)=>signs.push(name));
  for(let i=-2;i<length/60*2;i++)sign({},i);
- assert.equal(route.length,37);assert.equal(signs.length,74);
+ assert.equal(route.length,28);assert.equal(signs.length,56);
  for(const region of route)assert.equal(signs.filter(name=>name===region.name).length,2);
+ assert.deepEqual(route.map((r:any)=>r.id),['stadium','komeldikka','misrstation','moharrambek','karmouz','bahary','mansheya','mahatetraml','azareeta','shatby','hadra','smouha','zahreya','bakous','ghabriel','victoria','sidiBishr','miami','asafra','mandara','montaza','maamoura','abouqir','minabasal','mex','dekheila','agamy','borgelarab']);
+ assert.deepEqual(route.filter((r:any)=>r.sea).map((r:any)=>r.id),['bahary','mansheya','mahatetraml','azareeta','shatby','sidiBishr','miami','asafra','mandara','montaza','maamoura','abouqir','mex','agamy']);
+ assert.deepEqual(extended.map((r:any)=>r.id),route.map((r:any)=>r.id));
+ const lookup=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='YR')!;
+ const findRegion=new Function('_0','return '+lookup.getText(source))(extended);
+ assert.ok(route.every((r:any)=>findRegion(r.id)?.id===r.id));
 });
 
 test('account bridge rejects outside frames and cannot credit a run to a different member',async()=>{
@@ -229,15 +245,14 @@ function regionScenery(id:string,index=0) {
  return shapes;
 }
 
-test('Dekheila has an open left seafront with dock, cargo ship and cranes',()=>{
- const shapes=regionScenery('dekheila',8);
- assert.ok(shapes.some(s=>s.kind==='ball'&&s.args[0]===-45));
- assert.ok(shapes.filter(s=>s.kind==='cylinder'&&s.args[1]===6&&s.args[5]===12).length===4);
+test('Dekheila has port containers and cranes without sea scenery',()=>{
+ const shapes=regionScenery('dekheila',255);
+ assert.ok(shapes.some(s=>s.kind==='box'&&s.args[3]===24&&s.args[4]===14));
+ assert.ok(shapes.filter(s=>s.kind==='cylinder'&&s.args[1]===7&&s.args[5]===14).length>=4);
  assert.ok(shapes.some(s=>s.kind==='label'&&s.args[0]==='ميناء الدخيلة'));
- for(const shape of shapes.filter(s=>s.kind!=='label'))assert.ok(shape.args[0]<-20);
  const variable=source.statements.filter(ts.isVariableStatement).flatMap(n=>Array.from(n.declarationList.declarations)).find(n=>n.name.getText(source)==='_0')!;
  const regions=new Function('return '+variable.initializer!.getText(source))();
- assert.equal(regions.find((r:any)=>r.id==='dekheila').sea,true);
+ assert.equal(regions.find((r:any)=>r.id==='dekheila').sea,false);
 });
 
 test('Agamy villa gardens have extra leafy trees and Wardian has striped smoking stacks',()=>{
@@ -270,6 +285,45 @@ test('Mex has one black and white lighthouse per region pass, and HUD names the 
  assert.ok(shapes.every(s=>s.args[0]<-25));
  const ui=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='WC')!.getText(source);
  assert.match(ui,/className:"current-region",title:z\.current\.name},z\.current\.name/);
+});
+
+test('Misr Station receives train rooftop scenery and Montaza landmarks are prominent',()=>{
+ const trains=regionScenery('misrstation',4);
+ assert.equal(trains.filter(s=>s.kind==='box'&&s.args[1]===-1.05).length,3);
+ assert.equal(trains.filter(s=>s.kind==='box'&&s.args[1]===.08).length,3);
+ const montaza=regionScenery('montaza',5);
+ assert.ok(montaza.some(s=>s.kind==='label'&&s.args[0]==='قصر المنتزه'));
+ assert.ok(montaza.some(s=>s.kind==='box'&&s.args[0]===25&&s.args[3]===22&&s.args[4]===10));
+ assert.ok(montaza.some(s=>s.kind==='cylinder'&&s.args[0]===-45));
+});
+
+test('district trams and moving street obstacles are assigned to their required zones',()=>{
+ for(const id of ['moharrambek','karmouz'])assert.ok(regionScenery(id,5).some(s=>s.kind==='box'&&s.args[0]===-14&&s.args[6]===0xe4b52d));
+ assert.ok(regionScenery('mahatetraml',5).some(s=>s.kind==='box'&&s.args[0]===-14&&s.args[6]===0x24658d));
+ const engine=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
+ const objectMaker=engine.members.find(n=>n.name?.getText(source)==='getObject')!.getText(source);
+ const spawner=engine.members.find(n=>n.name?.getText(source)==='spawn')!.getText(source);
+ const runner=engine.members.find(n=>n.name?.getText(source)==='tickRun')!.getText(source);
+ assert.match(objectMaker,/t==="tuktuk"/);assert.match(objectMaker,/t==="motorcycle"/);assert.match(objectMaker,/t==="dog"/);
+ assert.match(objectMaker,/vr\(a\)==="misrstation"/);
+ assert.match(spawner,/\["komeldikka","karmouz","asafra"\]\.includes\(zone\)/);
+ assert.match(spawner,/zone==="misrstation"/);
+ assert.match(runner,/g\.group\.userData\.movingWheels/);assert.match(runner,/g\.group\.userData\.dogLegs/);
+ const collision=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='MC')!;
+ const avoids=new Function('return '+collision.getText(source))();
+ assert.equal(avoids('motorcycle',2,false),false);assert.equal(avoids('motorcycle',0,false),true);
+});
+
+test('major district landmarks cover Azarita, Smouha, Asafra, Maamoura, Mina El Basal and Borg El Arab',()=>{
+ assert.ok(regionScenery('azareeta',205).some(s=>s.kind==='label'&&s.args[0]==='مكتبة الإسكندرية'));
+ const smouha=regionScenery('smouha',115);
+ assert.ok(smouha.some(s=>s.kind==='label'&&s.args[0]==='نادي الاتحاد • فرع سموحة'));
+ assert.ok(smouha.some(s=>s.kind==='box'&&s.args[6]===0x3f8b52));
+ const asafra=regionScenery('asafra',175);
+ assert.ok(asafra.some(s=>s.kind==='box'&&s.args[6]===0x9d4936));
+ assert.ok(regionScenery('maamoura',205).some(s=>s.kind==='box'&&s.args[4]===4.8));
+ assert.ok(regionScenery('minabasal',235).some(s=>s.kind==='label'&&s.args[0]==='مينا البصل • المخازن'));
+ assert.ok(regionScenery('borgelarab',265).some(s=>s.kind==='label'&&s.args[0]==='استاد برج العرب'));
 });
 
 test('all refined characters build with their animation joints and ability attachments intact',()=>{
@@ -344,26 +398,20 @@ test('supporter banners stay on the stadium stand, clear of the running lanes, a
 
 
 
-test('Adel and Gamal have separate opening clips, while Hamido and Lazo have none',()=>{
+test('Gamal, Adel and Hamido have separate opening clips',()=>{
  const s=makeSound();s.ctx=context();s.playOpening('adel');const adel=s.opening;assert.equal(adel.plays,1);assert.equal(adel,s.adelOpeningAudio);
  let paused=0;adel.pause=()=>paused++;s.playOpening('gamal');assert.equal(paused,1);assert.notEqual(s.opening,adel);assert.equal(s.opening,s.gamalOpeningAudio);assert.equal(s.opening.plays,1);
- s.playOpening('hamido');s.playOpening('lazo');assert.equal(s.gamalOpeningAudio.plays,1);assert.equal(adel.plays,1);
+ s.playOpening('hamido');assert.equal(s.hamidoOpeningAudio.plays,1);assert.equal(s.opening,s.hamidoOpeningAudio);
+ s.playOpening('lazo');assert.equal(s.gamalOpeningAudio.plays,1);assert.equal(adel.plays,1);
  s.muted=true;s.playOpening('adel');assert.equal(adel.plays,1);s.muted=false;s.playOpening('adel');assert.equal(adel.plays,2);
 });
-test('characters unlock only above their score thresholds and saved locked selections fall back',()=>{
+test('all playable characters are unlocked immediately regardless of score',()=>{
  const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='characterUnlocked')!;
  const unlocked=new Function('return '+fn.getText(source))();
- for(const [id,limit] of [['hamido',200000],['lazo',300000]] as const){
-  assert.equal(unlocked(id,limit-1),false);assert.equal(unlocked(id,limit),false);assert.equal(unlocked(id,limit+1),true);assert.equal(unlocked(id,undefined),false);
- }
- assert.equal(unlocked('adel',0),true);assert.equal(unlocked('gamal',0),true);
+ for(const id of ['gamal','adel','hamido'])for(const score of [0,undefined,200000,300000])assert.equal(unlocked(id,score),true);
  const availableNode=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='availableCharacter')!;
  const available=new Function('characterUnlocked','sc','return '+availableNode.getText(source))(unlocked,(id:string)=>({id}));
- assert.equal(available('lazo',0),'gamal');assert.equal(available('hamido',200001),'hamido');
- const game=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
- const select=game.members.find(n=>n.name?.getText(source)==='selectCharacter')!;
- const choose=new Function('characterUnlocked','return ({'+select.getText(source)+'}).selectCharacter')(unlocked);
- assert.equal(choose.call({state:'MENU',best:{score:1}},'lazo'),false);
+ assert.equal(available('hamido',0),'hamido');
 });
 test('Hadra taxis and Kom el Dikka food cart and cafe stay off the runner lanes',()=>{
  const taxis=regionScenery('hadra',0).filter(s=>typeof s.args[0]==='number'&&s.args[0]>0);
