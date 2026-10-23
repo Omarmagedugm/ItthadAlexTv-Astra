@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Gamepad2, Play, ArrowRight, Trophy, Zap, Move } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, runTransaction } from 'firebase/firestore';
 import SEOHead from '../components/SEOHead';
 import GameLeaderboard from '../components/game/GameLeaderboard';
 import { auth, db } from '../lib/firebase';
+import { improvedGameStats, validGameResult } from '../lib/gameScores';
 
 export default function Game() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -12,7 +13,12 @@ export default function Game() {
   const latestResultRef = useRef<{ score: number; distance: number; character: string } | null>(null);
 
   const saveScoreForUser = async (result: { score: number; distance?: number; character?: string }, requestId?: string) => {
-    if (typeof result?.score !== 'number' || result.score < 1) return false;
+    const normalized = {
+      score: Number.isFinite(result?.score) ? Math.floor(result.score) : -1,
+      distance: Number.isFinite(result?.distance) ? Math.floor(result.distance!) : 0,
+      character: result?.character || 'gamal'
+    };
+    if (!validGameResult(normalized) || normalized.score < 1) return false;
 
     let user = auth.currentUser;
     if (!user) {
@@ -43,27 +49,14 @@ export default function Game() {
     let saved = false;
     try {
       const userRef = doc(db, 'users', user.uid);
-      const snap = await getDoc(userRef);
-      const currentStats = snap.exists() ? (snap.data()?.stats || {}) : {};
-      const existingScore = Number(currentStats.ittihadawyScore ?? 0);
-
-      if (result.score > existingScore) {
-        await setDoc(
-          userRef,
-          {
-            stats: {
-              ...currentStats,
-              ittihadawyScore: result.score,
-              ittihadawyDistance: result.distance || 0,
-              ittihadawyCharacter: result.character || 'gamal'
-            },
-            lastActive: new Date().toISOString()
-          },
-          { merge: true }
-        );
-      }
+      await runTransaction(db, async transaction => {
+        const profile = await transaction.get(userRef);
+        if (!profile.exists()) throw new Error('Member profile missing');
+        const update = improvedGameStats(profile.data()?.stats || {}, normalized);
+        if (update) transaction.update(userRef, update);
+      });
       saved = true;
-      console.info(`[GamePage] Recorded score ${result.score} for user ${user.uid}`);
+      console.info(`[GamePage] Confirmed score ${normalized.score} for user ${user.uid}`);
     } catch (directErr) {
       console.warn('[GamePage] Direct update error, saving via server endpoint:', directErr);
       try {
@@ -74,11 +67,11 @@ export default function Game() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ result })
+          body: JSON.stringify({ result: normalized })
         });
         if (res.ok) {
           saved = true;
-          console.info(`[GamePage] Server endpoint successfully saved score ${result.score}`);
+          console.info(`[GamePage] Server endpoint successfully saved score ${normalized.score}`);
         }
       } catch (serverErr) {
         console.warn('[GamePage] Server record score also failed:', serverErr);
@@ -107,6 +100,7 @@ export default function Game() {
   // Direct game listener: guarantees any score made by an authenticated member is saved instantly
   useEffect(() => {
     const handleGameMessage = async (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== iframeRef.current?.contentWindow) return;
       const data = event.data;
       if (!data) return;
 
