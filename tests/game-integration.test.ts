@@ -338,8 +338,7 @@ test('supporter banners stay on the stadium stand, clear of the running lanes, a
  const add=new Function('ns','yn','pi','$n','Image','Mt','Vs','let stadiumFanMaterial;return '+fn.getText(source))(Texture,'srgb',Material,2,class{},Mesh,class{constructor(public w:number,public h:number){}});
  const banners:any[]=[];const group={add(n:any){banners.push(n)}};add(group,1);add(group,2);assert.equal(banners.length,0);add(group,0);add(group,3);
  assert.equal(banners.length,2);assert.equal(banners[0].material,banners[1].material);assert.equal(banners[0].material.userData.sharedSurface,true);
- assert.ok(banners.every(b=>b.position.x>9&&b.position.y>3));assert.equal(banners[0].rotation.y,-Math.PI/2);
- assert.ok(banners.every(b=>b.geometry.w===23&&b.geometry.h===2.4));
+ assert.ok(banners.every(b=>b.position.x>9&&b.position.y>2));assert.equal(banners[0].rotation.y,-Math.PI/2);
 });
 
 

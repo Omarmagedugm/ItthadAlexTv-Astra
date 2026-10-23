@@ -193,8 +193,7 @@ function MainContentWrapper({ children, showGoal, showWin, activeMatch, scoredTe
     return <MaintenanceScreen />;
   }
 
-  // Keep the app chrome on the game landing page; the actual game runs in its own fullscreen iframe.
-  const isGameRoute = location.pathname.startsWith('/games/');
+  const isGameRoute = location.pathname === '/game' || location.pathname.startsWith('/games/');
 
   return (
     <div className="ds-app">
@@ -660,7 +659,7 @@ function AuthRedirector() {
 
 function AppNav() {
   const location = useLocation();
-  const hideNavPaths = ['/auth'];
+  const hideNavPaths = ['/auth', '/game'];
   const isHidden = hideNavPaths.some(p => location.pathname === p || location.pathname.startsWith('/games/'));
   if (isHidden) return null;
   return <BottomNav />;
