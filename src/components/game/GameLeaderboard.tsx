@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore';
 import { onIdTokenChanged } from 'firebase/auth';
 import { Link } from 'react-router-dom';
 import { Trophy, RefreshCw, UserCheck, Flame } from 'lucide-react';
@@ -76,13 +76,24 @@ export default function GameLeaderboard() {
         const loaded = snapshot.docs.slice(0, visibleCount).map(item => {
           const data = item.data();
           const stats = data.stats || {};
+          const rawScore = Number(stats.ittihadawyScore ?? data.ittihadawyScore ?? 0);
+          const score = Math.floor(rawScore);
+
+          // Auto-heal decimal scores for currently logged-in user in Firestore
+          if (uid && item.id === uid && typeof stats.ittihadawyScore === 'number' && !Number.isInteger(stats.ittihadawyScore)) {
+            updateDoc(doc(db, 'users', uid), {
+              'stats.ittihadawyScore': score,
+              'stats.ittihadawyDistance': Math.floor(Number(stats.ittihadawyDistance || 0))
+            }).catch(() => {});
+          }
+
           return {
             id: item.id,
             name: data.name || data.displayName || data.username || 'عضو الاتحاد',
-            score: Number(stats.ittihadawyScore ?? data.ittihadawyScore ?? 0),
+            score,
             character: String(stats.ittihadawyCharacter || data.ittihadawyCharacter || '')
           };
-        }).filter(item => Number.isSafeInteger(item.score) && item.score >= 1);
+        }).filter(item => !isNaN(item.score) && item.score >= 1);
 
         setEntries(loaded);
         setState('ready');
