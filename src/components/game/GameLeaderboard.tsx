@@ -18,7 +18,8 @@ const PAGE_SIZE = 10;
 const CHARACTERS: Record<string, string> = {
   adel: 'عادل شكل',
   gamal: 'جمال الدولي',
-  hamido: 'حميدو'
+  hamido: 'حميدو',
+  lazo: 'اللازو'
 };
 
 export default function GameLeaderboard() {

@@ -278,12 +278,13 @@ test('all refined characters build with their animation joints and ability attac
  const surface=(kind:string)=>({kind});
  const build=new Function('oe','Ee','Ve','Mt','Jn','Un','dn','pi','l0','ob','$n','naturalSurface','return ({'+method+'}).createGamalCharacter')(Group,Material,Geometry,Mesh,Geometry,Geometry,Geometry,Material,Geometry,Group,2,surface);
  const factory={createAlIttihadScarfTexture:()=>({}),createMabkharaFiligreeTexture:()=>({})};
- for(const id of ['gamal','adel','hamido']){
+ for(const id of ['gamal','adel','hamido','lazo']){
   const model=build.call(factory,id),rig=model.userData;
   assert.equal(rig.characterId,id);assert.equal(rig.headPivot.scale.x,.84);
   assert.equal(rig.leftLegPivot.scale.y,1.1);assert.equal(rig.rightLegPivot.position.y,1.23);
   for(const joint of ['leftForearmPivot','rightForearmPivot','leftShinPivot','rightShinPivot','mouthMesh','mabkharaPivot','scarfBackPivot'])assert.ok(rig[joint]);
   if(id==='adel'){assert.ok(rig.hornCarry);assert.ok(rig.hornMouth)}
+  if(id==='lazo'){assert.equal(model.name,'Lazo');assert.ok(rig.headPivot.children.some((n:any)=>n.name==='LazoBackwardsCap'));assert.equal(rig.scarfFrontLeft.visible,false);assert.ok(validGameResult({score:1,distance:10,character:id}))}
   const materials:any[]=[];model.traverse((node:any)=>{if(node.material)materials.push(node.material)});
   assert.ok(materials.some(m=>m.bumpMap?.kind==='skin'&&m.metalness===0));
   assert.ok(materials.some(m=>m.bumpMap?.kind==='cloth'&&m.roughness===.94));

@@ -141,7 +141,7 @@ export default function Game() {
 
       {/* Fullscreen Game Experience */}
       {isPlaying && (
-        <div className="fixed inset-0 z-50 h-screen w-screen bg-black">
+        <div className="fixed inset-0 z-[100] h-[100dvh] w-screen bg-black">
           <iframe
             ref={iframeRef}
             src="/games/ittihadawy/index.html"
@@ -163,92 +163,55 @@ export default function Game() {
         </div>
       )}
 
-      <div className="mx-auto max-w-4xl space-y-6 px-4 sm:px-6">
-        <div className="flex items-center justify-between">
-          <Link
-            to="/"
-            aria-label="الرجوع للتطبيق"
-            title="الرجوع للتطبيق"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm border border-slate-200 text-slate-700 transition hover:bg-slate-50 hover:text-emerald-600 active:scale-95 dark:bg-card-dark dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
-          >
-            <ArrowRight size={22} />
-          </Link>
-          <span className="text-xs font-bold text-slate-400 dark:text-slate-500">لعبة اتحاداوي</span>
+      <div className="mx-auto max-w-6xl space-y-6 px-4 sm:px-6">
+        <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+          <Link to="/" className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white dark:border-white/10 dark:bg-card-dark" aria-label="الرجوع للتطبيق"><ArrowRight size={18}/></Link>
+          <span>منطقة الألعاب</span><span className="text-emerald-600">/ اتحاداوي</span>
         </div>
-
-        {/* Hero Banner */}
-        <section className="relative overflow-hidden rounded-3xl border border-emerald-200 bg-white p-6 shadow-sm dark:border-emerald-500/20 dark:bg-card-dark sm:p-8">
-          <div className="pointer-events-none absolute -left-12 -top-16 h-64 w-64 rounded-full bg-emerald-400/10 blur-3xl" />
-          <div className="relative flex items-start justify-between gap-4">
-            <div>
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">من المدرج للمنافسة</span>
-              <h1 className="mt-3 text-4xl font-black text-slate-900 dark:text-white">اتحاداوي</h1>
-              <p className="mt-3 max-w-md text-sm leading-7 text-slate-500 dark:text-slate-300">
-                اختار نجمك، اجمع النقاط وعدّي العوائق. كل جولة فرصة جديدة ترفع اسمك في ترتيب الأعضاء.
-              </p>
+        <section className="relative isolate overflow-hidden rounded-[2rem] bg-[#073c30] text-white">
+          <div className="grid sm:grid-cols-2">
+            <div className="relative z-10 p-6 sm:p-9 lg:p-12">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-[#d3ed9b]"><Gamepad2 size={15}/>اللعبة الرسمية لجمهور الاتحاد</span>
+              <h1 className="mt-6 text-5xl font-black sm:text-6xl">اتحاداوي<span className="text-[#cee991]">.</span></h1>
+              <p className="mt-4 max-w-sm text-sm leading-7 text-emerald-50/75">من قلب المدرج لقلب المنافسة. اختار شخصيتك، عدّي العوائق، وخلي اسمك في الصدارة.</p>
+              <button type="button" onClick={() => setIsPlaying(true)} className="mt-7 flex w-full items-center justify-center gap-3 whitespace-nowrap rounded-2xl bg-[#cee991] px-6 py-4 font-bold text-[#102b23] transition hover:bg-[#dff4b3] active:scale-[.98] sm:w-auto"><Play size={20} fill="currentColor"/>ابدأ اللعب</button>
+              <div className="mt-6 flex gap-5 text-xs text-emerald-100/70"><span>٤ شخصيات</span><span>٣٧ منطقة</span><span>تحدّي بلا نهاية</span></div>
             </div>
-            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 sm:h-20 sm:w-20">
-              <Gamepad2 className="h-9 w-9" />
-            </span>
-          </div>
-
-          <div className="mt-6">
-            <button
-              type="button"
-              onClick={() => setIsPlaying(true)}
-              className="relative flex w-full items-center justify-center gap-3 whitespace-nowrap rounded-2xl bg-emerald-600 px-6 py-4 text-base font-bold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[.99]"
-            >
-              <Play size={20} fill="currentColor" />
-              <span>يلا نلعب الآن</span>
-            </button>
-          </div>
-
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-500 dark:text-slate-400">
-            <span>٣ شخصيات</span>
-            <span>٣٧ منطقة</span>
-            <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
-              <Trophy size={14} />
-              سكور باسمك في الترتيب
-            </span>
+            <div className="relative min-h-64 overflow-hidden sm:min-h-[420px]">
+              <img src="/games/ittihadawy/references/lazo.jpeg" alt="اللازو بطقم الاتحاد الأخضر ونضارة وكاب" className="absolute inset-0 h-full w-full object-cover object-[center_28%]"/>
+              <div className="absolute inset-0 bg-gradient-to-t from-[#073c30] via-transparent to-transparent"/>
+              <div className="absolute bottom-5 right-6 flex items-center gap-3"><span className="rounded-full bg-[#cee991] px-3 py-1 text-xs font-bold text-[#102b23]">وصل جديد</span><span className="text-xl font-bold">اللازو</span></div>
+            </div>
           </div>
         </section>
-
-        {/* Real-time Game Leaderboard: Displays top 10 + Load More down to 1 point */}
-        <GameLeaderboard />
-
-        {/* How to Play Section */}
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-card-dark">
-          <h2 className="font-bold text-slate-900 dark:text-white">اختار طريقتك في اللعب</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <section aria-labelledby="characters-title">
+          <div className="mb-4 flex items-center justify-between"><h2 id="characters-title" className="text-xl font-bold text-slate-900 dark:text-white">اختار نجم الجولة</h2><span className="text-xs text-slate-500">كل شخصية وليها طريقتها</span></div>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {[
               ['عادل شكل', 'زمارة ٦ إلا تلت', 'adel-horn.png'],
               ['جمال الدولي', 'المبخرة', 'gamal-avatar.jpg'],
               ['حميدو', 'أبو جلمبو', 'hamido.png'],
+              ['اللازو', 'المراوغة', 'lazo.jpeg'],
             ].map(([name, ability, image]) => (
-              <div key={name} className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3 dark:bg-white/5">
-                <img
-                  src={`/games/ittihadawy/references/${image}`}
-                  alt=""
-                  className="h-12 w-12 rounded-xl object-cover"
-                />
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-white">{name}</h3>
-                  <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{ability}</p>
-                </div>
+              <div key={name} className="overflow-hidden rounded-3xl border border-slate-200 bg-white dark:border-white/10 dark:bg-card-dark">
+                <div className="relative h-40 overflow-hidden bg-emerald-950/5 sm:h-48"><img src={`/games/ittihadawy/references/${image}`} alt={name} className="h-full w-full object-cover object-[center_25%]" loading="lazy"/>{name === 'اللازو' && <span className="absolute right-3 top-3 rounded-full bg-[#cee991] px-2.5 py-1 text-[10px] font-bold text-emerald-950">جديد</span>}</div>
+                <div className="p-4"><h3 className="font-bold text-slate-900 dark:text-white">{name}</h3><p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{ability}</p></div>
               </div>
             ))}
           </div>
-          <div className="mt-5 grid gap-3 border-t border-slate-100 pt-5 text-xs leading-6 text-slate-500 dark:border-white/10 dark:text-slate-400 sm:grid-cols-2">
-            <p className="flex items-start gap-2">
-              <Move size={17} className="mt-1 shrink-0" />
-              اسحب على الموبايل، أو استخدم الأسهم على الكمبيوتر للحركة والقفز والتزحلق.
-            </p>
-            <p className="flex items-start gap-2">
-              <Zap size={17} className="mt-1 shrink-0" />
-              زر E لقدرة الشخصية، وعلامة البرق بتديك سرعة وحماية مؤقتة.
-            </p>
-          </div>
         </section>
+        <div className="grid items-start gap-6 lg:grid-cols-[1fr_300px]">
+          <GameLeaderboard />
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-card-dark">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600"><Gamepad2 size={21}/></span>
+            <h2 className="mt-4 font-bold text-slate-900 dark:text-white">جاهز للجولة؟</h2>
+            <div className="mt-4 space-y-5 text-sm leading-7 text-slate-500 dark:text-slate-400">
+              <p className="flex gap-3"><Move size={19} className="mt-1 shrink-0 text-emerald-600"/>اسحب للحركة والقفز والتزحلق، أو استخدم الأسهم على الكمبيوتر.</p>
+              <p className="flex gap-3"><Zap size={19} className="mt-1 shrink-0 text-emerald-600"/>فعّل قدرة شخصيتك بزر القدرة أو E. البرق بيديك سرعة وحماية مؤقتة.</p>
+              <p className="flex gap-3"><Trophy size={19} className="mt-1 shrink-0 text-emerald-600"/>العب بحسابك عشان أعلى نتيجة تتحفظ باسمك وتنافس الأعضاء.</p>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );

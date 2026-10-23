@@ -54,7 +54,7 @@ function getLiveGameStats() {
   // 3. Read character from localStorage
   try {
     const savedChar = JSON.parse(localStorage.getItem('ittihadawy-character') || '""');
-    if (savedChar && ['adel', 'gamal', 'hamido'].includes(savedChar)) {
+    if (savedChar && ['adel', 'gamal', 'hamido', 'lazo'].includes(savedChar)) {
       character = savedChar;
     }
   } catch (_) {}
