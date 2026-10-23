@@ -97,12 +97,10 @@ service cloud.firestore {
       allow update: if (
         isOwner(userId) && 
         isValidUser(incoming()) &&
-        // role cannot be changed by user, or must remain 'user' if newly set
-        (!('role' in incoming()) || ('role' in existing() && incoming().role == existing().role) || (!('role' in existing()) && incoming().role == 'user')) &&
-        // roles array cannot be changed by user, or must remain empty if newly set
-        (!('roles' in incoming()) || ('roles' in existing() && incoming().roles == existing().roles) || (!('roles' in existing()) && incoming().roles.size() == 0)) &&
-        // isAdmin cannot be changed by user, and cannot be set to true
-        (!('isAdmin' in incoming()) || ('isAdmin' in existing() && incoming().isAdmin == existing().isAdmin) || incoming().isAdmin == false) &&
+        // role, roles, and isAdmin cannot be modified or escalated by non-admin:
+        (!incoming().diff(existing()).affectedKeys().hasAny(['role']) || ('role' in existing() && incoming().role == existing().role) || (!('role' in existing()) && incoming().role == 'user')) &&
+        (!incoming().diff(existing()).affectedKeys().hasAny(['roles']) || (!('roles' in existing()) && incoming().roles.size() == 0)) &&
+        (!incoming().diff(existing()).affectedKeys().hasAny(['isAdmin']) || (!('isAdmin' in incoming()) || incoming().isAdmin == false)) &&
         incoming().diff(existing()).affectedKeys().hasOnly([
           'name', 'username', 'bio', 'location', 'avatar', 'tier', 
           'stats', 'bookmarks', 'lastActive', 'fcmToken', 'email', 

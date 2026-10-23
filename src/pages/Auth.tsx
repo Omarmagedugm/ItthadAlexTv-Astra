@@ -91,17 +91,33 @@ export default function Auth() {
       }
       navigate('/profile');
     } catch (err: any) {
-      console.error("Google Auth Error:", err);
-      const code = err.code || '';
-      if (code === 'auth/unauthorized-domain') {
+      const code = err?.code || '';
+      const message = err?.message || '';
+      const stack = err?.stack || '';
+      const isUnauthorizedDomain =
+        code === 'auth/unauthorized-domain' ||
+        message.toLowerCase().includes('unauthorized domain') ||
+        message.toLowerCase().includes('auth/unauthorized-domain') ||
+        stack.includes('_validateOrigin');
+
+      if (isUnauthorizedDomain) {
+        console.warn('[Auth] Current domain is not in Firebase Authorized Domains:', window.location.hostname);
         setUnauthorizedDomain(true);
-        setError('النطاق الحالي غير مضاف في قائمة النطاقات المصرح بها (Authorized Domains) في Firebase Authentication.');
+        setError('النطاق الحالي غير مضاف في قائمة النطاقات المصرح بها (Authorized Domains) في Firebase Authentication. يرجى نسخه وإضافته أو تسجيل الدخول بالبريد الإلكتروني.');
       } else if (code === 'auth/popup-blocked') {
+        console.warn('[Auth] Popup was blocked by browser');
         setError('تم حظر النافذة المنبثقة من قبل المتصفح. يرجى السماح بالنوافذ المنبثقة لهذا الموقع وإعادة المحاولة.');
+      } else if (code === 'auth/popup-closed-by-user') {
+        console.warn('[Auth] Popup closed by user');
+        setError('تم إغلاق نافذة تسجيل الدخول قبل إتمام العملية.');
+      } else if (code === 'auth/cancelled-popup-request') {
+        console.warn('[Auth] Cancelled popup request');
       } else if (code === 'auth/operation-not-allowed') {
-        setError('تسجيل الدخول عن طريق جوجل غير مفعل في مشروع Firebase الحالي. يمكنك تفعيله من خلال Sign-in providers.');
+        console.warn('[Auth] Google provider not enabled in Firebase project');
+        setError('تسجيل الدخول عن طريق جوجل غير مفعل في مشروع Firebase الحالي. يمكنك تفعيله من خلال Sign-in providers أو الدخول بالبريد وكلمة المرور.');
       } else {
-        setError(`فشل تسجيل الدخول بجوجل: ${err.message || code}`);
+        console.warn('[Auth] Google Auth issue:', message || code);
+        setError(`فشل تسجيل الدخول بجوجل: ${message || code}. يمكنك تسجيل الدخول بالبريد وكلمة المرور في الأعلى.`);
       }
     } finally {
       setLoading(false);

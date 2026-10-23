@@ -681,6 +681,79 @@ OUTPUT: Return ONLY the transformed image.`;
     }
   });
 
+  // Server-Authoritative Game Score Recording Endpoint
+  app.post('/api/game/record-score', authenticateUser, async (req: any, res: any) => {
+    try {
+      const uid = req.user?.uid;
+      const result = req.body?.result;
+      if (!uid) {
+        return res.status(401).json({ error: 'غير مصرح' });
+      }
+      if (!result || typeof result.score !== 'number' || !Number.isSafeInteger(result.score) || result.score < 0 || result.score > 2147483647) {
+        return res.status(400).json({ error: 'نتيجة اللعبة غير صالحة' });
+      }
+
+      const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      const docUrl = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/${config.firestoreDatabaseId}/documents/users/${encodeURIComponent(uid)}?key=${config.apiKey}`;
+
+      const authHeaders: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (req.headers.authorization) {
+        authHeaders['Authorization'] = req.headers.authorization;
+      }
+
+      const userRes = await fetch(docUrl, {
+        headers: req.headers.authorization ? { 'Authorization': req.headers.authorization } : {}
+      });
+      let currentScore = -1;
+      let existingFields: any = {};
+      if (userRes.ok) {
+        const docJson: any = await userRes.json();
+        existingFields = docJson.fields || {};
+        const statsMap = existingFields.stats?.mapValue?.fields || {};
+        currentScore = statsMap.ittihadawyScore?.integerValue ? Number(statsMap.ittihadawyScore.integerValue) : -1;
+      }
+
+      if (result.score <= currentScore) {
+        return res.json({ success: true, updated: false, currentScore, score: result.score });
+      }
+
+      const patchUrl = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/${config.firestoreDatabaseId}/documents/users/${encodeURIComponent(uid)}?updateMask.fieldPaths=stats.ittihadawyScore&updateMask.fieldPaths=stats.ittihadawyDistance&updateMask.fieldPaths=stats.ittihadawyCharacter&key=${config.apiKey}`;
+      const patchRes = await fetch(patchUrl, {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({
+          fields: {
+            stats: {
+              mapValue: {
+                fields: {
+                  ...(existingFields.stats?.mapValue?.fields || {}),
+                  ittihadawyScore: { integerValue: String(result.score) },
+                  ittihadawyDistance: { integerValue: String(result.distance || 0) },
+                  ittihadawyCharacter: { stringValue: String(result.character || 'gamal') }
+                }
+              }
+            }
+          }
+        })
+      });
+
+      if (!patchRes.ok) {
+        const patchErr = await patchRes.text();
+        console.warn('[Server GameScore] Patch failed:', patchErr);
+        return res.status(500).json({ error: 'تعذر حفظ النتيجة في قاعدة البيانات' });
+      }
+
+      console.log(`[Server GameScore] Successfully recorded score ${result.score} for ${uid}`);
+      res.json({ success: true, updated: true, score: result.score });
+    } catch (e: any) {
+      console.warn('[Server GameScore] Exception:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // Server-Authoritative User Role Assignment Endpoint (Protected: Admins only)
   app.post('/api/admin/set-user-role', requireAdmin, async (req: any, res: any) => {
     try {

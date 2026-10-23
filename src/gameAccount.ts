@@ -12,6 +12,53 @@ window.addEventListener('message', (event) => {
   if (parentWindow === window || event.source !== parentWindow || event.origin !== location.origin) return;
   const data = event.data;
   if (!data || typeof data.id !== 'string' || data.id.length > 80) return;
+
+  if (data.type === 'ittihadawy:get-leaderboard') {
+    queue = queue.then(async () => {
+      await auth.authStateReady();
+      try {
+        const { collection, getDocs, limit, orderBy, query, where } = await import('firebase/firestore');
+        const count = typeof data.count === 'number' && data.count > 0 ? Math.min(data.count, 200) : 10;
+        const q = query(
+          collection(db, 'users'),
+          where('stats.ittihadawyScore', '>=', 1),
+          orderBy('stats.ittihadawyScore', 'desc'),
+          limit(count + 1)
+        );
+        const snapshot = await getDocs(q);
+        const hasMore = snapshot.docs.length > count;
+        const items = snapshot.docs.slice(0, count).map((docItem, index) => {
+          const d = docItem.data();
+          return {
+            rank: index + 1,
+            id: docItem.id,
+            name: d.name || d.displayName || d.username || 'عضو الاتحاد',
+            score: Number(d.stats?.ittihadawyScore ?? d.ittihadawyScore ?? 0),
+            character: d.stats?.ittihadawyCharacter || '',
+          };
+        }).filter(item => Number.isSafeInteger(item.score) && item.score >= 1);
+
+        parentWindow.postMessage({
+          type: 'ittihadawy:leaderboard-data',
+          id: data.id,
+          items,
+          hasMore,
+          currentUid: auth.currentUser?.uid ?? null,
+        }, location.origin);
+      } catch (err) {
+        console.warn('Leaderboard bridge fetch error:', err);
+        parentWindow.postMessage({
+          type: 'ittihadawy:leaderboard-data',
+          id: data.id,
+          items: [],
+          hasMore: false,
+          error: true,
+        }, location.origin);
+      }
+    });
+    return;
+  }
+
   if (!['ittihadawy:run-start', 'ittihadawy:run-end'].includes(data.type)) return;
   queue = queue.then(async () => {
     await auth.authStateReady();
@@ -19,7 +66,10 @@ window.addEventListener('message', (event) => {
       runs.clear(); runs.set(data.id, auth.currentUser?.uid ?? null); return;
     }
     if (!runs.has(data.id) || !validGameResult(data.result)) return;
-    const uid = runs.get(data.id);
+    let uid = runs.get(data.id);
+    if (!uid && auth.currentUser?.uid) {
+      uid = auth.currentUser.uid;
+    }
     if (!uid || uid !== auth.currentUser?.uid) {
       reply('guest', data.id); runs.delete(data.id); return;
     }
@@ -34,7 +84,29 @@ window.addEventListener('message', (event) => {
         if (update) transaction.update(reference, update);
       });
       runs.delete(data.id); reply('saved', data.id);
-    } catch { reply('error', data.id); }
+    } catch (primaryErr) {
+      try {
+        if (typeof fetch === 'function' && auth.currentUser?.getIdToken) {
+          const token = await auth.currentUser.getIdToken();
+          const response = await fetch('/api/game/record-score', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ result: data.result })
+          });
+          if (response.ok) {
+            runs.delete(data.id);
+            reply('saved', data.id);
+            return;
+          }
+        }
+      } catch (fallbackErr) {
+        console.warn('Fallback server score save error:', fallbackErr);
+      }
+      reply('error', data.id);
+    }
   }).catch(() => reply('error', data.id));
 });
 if (parentWindow !== window) reply('ready');
