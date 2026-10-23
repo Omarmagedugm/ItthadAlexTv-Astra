@@ -46,6 +46,44 @@ export function addRegionDetails(group, region, index, { box, cylinder, ball, la
       }
     }
   }
+  if (region.id === 'hadra' && index%2===0) {
+    // Parked three-wheel taxis on the right, outside all runner lanes.
+    for(const z of [-14,16]) {
+      const x=7.2;
+      box(group,x,.85,z,1.7,1.1,2.7,0xe8b72e);
+      box(group,x,1.9,z+.3,1.8,.18,2.2,0x242629);
+      box(group,x,1.35,z-1.12,1.45,.65,.12,0x709caa);
+      for(const dx of [-.7,.7]) cylinder(group,x+dx,1.45,z+.9,.055,.055,1.1,0x27282a,6);
+      for(const [dx,dz] of [[0,-1.2],[-.85,.85],[.85,.85]]) {
+        const wheel=cylinder(group,x+dx,.35,z+dz,.34,.34,.22,0x202327,12);
+        wheel.rotation.z=Math.PI/2;
+      }
+      for(const dx of [-.55,.55]) ball(group,x+dx,.95,z-1.38,.13,0xffedb1);
+    }
+  }
+  if (region.id === 'komeldikka' && index%3===0) {
+    // Foul cart and street cafe, spaced apart along the pavement.
+    box(group,6.8,.85,-10,1.8,1.4,2.6,0xc24736);
+    box(group,6.8,1.62,-10,2,.15,2.8,0xc5c7b9);
+    cylinder(group,6.8,2,-10,.45,.6,.8,0xb9995e,16);
+    cylinder(group,6.8,2.45,-10,.23,.3,.2,0xd0b379,12);
+    box(group,6.8,3,-10,2.6,.18,3.2,0x5f8c48);
+    for(const z of [-11, -9]) cylinder(group,7.6,2.2,z,.05,.05,1.5,0x6a5036,6);
+    for(const z of [-11,-9]) {const wheel=cylinder(group,6.8,.35,z,.35,.35,2,0x282b2b,12);wheel.rotation.z=Math.PI/2;}
+    label(group,'فول وطعمية',6.8,2.85,-11.65,2.5,.55,'#8d3029','#fff5d4');
+    box(group,-7.3,2.9,12,3.5,.22,8,0x326f50);
+    label(group,'قهوة كوم الدكة',-7.3,2.5,8,3.4,.65,'#24543d','#fff2c9');
+    for(const z of [10,14]) {
+      cylinder(group,-7.3,.65,z,.08,.1,1.3,0x60432d,8);
+      cylinder(group,-7.3,1.3,z,.7,.7,.12,0xa17a48,16);
+      for(const dx of [-1.1,1.1]) {
+        box(group,-7.3+dx,.65,z,.55,.12,.6,0x7a5031);
+        box(group,-7.3+dx,1.05,z+.25,.55,.8,.1,0x7a5031);
+        for(const dz of [-.2,.2]) cylinder(group,-7.3+dx,.3,z+dz,.04,.04,.6,0x67462e,6);
+      }
+      cylinder(group,-7.3,1.48,z,.09,.08,.2,0xe3c992,8);
+    }
+  }
   if (region.id === 'mex' && index%10===9) {
     box(group,-33,.3,0,12,.7,12,0x999b94);
     cylinder(group,-33,1,0,2.8,3.1,1.3,0xe7e5de,20);

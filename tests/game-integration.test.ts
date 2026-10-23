@@ -2,14 +2,15 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
+import { GameVoiceBank } from '../public/games/ittihadawy/voice-bank.js';
 import { validGameResult, improvedGameStats } from '../src/lib/gameScores';
 const html=readFileSync('public/games/ittihadawy/index.html','utf8');
 const asset=html.match(/src="\/games\/ittihadawy\/(assets\/index-[^"]+.js)"/)![1];
 const source=ts.createSourceFile('game.js',readFileSync('public/games/ittihadawy/'+asset,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
 const sound=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='gC') as ts.ClassDeclaration;
-const makeSound=(saved:Record<string,string>={})=>{
+const makeSound=(saved:Record<string,string>={}, Bank=GameVoiceBank)=>{
  const store={getItem:(key:string)=>saved[key]??null,setItem:(key:string,value:string)=>saved[key]=value};
- const Sound=new Function('window','localStorage','Audio','return ('+sound.getText(source)+')')({},store,class {currentTime=0;plays=0;preload="";pause(){}play(){this.plays++;return Promise.resolve()}});
+ const Sound=new Function('window','localStorage','Audio','GameVoiceBank','return ('+sound.getText(source)+')')({},store,class {currentTime=0;plays=0;preload="";pause(){}play(){this.plays++;return Promise.resolve()}},Bank);
  return new Sound(false);
 };
 const gain=()=>({gain:{value:1,setTargetAtTime(value:number){this.value=value}},connect(){return this}});
@@ -195,12 +196,16 @@ test('running speed increases faster and keeps rising on successive route loops'
  const extended=new Function('return '+variables.get('_0')!.initializer!.getText(source))();
  const route=new Function('_0','return '+variables.get('Mr')!.initializer!.getText(source))(extended);
  const lap=route.at(-1).end;
- const speed=new Function('Uf','return '+variables.get('Wy')!.initializer!.getText(source))(lap);
+ const stageNode=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='regionStage')!;
+ const stage=new Function('Uf','Mr','return '+stageNode.getText(source))(lap,route);
+ const speed=new Function('Uf','regionStage','return '+variables.get('Wy')!.initializer!.getText(source))(lap,stage);
  assert.equal(speed(0),24);assert.equal(speed(-100),24);
  assert.ok(speed(1000)>24+1000/130);
  assert.ok(speed(lap)>=66);
  for(let loop=1;loop<=10;loop++)assert.ok(speed((loop+1)*lap)>speed(loop*lap));
- for(const d of [lap,lap*2])assert.ok(speed(d)-speed(d-.01)<.01);
+ for(const loop of [0,1,2])for(const r of route){const d=loop*lap+r.end;assert.ok(speed(d)>speed(d-.01));}
+ const spacing=new Function('Wy','regionStage','return '+variables.get('yC')!.initializer!.getText(source))(speed,stage);
+ assert.ok(spacing(1000)/speed(1000)<spacing(0)/speed(0));assert.ok(spacing(lap)/speed(lap)>=.95);
 });
 
 test('speed pickups are spaced farther apart while normal coin rows remain',()=>{
@@ -249,7 +254,7 @@ test('Agamy villa gardens have extra leafy trees and Wardian has striped smoking
 });
 
 test('Hadra vegetable stalls occupy all four left lanes and leave runner lanes clear',()=>{
- const shapes=regionScenery('hadra');
+ const shapes=regionScenery('hadra',1);
  const stalls=shapes.filter(s=>s.kind==='box'&&s.args[1]===.55);
  assert.equal(stalls.length,20);
  assert.deepEqual([...new Set(stalls.map(s=>s.args[0]))],[-17.5,-14.5,-11.5,-8.5]);
@@ -314,4 +319,57 @@ test('Lazo arrest stops all other voice tracks without stopping background music
  let musicStopped=false;s.soundtrack={pause(){musicStopped=true}};s.openingWasPlaying=true;
  s.caught('lazo');assert.equal(stopped,6);assert.equal(s.openingWasPlaying,false);assert.equal(musicStopped,false);assert.equal(s.lazoCaughtAudio.plays,1);
  for(const key of ['opening','hornAudio','crabAudio','adelHitAudio','adelCaughtAudio','adelBoostAudio'])assert.equal(s[key].currentTime,0);
+});
+
+
+test('game engine uses prepared buffers for Lazo arrest and preserves the volume slider',async()=>{
+ const Bank=class extends GameVoiceBank{constructor(ctx:any){super(ctx,async(url:string)=>({ok:true,arrayBuffer:async()=>({url})}))}};
+ const s=makeSound({},Bank),sources:any[]=[];s.ctx={...context(),state:'running',resume:async()=>{},decodeAudioData:async(b:any)=>b,createBufferSource(){const n={connect(){},disconnect(){},start(){},stop(){this.stopped=true}};sources.push(n);return n}};
+ s.prepareVoices();await s.voiceBank.preload(['/games/ittihadawy/audio/lazo-caught.mp3']);s.caught('lazo');await new Promise(r=>setTimeout(r,0));
+ assert.equal(sources.length,1);assert.equal(sources[0].buffer.url,'/games/ittihadawy/audio/lazo-caught.mp3');
+ s.setSfxVolume(.25);assert.equal(s.lazoCaughtAudio.gain.gain.value,.25);s.reset();assert.equal(sources[0].stopped,true);
+});
+
+test('supporter banners stay on the stadium stand, clear of the running lanes, and repeat sparingly',()=>{
+ const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='addStadiumFanBanner')!;
+ class Texture{colorSpace:any;image:any;needsUpdate=false;offset={set(){}};repeat={set(){}}}
+ class Material{userData:any={};constructor(options:any){Object.assign(this,options)}}
+ class Mesh{userData:any={};rotation:any={};position:any={set(x:number,y:number,z:number){Object.assign(this,{x,y,z})}};constructor(public geometry:any,public material:any){}}
+ const add=new Function('ns','yn','pi','$n','Image','Mt','Vs','let stadiumFanMaterial;return '+fn.getText(source))(Texture,'srgb',Material,2,class{},Mesh,class{constructor(public w:number,public h:number){}});
+ const banners:any[]=[];const group={add(n:any){banners.push(n)}};add(group,1);add(group,2);assert.equal(banners.length,0);add(group,0);add(group,3);
+ assert.equal(banners.length,2);assert.equal(banners[0].material,banners[1].material);assert.equal(banners[0].material.userData.sharedSurface,true);
+ assert.ok(banners.every(b=>b.position.x>9&&b.position.y>2));assert.equal(banners[0].rotation.y,-Math.PI/2);
+});
+
+
+
+
+test('Adel and Gamal have separate opening clips, while Hamido and Lazo have none',()=>{
+ const s=makeSound();s.ctx=context();s.playOpening('adel');const adel=s.opening;assert.equal(adel.plays,1);assert.equal(adel,s.adelOpeningAudio);
+ let paused=0;adel.pause=()=>paused++;s.playOpening('gamal');assert.equal(paused,1);assert.notEqual(s.opening,adel);assert.equal(s.opening,s.gamalOpeningAudio);assert.equal(s.opening.plays,1);
+ s.playOpening('hamido');s.playOpening('lazo');assert.equal(s.gamalOpeningAudio.plays,1);assert.equal(adel.plays,1);
+ s.muted=true;s.playOpening('adel');assert.equal(adel.plays,1);s.muted=false;s.playOpening('adel');assert.equal(adel.plays,2);
+});
+test('characters unlock only above their score thresholds and saved locked selections fall back',()=>{
+ const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='characterUnlocked')!;
+ const unlocked=new Function('return '+fn.getText(source))();
+ for(const [id,limit] of [['hamido',200000],['lazo',300000]] as const){
+  assert.equal(unlocked(id,limit-1),false);assert.equal(unlocked(id,limit),false);assert.equal(unlocked(id,limit+1),true);assert.equal(unlocked(id,undefined),false);
+ }
+ assert.equal(unlocked('adel',0),true);assert.equal(unlocked('gamal',0),true);
+ const availableNode=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='availableCharacter')!;
+ const available=new Function('characterUnlocked','sc','return '+availableNode.getText(source))(unlocked,(id:string)=>({id}));
+ assert.equal(available('lazo',0),'gamal');assert.equal(available('hamido',200001),'hamido');
+ const game=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
+ const select=game.members.find(n=>n.name?.getText(source)==='selectCharacter')!;
+ const choose=new Function('characterUnlocked','return ({'+select.getText(source)+'}).selectCharacter')(unlocked);
+ assert.equal(choose.call({state:'MENU',best:{score:1}},'lazo'),false);
+});
+test('Hadra taxis and Kom el Dikka food cart and cafe stay off the runner lanes',()=>{
+ const taxis=regionScenery('hadra',0).filter(s=>typeof s.args[0]==='number'&&s.args[0]>0);
+ assert.ok(taxis.length>10);assert.ok(taxis.every(s=>s.args[0]>6));
+ const cafe=regionScenery('komeldikka',0);assert.ok(cafe.some(s=>s.kind==='label'&&s.args[0]==='قهوة كوم الدكة'));
+ assert.ok(cafe.some(s=>s.kind==='label'&&s.args[0]==='فول وطعمية'));
+ assert.ok(cafe.filter(s=>s.kind!=='label').every(s=>Math.abs(s.args[0])>=6));
+ assert.equal(regionScenery('komeldikka',1).length,0);
 });
