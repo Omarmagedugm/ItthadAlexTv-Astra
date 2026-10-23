@@ -48,3 +48,11 @@ This report does not certify completion of all 37 requested visual/gameplay acce
 - `tests/game-integration.test.ts`
 
 No administration dashboard, dashboard API or database integration was changed. Locked PWA assets and original stadium banner source artwork were preserved.
+
+## Follow-up: reuse the signed-in app session
+
+- Replaced the unconditional login wording during initialization with a session-loading state.
+- The game now requests access immediately from its signed-in app page instead of waiting for the full iframe load event.
+- The existing Firebase account bridge also restores the saved app session for direct game links. No separate sign-in flow was introduced.
+- Guest login controls appear only after authentication has resolved to no user. An embedded account bridge cannot revoke a valid in-memory parent session.
+- Game and voice tests now include authenticated parent, saved account, guest, wrong-origin and wrong-frame cases: 37 passed.

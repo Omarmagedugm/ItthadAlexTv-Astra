@@ -57,3 +57,5 @@ input[type=range]{direction:ltr;touch-action:none;min-height:36px}
 .game-lb-end-note{font-size:11px;color:#94a3b8;text-align:center;margin:8px 0 2px 0}
 .game-lb-empty,.game-lb-loading{text-align:center;padding:30px 10px;font-size:13px;color:#cbd5e1}
 
+
+#member-access-gate a[hidden]{display:none}

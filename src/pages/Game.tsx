@@ -144,6 +144,11 @@ export default function Game() {
       const data = event.data;
       if (!data) return;
 
+      if (data.type === 'ittihadawy:access-request') {
+        authorizeGameFrame();
+        return;
+      }
+
       if (data.type === 'ittihadawy:live-progress' && data.result) {
         if (typeof data.result.score === 'number' && data.result.score >= 1) {
           latestResultRef.current = data.result;

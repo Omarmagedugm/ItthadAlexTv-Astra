@@ -14,8 +14,10 @@ test('only a signed-in app member can open the game or unlock its standalone fra
  assert.match(page,/await auth\.authStateReady\(\)[\s\S]*if \(!auth\.currentUser\)[\s\S]*setLoginRequired\(true\)/);
  assert.match(page,/type: 'ittihadawy:member-access', authorized: true/);
  assert.match(html,/id="member-access-gate"/);
- assert.match(bridge,/event\.source !== window\.parent \|\| event\.origin !== location\.origin/);
- assert.match(bridge,/event\.data\?\.type !== 'ittihadawy:member-access' \|\| event\.data\.authorized !== true/);
+ assert.match(bridge,/event\.origin !== location\.origin/);
+ assert.match(bridge,/event\.source === frame\.contentWindow/);
+ assert.match(bridge,/event\.source === window\.parent/);
+ assert.match(bridge,/event\.data\.authorized === true/);
 });
 const sound=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='gC') as ts.ClassDeclaration;
 const makeSound=(saved:Record<string,string>={}, Bank=GameVoiceBank)=>{
@@ -105,12 +107,14 @@ test('account bridge rejects outside frames and cannot credit a run to a differe
  const handlers:Record<string,Function>={}, replies:any[]=[], writes:any[]=[];
  const parent={postMessage:(message:any)=>replies.push(message)};
  const window={parent,addEventListener:(name:string,handler:Function)=>handlers[name]=handler};
- const auth:any={currentUser:{uid:'member-a'},authStateReady:async()=>{}};
+ const auth:any={currentUser:{uid:'member-a'},authStateReady:async()=>{},onAuthStateChanged(callback:Function){handlers.auth=callback;callback(this.currentUser);return ()=>{}}};
  const input=readFileSync('src/gameAccount.ts','utf8').replace(/^import .*;\n/gm,'');
  const js=ts.transpile(input,{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None});
  const storage={getItem:()=>null,setItem:()=>{}};
  const instance=new Function('auth','db','doc','runTransaction','validGameResult','improvedGameStats','window','location','crypto','localStorage','sessionStorage','setDoc','serverTimestamp',js+';return {flush:()=>queue};')(
   auth,{},(_db:any,_collection:string,uid:string)=>({uid}),async(_db:any,work:Function)=>work({get:async()=>({exists:()=>true,data:()=>({stats:{}})}),update:(...args:any[])=>writes.push(args)}),validGameResult,improvedGameStats,window,{origin:'https://app.example'},crypto,storage,storage,async()=>{},()=>0);
+ assert.ok(replies.some(r=>r.type==='ittihadawy:member-access'&&r.authorized===true));
+ handlers.auth(null);assert.equal(replies.at(-1).authorized,false);
  const message=(type:string,id:string,result?:any,source:any=parent)=>handlers.message({origin:'https://app.example',source,data:{type,id,result}});
  const result={score:500,distance:200,character:'adel'};
  message('ittihadawy:run-start','foreign',undefined,{});await instance.flush();
@@ -420,4 +424,23 @@ test('Hadra taxis and Kom el Dikka food cart and cafe stay off the runner lanes'
  assert.ok(cafe.some(s=>s.kind==='label'&&s.args[0]==='فول وطعمية'));
  assert.ok(cafe.filter(s=>s.kind!=='label').every(s=>Math.abs(s.args[0])>=6));
  assert.equal(regionScenery('komeldikka',1).length,0);
+});
+
+test('existing app and persisted account sessions unlock gameplay without another login',()=>{
+ const code=readFileSync('public/games/ittihadawy/enhancements.js','utf8');
+ const parsed=ts.createSourceFile('enhancements.js',code,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
+ const statement=parsed.statements.find(s=>ts.isExpressionStatement(s)&&s.getText(parsed).includes('const fromApp')) as ts.ExpressionStatement;
+ const callback=(statement.expression as ts.CallExpression).arguments[1].getText(parsed);
+ for(const embedded of [false,true]){
+  const parent={},account={},win:any={parent};if(!embedded)win.parent=win;
+  let opened=0,locked=0;const fields:any={h1:{},p:{},a:{hidden:true}};
+  const gate={remove(){opened++},querySelector:(s:string)=>fields[s]};
+  const root={removeAttribute(){},setAttribute(){locked++}};
+  const handler=new Function('window','location','frame','accessGate','document','return '+callback)(win,{origin:'https://app.example'},{contentWindow:account},gate,{getElementById:()=>root,body:{append(){}}});
+  const send=(source:any,authorized:boolean,origin='https://app.example')=>handler({source,origin,data:{type:'ittihadawy:member-access',authorized}});
+  send({},true);send(account,true,'https://other.example');assert.equal(opened,0);
+  send(account,true);assert.equal(opened,1);
+  if(embedded){send(parent,true);assert.equal(opened,2);send(account,false);assert.equal(locked,0);send(parent,false)}else send(account,false);
+  assert.equal(locked,1);assert.equal(fields.a.hidden,false);
+ }
 });

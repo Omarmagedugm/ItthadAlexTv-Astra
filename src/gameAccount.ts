@@ -109,7 +109,13 @@ window.addEventListener('message', (event) => {
     }
   }).catch(() => reply('error', data.id));
 });
-if (parentWindow !== window) reply('ready');
+if (parentWindow !== window) {
+  reply('ready');
+  // Reuse the application's persisted Firebase session; never request a new login.
+  auth.onAuthStateChanged((user) => {
+    parentWindow.postMessage({ type: 'ittihadawy:member-access', authorized: !!user }, location.origin);
+  });
+}
 
 // Count real game entries, not opens of the promotional page. A refresh within
 // thirty minutes is part of the same visit. Guest identities are browser-local.

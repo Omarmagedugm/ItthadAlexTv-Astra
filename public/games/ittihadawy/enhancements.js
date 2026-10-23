@@ -8,14 +8,31 @@ document.body.append(frame);
 let ready = false, runId = null, result = null, status = '', pending = [];
 const send = message => ready ? frame.contentWindow.postMessage(message, location.origin) : pending.push(message);
 
-// The standalone game document remains locked until its authenticated app page
-// explicitly authorizes this same-origin iframe.
+// Embedded play uses the already signed-in app; direct links reuse Firebase's
+// persisted session through the existing same-origin account bridge.
+const accessGate = document.getElementById('member-access-gate');
 window.addEventListener('message', event => {
-  if (window.parent === window || event.source !== window.parent || event.origin !== location.origin) return;
-  if (event.data?.type !== 'ittihadawy:member-access' || event.data.authorized !== true) return;
-  document.getElementById('member-access-gate')?.remove();
-  document.getElementById('root')?.removeAttribute('inert');
+  if (event.origin !== location.origin) return;
+  const fromApp = window.parent !== window && event.source === window.parent;
+  const fromAccount = event.source === frame.contentWindow;
+  if (!fromApp && !fromAccount) return;
+  if (event.data?.type !== 'ittihadawy:member-access') return;
+  if (event.data.authorized === true) {
+    accessGate?.remove();
+    document.getElementById('root')?.removeAttribute('inert');
+  } else if (event.data.authorized === false && accessGate) {
+    // Embedded play may use an in-memory app session; only the app can revoke it.
+    if (fromAccount && window.parent !== window) return;
+    document.getElementById('root')?.setAttribute('inert', '');
+    accessGate.querySelector('h1').textContent = 'سجّل الدخول للعب';
+    accessGate.querySelector('p').textContent = 'اللعبة متاحة لأعضاء التطبيق. استخدم حسابك الحالي أو أنشئ حسابًا.';
+    accessGate.querySelector('a').hidden = false;
+    document.body.append(accessGate);
+  }
 });
+if (window.parent !== window) {
+  window.parent.postMessage({ type: 'ittihadawy:access-request' }, location.origin);
+}
 
 // Keep the engine's global keyboard handlers inactive while access is locked.
 for (const type of ['keydown', 'keyup']) window.addEventListener(type, event => {
