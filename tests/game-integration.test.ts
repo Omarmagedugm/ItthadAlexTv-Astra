@@ -266,3 +266,26 @@ test('Mex has one black and white lighthouse per region pass, and HUD names the 
  const ui=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='WC')!.getText(source);
  assert.match(ui,/className:"current-region",title:z\.current\.name},z\.current\.name/);
 });
+
+test('all refined characters build with their animation joints and ability attachments intact',()=>{
+ const characterClass=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qy') as ts.ClassDeclaration;
+ const method=characterClass.members.find(n=>n.name?.getText(source)==='createGamalCharacter')!.getText(source).replace(/^static /,'');
+ class Vector {x=0;y=0;z=0;set(x:number,y:number,z:number){Object.assign(this,{x,y,z});return this}setScalar(n:number){return this.set(n,n,n)}multiplyScalar(n:number){this.x*=n;this.y*=n;this.z*=n;return this}}
+ class Group {name='';children:any[]=[];userData:any={};position=new Vector;rotation=new Vector;scale=new Vector().setScalar(1);visible=true;add(child:any){this.children.push(child)}traverse(fn:Function){fn(this);this.children.forEach(c=>c.traverse(fn))}}
+ class Geometry {parameters:any;constructor(...args:any[]){this.parameters={radius:args[0]}}}
+ class Material {color:any;constructor(options:any){Object.assign(this,options);this.color={value:options.color,setHex(n:number){this.value=n}}}}
+ class Mesh extends Group {isMesh=true;constructor(public geometry:any,public material:any){super()}}
+ const surface=(kind:string)=>({kind});
+ const build=new Function('oe','Ee','Ve','Mt','Jn','Un','dn','pi','l0','ob','$n','naturalSurface','return ({'+method+'}).createGamalCharacter')(Group,Material,Geometry,Mesh,Geometry,Geometry,Geometry,Material,Geometry,Group,2,surface);
+ const factory={createAlIttihadScarfTexture:()=>({}),createMabkharaFiligreeTexture:()=>({})};
+ for(const id of ['gamal','adel','hamido']){
+  const model=build.call(factory,id),rig=model.userData;
+  assert.equal(rig.characterId,id);assert.equal(rig.headPivot.scale.x,.84);
+  assert.equal(rig.leftLegPivot.scale.y,1.1);assert.equal(rig.rightLegPivot.position.y,1.23);
+  for(const joint of ['leftForearmPivot','rightForearmPivot','leftShinPivot','rightShinPivot','mouthMesh','mabkharaPivot','scarfBackPivot'])assert.ok(rig[joint]);
+  if(id==='adel'){assert.ok(rig.hornCarry);assert.ok(rig.hornMouth)}
+  const materials:any[]=[];model.traverse((node:any)=>{if(node.material)materials.push(node.material)});
+  assert.ok(materials.some(m=>m.bumpMap?.kind==='skin'&&m.metalness===0));
+  assert.ok(materials.some(m=>m.bumpMap?.kind==='cloth'&&m.roughness===.94));
+ }
+});
