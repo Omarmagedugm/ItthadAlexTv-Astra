@@ -193,10 +193,12 @@ function MainContentWrapper({ children, showGoal, showWin, activeMatch, scoredTe
     return <MaintenanceScreen />;
   }
 
+  const isGameRoute = location.pathname === '/game' || location.pathname.startsWith('/games/');
+
   return (
     <div className="ds-app">
       <a href="#main-content" className="ds-skip-link">تخطّي إلى المحتوى</a>
-      <TopHeader />
+      {!isGameRoute && <TopHeader />}
       <PageFrame><Suspense fallback={<PageLoader />}>{children}</Suspense></PageFrame>
 
       {/* Non-blocking background and utility widgets */}
@@ -657,9 +659,9 @@ function AuthRedirector() {
 
 function AppNav() {
   const location = useLocation();
-  const hideNavPaths = ['/auth'];
-  const isSplashOrAuth = hideNavPaths.includes(location.pathname);
-  if (isSplashOrAuth) return null;
+  const hideNavPaths = ['/auth', '/game'];
+  const isHidden = hideNavPaths.some(p => location.pathname === p || location.pathname.startsWith('/games/'));
+  if (isHidden) return null;
   return <BottomNav />;
 }
 

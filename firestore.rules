@@ -93,19 +93,23 @@ service cloud.firestore {
                       incoming().get('role', 'user') == 'user' &&
                       (!('roles' in incoming()) || (incoming().roles is list && incoming().roles.size() == 0)) &&
                       (!('isAdmin' in incoming()) || incoming().isAdmin == false);
-      // Profile updates by user cannot modify role, roles, or isAdmin:
+      // Profile updates: fast-path for stats/lastActive (safe for all members and roles), or validated non-privileged profile update:
       allow update: if (
-        isOwner(userId) && 
-        isValidUser(incoming()) &&
-        // role, roles, and isAdmin cannot be modified or escalated by non-admin:
-        (!incoming().diff(existing()).affectedKeys().hasAny(['role']) || ('role' in existing() && incoming().role == existing().role) || (!('role' in existing()) && incoming().role == 'user')) &&
-        (!incoming().diff(existing()).affectedKeys().hasAny(['roles']) || (!('roles' in existing()) && incoming().roles.size() == 0)) &&
-        (!incoming().diff(existing()).affectedKeys().hasAny(['isAdmin']) || (!('isAdmin' in incoming()) || incoming().isAdmin == false)) &&
-        incoming().diff(existing()).affectedKeys().hasOnly([
-          'name', 'username', 'bio', 'location', 'avatar', 'tier', 
-          'stats', 'bookmarks', 'lastActive', 'fcmToken', 'email', 
-          'gender', 'favoritePlayer', 'pushNotificationCategories', 'uid', 'joinDate', 'role', 'roles', 'isAdmin'
-        ])
+        isOwner(userId) && (
+          // Fast-path: updating game score/stats or activity only - 100% safe, cannot touch any role or profile field
+          incoming().diff(existing()).affectedKeys().hasOnly(['stats', 'lastActive']) ||
+          // Standard profile update (cannot modify privileged role/roles/isAdmin)
+          (
+            isValidUser(incoming()) &&
+            !incoming().diff(existing()).affectedKeys().hasAny(['role', 'roles', 'isAdmin']) &&
+            (!('isAdmin' in incoming()) || incoming().isAdmin == false) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'username', 'bio', 'location', 'avatar', 'tier', 
+              'stats', 'bookmarks', 'lastActive', 'fcmToken', 'email', 
+              'gender', 'favoritePlayer', 'pushNotificationCategories', 'uid', 'joinDate', 'role', 'roles', 'isAdmin'
+            ])
+          )
+        )
       ) || isAdmin();
       allow delete: if isAdmin();
     }

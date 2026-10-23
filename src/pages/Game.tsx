@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Gamepad2, Play, ArrowRight, Trophy, Zap, Move } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import SEOHead from '../components/SEOHead';
 import GameLeaderboard from '../components/game/GameLeaderboard';
 import { auth, db } from '../lib/firebase';
@@ -16,6 +16,11 @@ export default function Game() {
       if (event.origin !== window.location.origin) return;
       const data = event.data;
       if (!data) return;
+
+      if (data.type === 'ittihadawy:close' || data.type === 'ittihadawy:exit') {
+        setIsPlaying(false);
+        return;
+      }
 
       if (data.type === 'ittihadawy:run-end' && data.result) {
         const user = auth.currentUser;
@@ -39,18 +44,25 @@ export default function Game() {
         try {
           const userRef = doc(db, 'users', user.uid);
           const snap = await getDoc(userRef);
-          if (snap.exists()) {
-            const currentStats = snap.data()?.stats || {};
-            const existingScore = Number(currentStats.ittihadawyScore ?? 0);
-            if (result.score > existingScore) {
-              await updateDoc(userRef, {
-                'stats.ittihadawyScore': result.score,
-                'stats.ittihadawyDistance': result.distance || 0,
-                'stats.ittihadawyCharacter': result.character || 'gamal'
-              });
-            }
-            saved = true;
+          const currentStats = snap.exists() ? (snap.data()?.stats || {}) : {};
+          const existingScore = Number(currentStats.ittihadawyScore ?? 0);
+
+          if (result.score > existingScore) {
+            await setDoc(
+              userRef,
+              {
+                stats: {
+                  ...currentStats,
+                  ittihadawyScore: result.score,
+                  ittihadawyDistance: result.distance || 0,
+                  ittihadawyCharacter: result.character || 'gamal'
+                },
+                lastActive: new Date().toISOString()
+              },
+              { merge: true }
+            );
           }
+          saved = true;
         } catch (directErr) {
           console.warn('[GamePage] Direct update error, saving via server endpoint:', directErr);
           try {
@@ -76,6 +88,11 @@ export default function Game() {
             { type: 'ittihadawy:account', status: 'saved', id: data.id },
             window.location.origin
           );
+        } else {
+          iframeRef.current?.contentWindow?.postMessage(
+            { type: 'ittihadawy:account', status: 'error', id: data.id },
+            window.location.origin
+          );
         }
       }
     };
@@ -93,30 +110,25 @@ export default function Game() {
 
       {/* Fullscreen Game Experience */}
       {isPlaying && (
-        <div className="fixed inset-0 z-50 flex h-screen w-screen flex-col bg-black">
-          <div className="flex h-12 shrink-0 items-center justify-between border-b border-white/10 bg-slate-950 px-4 text-white">
-            <div className="flex items-center gap-2">
-              <Gamepad2 size={18} className="text-emerald-400" />
-              <span className="text-xs font-bold sm:text-sm">لعبة اتحاداوي · شاشة كاملة</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsPlaying(false)}
-              className="flex items-center gap-1.5 rounded-xl bg-emerald-600/30 px-3.5 py-1.5 text-xs font-bold text-emerald-300 transition hover:bg-emerald-600/50"
-            >
-              <span>العودة للترتيب</span>
-              <ArrowRight size={14} className="rotate-180" />
-            </button>
-          </div>
-          <div className="relative h-[calc(100vh-3rem)] w-full flex-1 bg-black">
-            <iframe
-              ref={iframeRef}
-              src="/games/ittihadawy/index.html"
-              title="لعبة اتحاداوي"
-              className="h-full w-full border-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-            />
-          </div>
+        <div className="fixed inset-0 z-50 h-screen w-screen bg-black">
+          {/* Single Return Arrow Button - Positioned in the open top center to never cover game controls */}
+          <button
+            type="button"
+            onClick={() => setIsPlaying(false)}
+            aria-label="الرجوع للتطبيق"
+            title="الرجوع للتطبيق"
+            className="absolute top-3 left-1/2 -translate-x-1/2 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-black/75 text-white shadow-2xl backdrop-blur-md transition hover:bg-black hover:scale-105 active:scale-95 border border-white/20"
+          >
+            <ArrowRight size={20} />
+          </button>
+
+          <iframe
+            ref={iframeRef}
+            src="/games/ittihadawy/index.html"
+            title="لعبة اتحاداوي"
+            className="h-full w-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+          />
         </div>
       )}
 
@@ -124,10 +136,11 @@ export default function Game() {
         <div className="flex items-center justify-between">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-emerald-600"
+            aria-label="الرجوع للتطبيق"
+            title="الرجوع للتطبيق"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white shadow-sm border border-slate-200 text-slate-700 transition hover:bg-slate-50 hover:text-emerald-600 active:scale-95 dark:bg-card-dark dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
           >
-            <ArrowRight size={15} />
-            العودة للتطبيق
+            <ArrowRight size={20} />
           </Link>
         </div>
 
