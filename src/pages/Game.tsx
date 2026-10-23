@@ -169,18 +169,13 @@ export default function Game() {
           <span>منطقة الألعاب</span><span className="text-emerald-600">/ اتحاداوي</span>
         </div>
         <section className="relative isolate overflow-hidden rounded-[2rem] bg-[#073c30] text-white">
-          <div className="grid sm:grid-cols-2">
+          <div className="grid">
             <div className="relative z-10 p-5 sm:p-6 lg:p-7">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-[#d3ed9b]"><Gamepad2 size={15}/>اللعبة الرسمية لجمهور الاتحاد</span>
               <h1 className="mt-4 text-4xl font-black sm:text-5xl">اتحاداوي<span className="text-[#cee991]">.</span></h1>
               <p className="mt-4 max-w-sm text-sm leading-7 text-emerald-50/75">من قلب المدرج لقلب المنافسة. اختار شخصيتك، عدّي العوائق، وخلي اسمك في الصدارة.</p>
               <button type="button" onClick={() => setIsPlaying(true)} className="mt-5 flex w-full items-center justify-center gap-3 whitespace-nowrap rounded-2xl bg-[#cee991] px-6 py-4 font-bold text-[#102b23] transition hover:bg-[#dff4b3] active:scale-[.98] sm:w-auto"><Play size={20} fill="currentColor"/>ابدأ اللعب</button>
               <div className="mt-4 flex gap-5 text-xs text-emerald-100/70"><span>٤ شخصيات</span><span>٣٧ منطقة</span><span>تحدّي بلا نهاية</span></div>
-            </div>
-            <div className="relative min-h-40 overflow-hidden sm:min-h-[300px]">
-              <img src="/games/ittihadawy/references/lazo.jpeg" alt="اللازو بطقم الاتحاد الأخضر ونضارة وكاب" className="absolute inset-0 h-full w-full object-cover object-[center_28%]"/>
-              <div className="absolute inset-0 bg-gradient-to-t from-[#073c30] via-transparent to-transparent"/>
-              <div className="absolute bottom-3 right-4 flex items-center gap-3"><span className="rounded-full bg-[#cee991] px-3 py-1 text-xs font-bold text-[#102b23]">وصل جديد</span><span className="text-base font-bold">اللازو</span></div>
             </div>
           </div>
         </section>
@@ -197,7 +192,7 @@ export default function Game() {
               ['اللازو', 'حبيبي اخالي', 'lazo.jpeg'],
             ].map(([name, ability, image]) => (
               <div key={name} className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-card-dark">
-                <div className="relative h-24 overflow-hidden bg-emerald-950/5 sm:h-28"><img src={`/games/ittihadawy/references/${image}`} alt={name} className="h-full w-full object-cover object-[center_25%]" loading="lazy"/>{name === 'اللازو' && <span className="absolute right-3 top-3 rounded-full bg-[#cee991] px-2.5 py-1 text-[10px] font-bold text-emerald-950">جديد</span>}</div>
+                <div className="relative h-24 overflow-hidden bg-emerald-950/5 sm:h-28"><img src={`/games/ittihadawy/references/${image}`} alt={name} className="h-full w-full object-cover object-[center_25%]" loading="lazy"/>{name === 'اللازو' && <span className="absolute right-3 top-3 rounded-full bg-[#cee991] px-2.5 py-1 text-[10px] font-bold text-emerald-950">وصل جديد</span>}</div>
                 <div className="p-3"><h3 className="text-sm font-bold text-slate-900 dark:text-white">{name}</h3><p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{ability}</p></div>
               </div>
             ))}
