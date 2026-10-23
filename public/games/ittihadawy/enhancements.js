@@ -31,6 +31,110 @@ function showStatus() {
   box.append(link);
 }
 
+// Live Game Stats Extractor: reads live score/distance at any moment even if not caught
+function getLiveGameStats() {
+  let score = 0, distance = 0, character = 'gamal';
+  
+  // 1. Read live score from active HUD
+  const hudPoints = document.querySelector('.hud-points');
+  if (hudPoints && hudPoints.textContent) {
+    const raw = hudPoints.textContent.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[^\d]/g, '');
+    score = parseInt(raw, 10) || 0;
+  }
+  
+  // 2. Read live distance from hud-chip
+  const chips = document.querySelectorAll('.hud-chip');
+  chips.forEach(chip => {
+    if (chip.textContent && chip.textContent.includes('متر')) {
+      const raw = chip.textContent.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[^\d]/g, '');
+      distance = parseInt(raw, 10) || 0;
+    }
+  });
+
+  // 3. Read character from localStorage
+  try {
+    const savedChar = JSON.parse(localStorage.getItem('ittihadawy-character') || '""');
+    if (savedChar && ['adel', 'gamal', 'hamido'].includes(savedChar)) {
+      character = savedChar;
+    }
+  } catch (_) {}
+
+  // 4. Also check localStorage gamal-best if higher
+  try {
+    const best = JSON.parse(localStorage.getItem('gamal-best') || 'null');
+    if (best && typeof best.score === 'number' && best.score > score) {
+      score = best.score;
+      distance = Math.max(distance, best.distance || 0);
+    }
+  } catch (_) {}
+
+  return { score, distance, character };
+}
+
+// Intercept back button clicks inside iframe to save live score and exit cleanly
+document.addEventListener('click', (e) => {
+  const target = e.target;
+  const link = target && typeof target.closest === 'function' ? target.closest('.back-app-link') : null;
+  if (link) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Grab current live score before exiting, even if not game over
+    const current = getLiveGameStats();
+    if (current.score >= 1) {
+      send({ type: 'ittihadawy:run-end', id: runId || 'early-exit', result: current });
+      if (window.parent && window.parent !== window) {
+        try {
+          window.parent.postMessage({
+            type: 'ittihadawy:run-end',
+            id: runId || 'early-exit',
+            result: current
+          }, '*');
+        } catch (_) {}
+      }
+    }
+
+    if (window.parent && window.parent !== window) {
+      try { window.parent.postMessage({ type: 'ittihadawy:close' }, '*'); } catch {}
+    } else {
+      window.location.href = '/game';
+    }
+  }
+}, true);
+
+// Send periodic live score updates so parent window always has the freshest score
+setInterval(() => {
+  const current = getLiveGameStats();
+  if (current.score >= 1) {
+    if (window.parent && window.parent !== window) {
+      try {
+        window.parent.postMessage({
+          type: 'ittihadawy:live-progress',
+          id: runId || 'active-run',
+          result: current
+        }, '*');
+      } catch (_) {}
+    }
+  }
+}, 1000);
+
+// Capture score if window or tab is closed/navigated away
+window.addEventListener('beforeunload', () => {
+  const current = getLiveGameStats();
+  if (current.score >= 1) {
+    send({ type: 'ittihadawy:run-end', id: runId || 'early-exit', result: current });
+    if (window.parent && window.parent !== window) {
+      try {
+        window.parent.postMessage({
+          type: 'ittihadawy:run-end',
+          id: runId || 'early-exit',
+          result: current
+        }, '*');
+      } catch (_) {}
+    }
+  }
+});
+
 window.addEventListener('message', event => {
   if (event.origin !== location.origin) return;
   const data = event.data;
@@ -50,7 +154,7 @@ function startNewRun() {
   status = '';
   send({ type: 'ittihadawy:run-start', id: runId });
   if (window.parent && window.parent !== window) {
-    try { window.parent.postMessage({ type: 'ittihadawy:run-start', id: runId }, location.origin); } catch {}
+    try { window.parent.postMessage({ type: 'ittihadawy:run-start', id: runId }, '*'); } catch {}
   }
 }
 
@@ -72,7 +176,7 @@ window.addEventListener('ittihadawy:state', event => {
     status = 'waiting';
     send({ type: 'ittihadawy:run-end', id: runId, result });
     if (window.parent && window.parent !== window) {
-      try { window.parent.postMessage({ type: 'ittihadawy:run-end', id: runId, result }, location.origin); } catch {}
+      try { window.parent.postMessage({ type: 'ittihadawy:run-end', id: runId, result }, '*'); } catch {}
     }
     setTimeout(showStatus, 100);
     setTimeout(() => {

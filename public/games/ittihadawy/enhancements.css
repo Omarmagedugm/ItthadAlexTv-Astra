@@ -4,8 +4,9 @@ html,body{position:fixed;inset:0;width:100%;height:100%;overscroll-behavior:none
 #root>main{position:absolute;inset:0;width:100%;height:100%;max-width:none;max-height:none}
 .scene{display:block;width:100%;height:100%}
 .scene canvas{display:block;width:100%!important;height:100%!important;max-width:none;max-height:none}
-/* Hide duplicate/misaligned internal back links; React overlay provides the single sleek arrow button */
-.back-app-link{display:none!important}
+/* Single Return Arrow Button: top-left corner, zero collision with header actions on the right */
+.back-app-link{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 14px)!important;left:14px!important;right:auto!important;width:42px!important;height:42px!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;background:rgba(0,0,0,0.8)!important;border:1px solid rgba(255,255,255,0.3)!important;border-radius:50%!important;color:#fff!important;font-size:0!important;z-index:9999!important;box-shadow:0 4px 15px rgba(0,0,0,0.5)!important;cursor:pointer!important;text-decoration:none!important;-webkit-backdrop-filter:blur(8px)!important;backdrop-filter:blur(8px)!important}
+.back-app-link:before{content:'→';font-size:22px;font-weight:900;line-height:1;display:block}
 .playing header,.paused header,.intro header,.falling header{left:auto!important;right:12px!important;top:calc(env(safe-area-inset-top,0px) + 12px)!important;width:auto}
 .playing .topactions,.paused .topactions{flex-direction:row!important;gap:7px}
 .playing .topactions button,.paused .topactions button{width:37px;height:37px}

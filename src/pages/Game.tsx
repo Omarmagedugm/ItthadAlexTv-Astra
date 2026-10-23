@@ -9,91 +9,122 @@ import { auth, db } from '../lib/firebase';
 export default function Game() {
   const [isPlaying, setIsPlaying] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const latestResultRef = useRef<{ score: number; distance: number; character: string } | null>(null);
+
+  const saveScoreForUser = async (result: { score: number; distance?: number; character?: string }, requestId?: string) => {
+    if (typeof result?.score !== 'number' || result.score < 1) return false;
+
+    let user = auth.currentUser;
+    if (!user) {
+      try {
+        await auth.authStateReady();
+        user = auth.currentUser;
+      } catch (_) {}
+    }
+
+    if (!user) {
+      console.warn('[GamePage] No authenticated member to record score for.');
+      if (requestId) {
+        iframeRef.current?.contentWindow?.postMessage(
+          { type: 'ittihadawy:account', status: 'guest', id: requestId },
+          '*'
+        );
+      }
+      return false;
+    }
+
+    if (requestId) {
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: 'ittihadawy:account', status: 'saving', id: requestId },
+        '*'
+      );
+    }
+
+    let saved = false;
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      const snap = await getDoc(userRef);
+      const currentStats = snap.exists() ? (snap.data()?.stats || {}) : {};
+      const existingScore = Number(currentStats.ittihadawyScore ?? 0);
+
+      if (result.score > existingScore) {
+        await setDoc(
+          userRef,
+          {
+            stats: {
+              ...currentStats,
+              ittihadawyScore: result.score,
+              ittihadawyDistance: result.distance || 0,
+              ittihadawyCharacter: result.character || 'gamal'
+            },
+            lastActive: new Date().toISOString()
+          },
+          { merge: true }
+        );
+      }
+      saved = true;
+      console.info(`[GamePage] Recorded score ${result.score} for user ${user.uid}`);
+    } catch (directErr) {
+      console.warn('[GamePage] Direct update error, saving via server endpoint:', directErr);
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch('/api/game/record-score', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ result })
+        });
+        if (res.ok) {
+          saved = true;
+          console.info(`[GamePage] Server endpoint successfully saved score ${result.score}`);
+        }
+      } catch (serverErr) {
+        console.warn('[GamePage] Server record score also failed:', serverErr);
+      }
+    }
+
+    if (requestId) {
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: 'ittihadawy:account', status: saved ? 'saved' : 'error', id: requestId },
+        '*'
+      );
+    }
+
+    return saved;
+  };
+
+  const handleExitGame = async () => {
+    // If player achieved any score in this run, save it immediately before leaving
+    const pendingScore = latestResultRef.current;
+    if (pendingScore && typeof pendingScore.score === 'number' && pendingScore.score >= 1) {
+      await saveScoreForUser(pendingScore);
+    }
+    setIsPlaying(false);
+  };
 
   // Direct game listener: guarantees any score made by an authenticated member is saved instantly
   useEffect(() => {
     const handleGameMessage = async (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
       const data = event.data;
       if (!data) return;
 
+      if (data.type === 'ittihadawy:live-progress' && data.result) {
+        if (typeof data.result.score === 'number' && data.result.score >= 1) {
+          latestResultRef.current = data.result;
+        }
+        return;
+      }
+
       if (data.type === 'ittihadawy:close' || data.type === 'ittihadawy:exit') {
-        setIsPlaying(false);
+        await handleExitGame();
         return;
       }
 
       if (data.type === 'ittihadawy:run-end' && data.result) {
-        const user = auth.currentUser;
-        if (!user) {
-          iframeRef.current?.contentWindow?.postMessage(
-            { type: 'ittihadawy:account', status: 'guest', id: data.id },
-            window.location.origin
-          );
-          return;
-        }
-
-        const result = data.result;
-        if (typeof result.score !== 'number' || result.score < 1) return;
-
-        iframeRef.current?.contentWindow?.postMessage(
-          { type: 'ittihadawy:account', status: 'saving', id: data.id },
-          window.location.origin
-        );
-
-        let saved = false;
-        try {
-          const userRef = doc(db, 'users', user.uid);
-          const snap = await getDoc(userRef);
-          const currentStats = snap.exists() ? (snap.data()?.stats || {}) : {};
-          const existingScore = Number(currentStats.ittihadawyScore ?? 0);
-
-          if (result.score > existingScore) {
-            await setDoc(
-              userRef,
-              {
-                stats: {
-                  ...currentStats,
-                  ittihadawyScore: result.score,
-                  ittihadawyDistance: result.distance || 0,
-                  ittihadawyCharacter: result.character || 'gamal'
-                },
-                lastActive: new Date().toISOString()
-              },
-              { merge: true }
-            );
-          }
-          saved = true;
-        } catch (directErr) {
-          console.warn('[GamePage] Direct update error, saving via server endpoint:', directErr);
-          try {
-            const token = await user.getIdToken();
-            const res = await fetch('/api/game/record-score', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({ result })
-            });
-            if (res.ok) {
-              saved = true;
-            }
-          } catch (serverErr) {
-            console.warn('[GamePage] Server record score also failed:', serverErr);
-          }
-        }
-
-        if (saved) {
-          iframeRef.current?.contentWindow?.postMessage(
-            { type: 'ittihadawy:account', status: 'saved', id: data.id },
-            window.location.origin
-          );
-        } else {
-          iframeRef.current?.contentWindow?.postMessage(
-            { type: 'ittihadawy:account', status: 'error', id: data.id },
-            window.location.origin
-          );
-        }
+        latestResultRef.current = data.result;
+        await saveScoreForUser(data.result, data.id);
       }
     };
 
@@ -111,17 +142,6 @@ export default function Game() {
       {/* Fullscreen Game Experience */}
       {isPlaying && (
         <div className="fixed inset-0 z-50 h-screen w-screen bg-black">
-          {/* Single Return Arrow Button - Positioned in the open top center to never cover game controls */}
-          <button
-            type="button"
-            onClick={() => setIsPlaying(false)}
-            aria-label="الرجوع للتطبيق"
-            title="الرجوع للتطبيق"
-            className="absolute top-3 left-1/2 -translate-x-1/2 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-black/75 text-white shadow-2xl backdrop-blur-md transition hover:bg-black hover:scale-105 active:scale-95 border border-white/20"
-          >
-            <ArrowRight size={20} />
-          </button>
-
           <iframe
             ref={iframeRef}
             src="/games/ittihadawy/index.html"
@@ -129,6 +149,17 @@ export default function Game() {
             className="h-full w-full border-0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
           />
+
+          {/* Floating Back Arrow Button - Rendered AFTER iframe with z-[99999] so it is ALWAYS visible and clickable */}
+          <button
+            type="button"
+            onClick={handleExitGame}
+            aria-label="الرجوع للتطبيق"
+            title="الرجوع للتطبيق"
+            className="fixed top-3.5 left-3.5 z-[99999] flex h-11 w-11 items-center justify-center rounded-full bg-black/85 text-white shadow-2xl backdrop-blur-md transition hover:bg-black hover:scale-105 active:scale-90 border border-white/30 cursor-pointer pointer-events-auto"
+          >
+            <ArrowRight size={22} />
+          </button>
         </div>
       )}
 
@@ -138,10 +169,11 @@ export default function Game() {
             to="/"
             aria-label="الرجوع للتطبيق"
             title="الرجوع للتطبيق"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white shadow-sm border border-slate-200 text-slate-700 transition hover:bg-slate-50 hover:text-emerald-600 active:scale-95 dark:bg-card-dark dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm border border-slate-200 text-slate-700 transition hover:bg-slate-50 hover:text-emerald-600 active:scale-95 dark:bg-card-dark dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
           >
-            <ArrowRight size={20} />
+            <ArrowRight size={22} />
           </Link>
+          <span className="text-xs font-bold text-slate-400 dark:text-slate-500">لعبة اتحاداوي</span>
         </div>
 
         {/* Hero Banner */}
