@@ -184,7 +184,10 @@ export default function Game() {
             </div>
           </div>
         </section>
-        <section aria-labelledby="characters-title">
+        <div className="grid items-start gap-6 lg:grid-cols-[1fr_300px]">
+          <div className="space-y-6">
+            <GameLeaderboard />
+            <section aria-labelledby="characters-title">
           <div className="mb-3 flex items-center justify-between"><h2 id="characters-title" className="text-base font-bold text-slate-900 dark:text-white">اختار نجم الجولة</h2><span className="text-xs text-slate-500">كل شخصية وليها طريقتها</span></div>
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
             {[
@@ -200,8 +203,7 @@ export default function Game() {
             ))}
           </div>
         </section>
-        <div className="grid items-start gap-6 lg:grid-cols-[1fr_300px]">
-          <GameLeaderboard />
+          </div>
           <section className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-card-dark">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600"><Gamepad2 size={21}/></span>
             <h2 className="mt-4 font-bold text-slate-900 dark:text-white">جاهز للجولة؟</h2>
