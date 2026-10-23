@@ -306,3 +306,12 @@ test('Lazo voice events use distinct clips and arrest interrupts earlier speech'
  const engine=source.statements.find(n=>ts.isClassDeclaration(n)&&n.members.some(m=>m.name?.getText(source)==='finishIntro'))!;
  assert.match(engine.getText(source),/this.characterId==="lazo"\?\(this.cb.toast\([^)]*\),this.sound.playLazoVoice\("ability"\)\)/);
 });
+
+
+test('Lazo arrest stops all other voice tracks without stopping background music',()=>{
+ const s=makeSound();s.ctx=context();s.master=gain();let stopped=0;
+ for(const key of ['opening','hornAudio','crabAudio','adelHitAudio','adelCaughtAudio','adelBoostAudio'])s[key]={currentTime:3,pause(){stopped++}};
+ let musicStopped=false;s.soundtrack={pause(){musicStopped=true}};s.openingWasPlaying=true;
+ s.caught('lazo');assert.equal(stopped,6);assert.equal(s.openingWasPlaying,false);assert.equal(musicStopped,false);assert.equal(s.lazoCaughtAudio.plays,1);
+ for(const key of ['opening','hornAudio','crabAudio','adelHitAudio','adelCaughtAudio','adelBoostAudio'])assert.equal(s[key].currentTime,0);
+});
