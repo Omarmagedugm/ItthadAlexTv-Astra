@@ -290,3 +290,19 @@ test('all refined characters build with their animation joints and ability attac
   assert.ok(materials.some(m=>m.bumpMap?.kind==='cloth'&&m.roughness===.94));
  }
 });
+
+test('Lazo voice events use distinct clips and arrest interrupts earlier speech',()=>{
+ const s=makeSound();s.ctx=context();s.master=gain();
+ s.playLazoVoice('ability');const ability=s.lazoAbilityAudio;assert.equal(ability.plays,1);
+ let stopped=0;ability.pause=()=>stopped++;ability.currentTime=2;
+ s.hit('lazo');assert.ok(stopped>0);assert.equal(ability.currentTime,0);assert.equal(s.lazoHitAudio.plays,1);
+ let hitStopped=0;s.lazoHitAudio.pause=()=>hitStopped++;s.lazoHitAudio.currentTime=2;
+ s.caught('lazo');assert.ok(hitStopped>0);assert.equal(s.lazoHitAudio.currentTime,0);assert.equal(s.lazoCaughtAudio.plays,1);
+ assert.equal(s.mediaNodes.get(s.lazoCaughtAudio).gain.gain.value,.95);
+ s.setSfxVolume(.2);assert.equal(s.mediaNodes.get(s.lazoCaughtAudio).gain.gain.value,.2);
+ let caughtStops=0;s.lazoCaughtAudio.pause=()=>caughtStops++;s.setPlaybackState('GAME_OVER');assert.equal(caughtStops,0);s.setPlaybackState('MENU');assert.equal(caughtStops,1);
+ s.muted=true;s.hit('lazo');assert.equal(s.lazoHitAudio.plays,1);
+ s.muted=false;s.reset();assert.equal(s.lazoCaughtAudio.currentTime,0);
+ const engine=source.statements.find(n=>ts.isClassDeclaration(n)&&n.members.some(m=>m.name?.getText(source)==='finishIntro'))!;
+ assert.match(engine.getText(source),/this.characterId==="lazo"\?\(this.cb.toast\([^)]*\),this.sound.playLazoVoice\("ability"\)\)/);
+});
