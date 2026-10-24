@@ -106,36 +106,33 @@ export function addRegionDetails(group, region, index, { box, cylinder, ball, la
       for(const z of [-24,0,24])cylinder(group,x,2.3,z,.13,.16,4,0x69756c,8);
     }
   }
-  if(region.id==='montaza'&&zoneOffset===5) {
-    // Prominent palace and garden wing on the right; the route keeps sea to the left.
-    box(group,25,5,-5,22,10,18,0xd7bc8f);
-    box(group,25,10,-5,24,1,20,0x914e36);
-    for(const x of [18,22,26,30,34]) {
-      cylinder(group,x,7,-14,.38,.42,4,0xf0dfbd,12);
-      box(group,x,6.4,-14,1.35,2.2,.3,0x536a70);
+  if(region.id==='gomrok'&&zoneOffset%5===1) {
+    // Cruise liners moored on the sea side: stepped decks, cabin windows and lifeboats.
+    const x=-36;
+    box(group,x,.7,0,10,2.2,38,0x253e53);
+    const bow=cylinder(group,x,.7,-19,5,4.6,2.2,0x253e53,3);bow.rotation.y=Math.PI;
+    box(group,x,1.9,0,10.3,.3,38,0xeceee9);
+    for(let deck=0;deck<4;deck++) {
+      const length=32-deck*3,y=2.8+deck*1.45;
+      box(group,x,y,1,8-deck*.5,1.4,length,0xf5f1e7);
+      for(const side of [-1,1])for(let z=-length/2+3;z<length/2;z+=2)
+        box(group,x+side*(4-deck*.25+.03),y,1+z,.1,.55,.9,0x28516b);
     }
-    box(group,25,12,-5,10,3,7,0xe1c89a);
-    for(const x of [-31,-25,-19,-13,13,19,25,31]) {
-      cylinder(group,x,1.6,18,.25,.3,3.2,0x745238,8);
-      ball(group,x,4,18,1.25,0x326e42,1,1.2,1);
+    for(const z of [-9,-3,3,9])for(const side of [-1,1]) {
+      box(group,x+side*4.6,3.2,z,.9,.65,3.1,0xe3832f);
+      box(group,x+side*5,2.3,z,.08,.7,3.4,0xe8e5d9);
     }
-    if(zoneOffset===5)label(group,'قصر المنتزه',25,13,-5,12,1.5,'#80543d','#fff3dc');
-    // Historic bridge and lighthouse are positioned along the left waterfront.
-    box(group,-35,1,13,12,.5,2,0xe9dfc9);
-    for(const x of [-40,-36,-32,-28]) cylinder(group,x,2.1,13,.22,.22,2.2,0xc9bba3,10);
-    cylinder(group,-45,7,1,1.5,1.7,1.5,0xf3eee3,16);
-    for(let band=0;band<6;band++)cylinder(group,-45,2+band*1.6,1,1.1-band*.035,1.2-band*.035,1.5,band%2?0xd24b3d:0xf4ead8,16);
+    for(const z of [1,6]) {
+      cylinder(group,x,8.4,z,.85,1.05,2.5,0xd9a94b,12);
+      cylinder(group,x,9.7,z,.9,.9,.25,0x253e53,12);
+    }
+    box(group,x,7.6,-8,5,1.2,3,0x29566e);
+    cylinder(group,x,9,-11,.08,.1,3.4,0xf4f0e5,8);
   }
   if(region.id==='bahary'&&zoneOffset===5) {
     box(group,26,4,-4,19,8,17,0xb9a27d);
     for(const x of [18,23,28,33])box(group,x,9,-4,1.4,2,.8,0x8e4235);
     label(group,'قلعة قايتباي',26,9,-4,12,1.4,'#6d4c36','#fff4df');
-  }
-  if(region.id==='mansheya'&&zoneOffset===5) {
-    box(group,25,4,-4,19,8,17,0xc5b79f);
-    for(const x of [18,22,26,30,34])cylinder(group,x,5,-13,.5,.55,7,0xe0d6c5,12);
-    box(group,25,9,-4,21,1,18,0x665a50);
-    label(group,'ميدان المنشية',25,10,-4,12,1.2,'#4f493f','#fff7e8');
   }
   if(region.id==='mahatetraml'&&zoneOffset===5) {
     cylinder(group,24,2,-4,.35,.4,4,0x665a46,12);

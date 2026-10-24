@@ -28,8 +28,10 @@ The focused embedded-build patch script fails on unexpected upstream content, so
 
 ## Route continuity
 
-The route in `scripts/lib/game-prompt-route.mjs` retains 42 districts, including earlier districts that were lost during route replacement. The original gate is part of the stadium, the library is in Azarita, and the citadel is in Bahary. Stanley, Gleem, San Stefano and the memorial use their original landmark models once per district per lap. Inland districts do not render sea scenery.
+The route in `scripts/lib/game-prompt-route.mjs` retains 41 districts, including earlier districts that were lost during route replacement. The original gate is part of the stadium, the library is in Azarita, the citadel is in Bahary, and the memorial is part of Mansheya. Stanley, Gleem, San Stefano and Mansheya’s memorial use their original landmark models once per district per lap. Inland districts do not render sea scenery.
 
 `game-route-continuity.mjs` restores scene dispatch and prevents generic street facades from obscuring Misr Station. Kom el Dikka has wider pavement to fit its cafe and food cart outside the running lanes. The Mex lighthouse has a wider black-and-white shaft.
 
 Automated geometry, dispatch, route, audio and score tests cover these changes. Real mobile/WebGL visual verification remains outstanding; the available cloud browser cannot create a WebGL context.
+
+Montaza uses one enlarged original palace per lap and trees on the right, with open sea on the left. Gomrok has two cruise liners on its sea side. The memorial has no separate route entry.

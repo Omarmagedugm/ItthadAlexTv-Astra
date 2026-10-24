@@ -93,7 +93,7 @@ test('one blue entrance sign per region in each route loop, never repeated down 
  const sign=new Function('x0','Mr','Uf','Xt','Be','return ({'+method.getText(source)+'}).regionSign')(
    (distance:number)=>({current:route.find((r:any)=>distance%length<r.end)}),route,length,()=>{},(_group:any,name:string)=>signs.push(name));
  for(let i=-2;i<length/60*2;i++)sign({},i);
- assert.equal(route.length,42);assert.equal(signs.length,route.length*2);
+ assert.equal(route.length,41);assert.equal(signs.length,route.length*2);
  for(const region of route)assert.equal(signs.filter(name=>name===region.name).length,2);
  assert.deepEqual(extended.map((r:any)=>r.id),route.map((r:any)=>r.id));
  const lookup=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='YR')!;
@@ -289,7 +289,7 @@ test('Mex has one black and white lighthouse per region pass, and HUD names the 
  assert.match(ui,/className:"current-region",title:z\.current\.name},z\.current\.name/);
 });
 
-test('Misr Station trains rest on rails beside ground-level lanes and Montaza landmarks are prominent',()=>{
+test('Misr Station trains rest on rails beside ground-level lanes and stay outside the running lanes',()=>{
  const trains=regionScenery('misrstation',4);
  const bodies=trains.filter(s=>s.kind==='box'&&s.args[4]===2.6);
  assert.equal(bodies.length,6);
@@ -297,10 +297,7 @@ test('Misr Station trains rest on rails beside ground-level lanes and Montaza la
  const wheels=trains.filter(s=>s.kind==='cylinder'&&s.args[3]===.36);
  assert.equal(wheels.length,24);assert.ok(wheels.every(s=>Math.abs(s.args[1]-s.args[3]-.04)<1e-6));
  assert.ok(trains.filter(s=>s.kind==='box'&&s.args[1]-s.args[4]/2<2).every(s=>Math.abs(s.args[0])-s.args[3]/2>4.5));
- const montaza=regionScenery('montaza',5);
- assert.ok(montaza.some(s=>s.kind==='label'&&s.args[0]==='قصر المنتزه'));
- assert.ok(montaza.some(s=>s.kind==='box'&&s.args[0]===25&&s.args[3]===22&&s.args[4]===10));
- assert.ok(montaza.some(s=>s.kind==='cylinder'&&s.args[0]===-45));
+
 });
 
 test('district trams and moving street obstacles are assigned to their required zones',()=>{
@@ -533,7 +530,7 @@ test('route preserves every earlier district and keeps inland neighborhoods dry'
  const oldVars=old.statements.flatMap(s=>ts.isVariableStatement(s)?[...s.declarationList.declarations]:[]);
  const extended=new Function('return '+oldVars.find(d=>d.name.getText(old)==='_0')!.initializer!.getText(old))();
  const previous=new Function('_0','return '+oldVars.find(d=>d.name.getText(old)==='Mr')!.initializer!.getText(old))(extended);
- const aliases:Record<string,string>={gate:'stadium',corniche:'azareeta',citadel:'bahary'};
+ const aliases:Record<string,string>={gate:'stadium',corniche:'azareeta',citadel:'bahary',memorial:'mansheya'};
  assert.equal(new Set(route.map((r:any)=>r.id)).size,route.length);
  for(const r of previous)assert.ok(route.some((n:any)=>n.id===(aliases[r.id]||r.id)),r.id);
  for(const id of ['zahreya','bakous','ghabriel','victoria','wardian'])assert.equal(route.find((r:any)=>r.id===id).sea,false,id);
@@ -545,10 +542,10 @@ test('recovered landmarks render exactly once in their own district on successiv
  const route=new Function('return '+declarations.find(d=>d.name.getText(source)==='Mr')!.initializer!.getText(source))();
  const lap=route.at(-1).end,calls:string[]=[];
  const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='renderRecoveredDistrict')!;
- const env:any={Mr:route,Uf:lap,Yx(){},Xt(){},Le(){},Be(){},ea(){},Zx(){},Kp(){},br:new Map(),cC:()=>calls.push('stanley'),tC:()=>calls.push('memorial'),dC:(_g:any,id:string)=>calls.push(id)};
+ const env:any={Mr:route,Uf:lap,Yx(){},Xt(){},Le(){},Be(){},ea(){},Zx(){},Kp(){},br:new Map(),cC:()=>calls.push('stanley'),tC:()=>calls.push('mansheya'),dC:(_g:any,id:string)=>calls.push(id)};
  const render=new Function('env','with(env){return '+fn.getText(source)+'}')(env);
  const engine={light(){},building(){}};
- for(const zone of ['stanley','gleem','sanstefano','memorial'])for(const loop of [0,1,2]){
+ for(const zone of ['stanley','gleem','sanstefano','mansheya'])for(const loop of [0,1,2]){
   calls.length=0;const start=route[route.findIndex((r:any)=>r.id===zone)-1].end/60;
   for(let i=0;i<10;i++)render(engine,{},loop*lap/60+start+i,zone);
   assert.deepEqual(calls,[zone]);
@@ -584,4 +581,34 @@ test('station scenery reaches the station renderer without covering its facade w
  render({}, {id:'misrstation',theme:'station'},25,{});
  assert.deepEqual(calls,['misrstation']);
  assert.match(fn.getText(source),/t.id==="sidigaber"\?"محطة سيدي جابر"/);
+});
+
+test('Mansheya owns the memorial and Montaza has one palace, right-hand trees and left-hand sea each lap',()=>{
+ const declarations=source.statements.flatMap(s=>ts.isVariableStatement(s)?[...s.declarationList.declarations]:[]);
+ const route=new Function('return '+declarations.find(d=>d.name.getText(source)==='Mr')!.initializer!.getText(source))();
+ assert.ok(!route.some((r:any)=>r.id==='memorial'));
+ assert.equal(route.find((r:any)=>r.id==='gomrok').sea,true);
+ const lap=route.at(-1).end;
+ const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='renderRecoveredDistrict')!;
+ const shapes:any[]=[],palaces:any[]=[],scales:any[]=[];
+ const env:any={Mr:route,Uf:lap,Yx(){},Xt:(_g:any,...a:any[])=>shapes.push(['box',...a]),Le:(_g:any,...a:any[])=>shapes.push(['trunk',...a]),ea:(_g:any,...a:any[])=>shapes.push(['leaf',...a]),Be(){},Kp(){},br:new Map(),oe:class{scale={set:(...v:any[])=>scales.push(v)}},dC:(_g:any,id:string)=>palaces.push(id),Zx(){throw Error('Unexpected sea clutter')}};
+ const render=new Function('env','with(env){return '+fn.getText(source)+'}')(env);
+ const start=route[route.findIndex((r:any)=>r.id==='montaza')-1].end/60;
+ for(const loop of [0,1,2]){
+  shapes.length=0;palaces.length=0;scales.length=0;
+  for(let i=0;i<10;i++)render({}, {add(){}},loop*lap/60+start+i,'montaza');
+  assert.deepEqual(palaces,['montaza']);assert.deepEqual(scales,[[1.45,1.45,1.35]]);
+  assert.equal(shapes.filter(s=>s[0]==='box'&&s[7]===3772317&&s[1]<0).length,10);
+  assert.ok(shapes.filter(s=>s[0]==='trunk'||s[0]==='leaf').every(s=>s[1]>0));
+ }
+});
+
+test('Gomrok cruise liners have tiered cabins and lifeboats entirely on the sea side',()=>{
+ const shapes=Array.from({length:10},(_,i)=>regionScenery('gomrok',i)).flat();
+ assert.equal(shapes.filter(s=>s.kind==='box'&&s.args[3]===10&&s.args[5]===38).length,2);
+ assert.equal(shapes.filter(s=>s.kind==='box'&&s.args[6]===0xe3832f).length,16);
+ assert.ok(shapes.every(s=>s.args[0]<-25));
+ assert.ok(shapes.filter(s=>s.kind==='box'&&s.args[6]===0x28516b).length>50);
+ const engine=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
+ assert.match(engine.members.find(n=>n.name?.getText(source)==='segment')!.getText(source),/"mansheya","gomrok","montaza"\]\.includes\(o\)/);
 });
