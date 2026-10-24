@@ -1,58 +1,46 @@
-# ITTIHADAWY development report
+# مراجعة لعبة اتحاداوي — 24 أكتوبر 2026
 
-## Changes included
+المستودع المعتمد: Omarmagedugm/ItthadAlexTv-Astra. هذه مراجعة للكود والاختبارات؛ ليست شهادة اكتمال بصري أو اختبار هاتف فعلي.
 
-- Defined the requested 28-zone route in both route and scene lookup data, including the 14 designated coastal zones and the return to Alexandria Stadium.
-- Added procedural district landmarks, tram scenery, moving dogs/motorcycles/tuk-tuks, and Misr Station rooftop scenery and obstacle variants.
-- Preserved unlocked characters, existing character models and abilities, scoring rules and the original banner image file.
-- Added a separate Hamido introduction audio asset from the existing project audio.
-- Added an app sign-in check before opening gameplay. The embedded document remains behind an input-blocking gate until the same-origin parent authorizes it. Signing out closes the game frame.
-- Restricted the game page's incoming score/exit messages to its own same-origin game iframe and cleared pending results when opening a new session.
-- Added syntax validation before writing patched bundles and fixed repeated patch runs deleting an unchanged active bundle.
+## المناطق والمعالم
 
-## Verification
+| البند | نتيجة المراجعة |
+|---|---|
+| استاد الإسكندرية والبوابة | أُعيد استخدام النموذج الأصلي، وتم تمديد مقطع الاستاد إلى 420 مترًا لاستيعاب البوابة والمدرجات عبر اللفات. |
+| المدرجات والبنرات | أضيفت ثمانية صفوف مدعومة على جانبي البوابة. ملفات البنرات الأصلية لم تتغير. مواضعها تحتاج معاينة فعلية. |
+| بحري وقلعة قايتباي | أُعيد استدعاء النموذج الأصلي للقلعة في بحري. تمت مراجعة الصورة المرجعية، لكن التطابق البصري الكامل لم يُختبر في المتصفح. |
+| الشاطبي ونادي الاتحاد | أُعيدت مرافق النادي والنموذج الأصلي، مع مبنى مقابل مستوحى من الصورة المرجعية بالقبة والواجهة الحمراء والأقواس. |
+| مكتبة الإسكندرية | أُعيد النموذج الأصلي في الأزاريطة، قبل منطقة الشاطبي في المسار. |
+| محطة مصر | أضيفت الأقواس الثلاثة والأبراج والسقف المعدني الأزرق وفق صورتي المرجع؛ القطارات على جانبي ممر أرضي، وأُزيلت بدائل عقبات الأسطح. |
+| فنار المكس | موجود بشرائط سوداء وبيضاء وقاعدة عريضة. قبول عرض الجسم بصريًا ما زال يحتاج معاينة. |
+| المناطق الداخلية | الظاهرية وباكوس وغبريال وفيكتوريا مُعرّفة دون بحر؛ الرسم العام للبحر مشروط بخاصية المنطقة. |
+| استمرارية المناطق | المسار يحتوي 28 منطقة. اختبارات استرجاع المعالم تشمل اللفات؛ خلو كل المشاهد من الفراغات أو التداخلات يحتاج تشغيلًا بصريًا شاملًا. |
 
-- Game integration and voice tests: 36 passed, 0 failed.
-- Security audit: 9 passed, 0 failed.
-- Production build: passed. Existing large-chunk warnings remain.
-- Active game bundle JavaScript parsing: passed.
-- Member access message behavior: rejected wrong origins, wrong frames and unauthorized messages; accepted the authorized parent.
-- Re-running the current patch script preserved the active bundle.
-- Whitespace/diff checks: passed.
+## اللعب والصوت
 
-## Remaining acceptance work
+- جمال وعادل وحميدو متاحون من البداية دون شرط نقاط.
+- السرعة تتزايد مع المسافة واللفات، وتزداد صعوبة العقبات مع التقدم.
+- تعزيز السرعة الحالي 3 ثوانٍ للالتقاط، وبحد أقصى 4 ثوانٍ للتراكم.
+- قدرة حميدو الحالية تستدعي رمي أبو جلمبو وصوته؛ التحقق من شكل الحركة يتطلب معاينة.
+- لكل شخصية من الثلاث صوت بداية منفصل. الأصوات القصيرة تستعمل مخازن صوت مفككة وترتبط بساعة AudioContext.
+- الدخول يستخدم جلسة التطبيق الحالية؛ اختبار ضوابط مصدر الرسائل واستعادة الجلسة ناجح.
+- حُوّل حفظ السكور في صفحة اللعبة إلى transaction حتى لا يتراجع الرقم القياسي عند تزامن جولتين.
+- أُضيف api/game/record-score.ts لتشغيل Vercel، واستخدم Express المعالج نفسه.
+- حفظ الخادم يتحقق من هوية العضو والنتيجة، ويستخدم updateTime لمنع تعارض الكتابة، ولا يعتبر استجابة HTML ناجحة حفظًا للنتيجة.
 
-This report does not certify completion of all 37 requested visual/gameplay acceptance criteria.
+## التحقق
 
-- Browser/WebGL and physical mobile playtesting have not been completed; Chromium is not installed in this environment. Frame rate, scene transitions, obstacle fairness, rooftop landings and absence of rendering failures still require runtime verification.
-- Stadium grandstand continuity, gate visibility, banner placement/proportions and removal of the specific blue sign still need a visual acceptance pass.
-- Rooftop scenery and specialized obstacles are implemented, but jumping across actual carriage gaps and moving trains have not been verified as a completed feature.
-- Saint Marc College's user reference image has not been supplied for architectural matching; current procedural scenery is provisional.
-- The 28 route entries are implemented; detailed visual completion of every district is not yet certified.
+- 47 اختبارًا للعبة والصوت وواجهة حفظ السكور: ناجحة.
+- 9 اختبارات أمان: ناجحة.
+- بناء Vite للإنتاج: ناجح. بقي تحذير حجم الحزم.
+- توليد خريطة الموقع حاول الوصول إلى Firestore وتعذر بسبب الاتصال؛ البناء استمر بنجاح.
+- لم تُعدّل أيقونة التطبيق أو إعدادات manifest أو وسوم PWA المحمية.
+- تعذرت المعاينة المُدارة: خدمة المعاينة لم تجد tsx، رغم أن اختبارات Node وبناء Vite نجحا عبر تبعيات البيئة.
+- لم يُختبر هاتف فعلي أو WebGL في المتصفح في هذه المراجعة.
+- لم تُنفذ كتابة تجريبية إلى بيانات عضو حقيقي؛ نجاح حفظ السكور الحي وقائمة المتصدرين يحتاج تجربة في البيئة المنشورة.
 
-## Files
+## ما لا يجوز اعتباره منتهيًا بعد
 
-- `src/pages/Game.tsx`
-- `public/games/ittihadawy/index.html`
-- `public/games/ittihadawy/enhancements.js`
-- `public/games/ittihadawy/enhancements.css`
-- `public/games/ittihadawy/version.json`
-- `public/games/ittihadawy/assets/index-60bd2ae7.js`
-- `public/games/ittihadawy/audio/hamido-opening.mp3`
-- `scripts/patch-embedded-game.mjs`
-- `scripts/patch-current-game-prompt.mjs`
-- `scripts/lib/game-region-details.mjs`
-- `scripts/lib/game-prompt-route.mjs`
-- `scripts/lib/game-moving-obstacles.mjs`
-- `scripts/lib/game-train-rooftops.mjs`
-- `tests/game-integration.test.ts`
+مطابقة كل المعالم بصريًا، عرض جسم الفنار، انعدام الفراغات في كل منطقة، عدالة كل التصادمات في اللعب الفعلي، الأداء والصوت على هاتف، والتأكد من ظهور نتيجة حساب حقيقي في قائمة المتصدرين.
 
-No administration dashboard, dashboard API or database integration was changed. Locked PWA assets and original stadium banner source artwork were preserved.
-
-## Follow-up: reuse the signed-in app session
-
-- Replaced the unconditional login wording during initialization with a session-loading state.
-- The game now requests access immediately from its signed-in app page instead of waiting for the full iframe load event.
-- The existing Firebase account bridge also restores the saved app session for direct game links. No separate sign-in flow was introduced.
-- Guest login controls appear only after authentication has resolved to no user. An embedded account bridge cannot revoke a valid in-memory parent session.
-- Game and voice tests now include authenticated parent, saved account, guest, wrong-origin and wrong-frame cases: 37 passed.
+تم رفع دفعة المعالم 7dd6270 ودفعة السكور e2388ed بناءً على طلب رفع التعديلات أولًا بأول.
