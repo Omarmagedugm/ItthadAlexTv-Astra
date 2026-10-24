@@ -96,7 +96,7 @@ window.addEventListener('message', (event) => {
             },
             body: JSON.stringify({ result: data.result })
           });
-          if (response.ok) {
+          if (response.ok && (await response.json()).success === true) {
             runs.delete(data.id);
             reply('saved', data.id);
             return;

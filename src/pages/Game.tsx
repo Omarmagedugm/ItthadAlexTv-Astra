@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Gamepad2, Play, ArrowRight, Trophy, Zap, Move } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, runTransaction } from 'firebase/firestore';
+import { improvedGameStats, validGameResult } from '../lib/gameScores';
 import SEOHead from '../components/SEOHead';
 import GameLeaderboard from '../components/game/GameLeaderboard';
 import { auth, db } from '../lib/firebase';
@@ -45,7 +46,7 @@ export default function Game() {
   };
 
   const saveScoreForUser = async (result: { score: number; distance?: number; character?: string }, requestId?: string) => {
-    if (typeof result?.score !== 'number' || result.score < 1) return false;
+    if (!validGameResult(result) || result.score < 1) return false;
 
     let user = auth.currentUser;
     if (!user) {
@@ -76,25 +77,13 @@ export default function Game() {
     let saved = false;
     try {
       const userRef = doc(db, 'users', user.uid);
-      const snap = await getDoc(userRef);
-      const currentStats = snap.exists() ? (snap.data()?.stats || {}) : {};
-      const existingScore = Number(currentStats.ittihadawyScore ?? 0);
-
-      if (result.score > existingScore) {
-        await setDoc(
-          userRef,
-          {
-            stats: {
-              ...currentStats,
-              ittihadawyScore: result.score,
-              ittihadawyDistance: result.distance || 0,
-              ittihadawyCharacter: result.character || 'gamal'
-            },
-            lastActive: new Date().toISOString()
-          },
-          { merge: true }
-        );
-      }
+      await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(userRef);
+        if (!snap.exists()) throw new Error('Member profile missing');
+        if (auth.currentUser?.uid !== user.uid) throw new Error('Account changed');
+        const update = improvedGameStats(snap.data().stats, result);
+        if (update) transaction.update(userRef, update);
+      });
       saved = true;
       console.info(`[GamePage] Recorded score ${result.score} for user ${user.uid}`);
     } catch (directErr) {
@@ -109,7 +98,7 @@ export default function Game() {
           },
           body: JSON.stringify({ result })
         });
-        if (res.ok) {
+        if (res.ok && (await res.json()).success === true) {
           saved = true;
           console.info(`[GamePage] Server endpoint successfully saved score ${result.score}`);
         }
