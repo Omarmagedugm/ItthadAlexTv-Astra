@@ -117,13 +117,16 @@ export default function Game() {
     return saved;
   };
 
-  const handleExitGame = async () => {
-    // If player achieved any score in this run, save it immediately before leaving
+  const handleExitGame = () => {
     const pendingScore = latestResultRef.current;
-    if (pendingScore && typeof pendingScore.score === 'number' && pendingScore.score >= 1) {
-      await saveScoreForUser(pendingScore);
-    }
+    latestResultRef.current = null;
+    // Return to the game page immediately, even if score storage is offline or slow.
     setIsPlaying(false);
+    if (pendingScore && typeof pendingScore.score === 'number' && pendingScore.score >= 1) {
+      void saveScoreForUser(pendingScore).catch((error) => {
+        console.warn('[GamePage] Could not save score after leaving:', error);
+      });
+    }
   };
 
   // Direct game listener: guarantees any score made by an authenticated member is saved instantly
@@ -183,8 +186,8 @@ export default function Game() {
           <button
             type="button"
             onClick={handleExitGame}
-            aria-label="الرجوع للتطبيق"
-            title="الرجوع للتطبيق"
+            aria-label="الرجوع لصفحة اللعبة"
+            title="الرجوع لصفحة اللعبة"
             className="fixed top-3.5 left-3.5 z-[99999] flex h-11 w-11 items-center justify-center rounded-full bg-black/85 text-white shadow-2xl backdrop-blur-md transition hover:bg-black hover:scale-105 active:scale-90 border border-white/30 cursor-pointer pointer-events-auto"
           >
             <ArrowRight size={22} />

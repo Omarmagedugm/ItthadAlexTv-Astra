@@ -1,3 +1,4 @@
+import { lowerStadiumSigns } from './lib/game-stadium-signs.mjs';
 import { restoreOriginalLandmarks } from './lib/game-landmark-restoration.mjs';
 import { restoreStadium } from './lib/game-stadium-restoration.mjs';
 import { readFileSync, writeFileSync, unlinkSync } from 'node:fs';
@@ -19,7 +20,7 @@ const parsed=ts.createSourceFile('game.js',code,ts.ScriptTarget.Latest,true,ts.S
 const regionDetails=parsed.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='addRegionDetails');
 if(!regionDetails)throw new Error('Could not locate embedded district scenery');
 code=code.slice(0,regionDetails.getStart(parsed))+addRegionDetails.toString()+code.slice(regionDetails.end);
-code=restoreRouteContinuity(code);
+code=lowerStadiumSigns(restoreRouteContinuity(code));
 const validated=ts.createSourceFile('game.js',code,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
 if(validated.parseDiagnostics.length)throw new Error('Refusing to write an invalid game bundle');
 const hash=createHash('sha256').update(code).digest('hex').slice(0,8),name=`assets/index-${hash}.js`;

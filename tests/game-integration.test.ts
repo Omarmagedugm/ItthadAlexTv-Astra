@@ -395,7 +395,7 @@ test('supporter banners stay on the stadium stand, clear of the running lanes, a
  const add=new Function('ns','yn','pi','$n','Image','Mt','Vs','let stadiumFanMaterial;return '+fn.getText(source))(Texture,'srgb',Material,2,class{},Mesh,class{constructor(public w:number,public h:number){}});
  const banners:any[]=[];const group={add(n:any){banners.push(n)}};add(group,1);add(group,2);assert.equal(banners.length,0);add(group,0);add(group,3);
  assert.equal(banners.length,2);assert.equal(banners[0].material,banners[1].material);assert.equal(banners[0].material.userData.sharedSurface,true);
- assert.ok(banners.every(b=>b.position.x>9&&b.position.y>2));assert.equal(banners[0].rotation.y,-Math.PI/2);
+ assert.ok(banners.every(b=>b.position.x>9&&b.position.y===1.25));assert.equal(banners[0].rotation.y,-Math.PI/2);
 });
 
 
@@ -451,7 +451,7 @@ test('stadium uses original renderer and gate on every lap instead of generic st
  const engine=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
  const method=engine.members.find(m=>m.name?.getText(source)==='segment')!;
  const shape=()=>({rotation:{},material:{},position:{set(){}}});
- const env:any={Uf:lap,vr:(d:number)=>route.find((r:any)=>d%lap<r.end).id,Me:{white:1,green:2,skin:3,black:4},br:new Map(),YR:(id:string)=>{calls.push('generic:'+id);return route.find((r:any)=>r.id===id)},XC:()=>calls.push('original-stands'),addGateGrandstands:()=>calls.push('gate-stands'),oC:()=>calls.push('komeldikka'),addRegionDetails(){},vf:()=>false,Xt:shape,ea:shape,Le:shape,Be:shape,kC:()=>{},Kp:()=>{},jp:()=>{}};
+ const env:any={Uf:lap,vr:(d:number)=>route.find((r:any)=>d%lap<r.end).id,Me:{white:1,green:2,skin:3,black:4},br:new Map(),YR:(id:string)=>{calls.push('generic:'+id);return route.find((r:any)=>r.id===id)},XC:()=>calls.push('original-stands'),addGateGrandstands:()=>calls.push('gate-stands'),addGateCelebration(){},oC:()=>calls.push('komeldikka'),addRegionDetails(){},vf:()=>false,Xt:shape,ea:shape,Le:shape,Be:shape,kC:()=>{},Kp:()=>{},jp:()=>{}};
  const segment=new Function('env','with(env){return ({'+method.getText(source)+'}).segment}')(env);
  const self={disposeGroup(){},regionSign(){},flag(){},light(){},gate(){calls.push('original-gate')}};
  for(const offset of [0,lap/60]){
@@ -495,7 +495,7 @@ test('Shatby restores original club facilities and Azarita restores the original
 
 test('original stadium, gate, Shatby club and library models are preserved verbatim',()=>{
  const old=ts.createSourceFile('old.js',readFileSync('public/games/ittihadawy/assets/index-e2d85a39.js','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
- for(const name of ['XC','uC','sC','hC','Xy','fC']){
+ for(const name of ['uC','sC','hC','Xy','fC']){
   const find=(s:ts.SourceFile)=>s.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text===name)!.getText(s);
   assert.equal(find(source),find(old),name);
  }
@@ -611,4 +611,50 @@ test('Gomrok cruise liners have tiered cabins and lifeboats entirely on the sea 
  assert.ok(shapes.filter(s=>s.kind==='box'&&s.args[6]===0x28516b).length>50);
  const engine=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
  assert.match(engine.members.find(n=>n.name?.getText(source)==='segment')!.getText(source),/"mansheya","gomrok","montaza"\]\.includes\(o\)/);
+});
+
+test('back arrow closes gameplay immediately while score saving is pending, and repeat taps do not resave',async()=>{
+ const page=ts.createSourceFile('Game.tsx',readFileSync('src/pages/Game.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+ let handler:ts.VariableDeclaration|undefined;
+ function visit(node:ts.Node){if(ts.isVariableDeclaration(node)&&node.name.getText(page)==='handleExitGame')handler=node;ts.forEachChild(node,visit);}
+ visit(page);assert.ok(handler?.initializer);
+ const code=ts.transpileModule('const exit = '+handler.initializer.getText(page),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+ const result={score:100,distance:40,character:'lazo'},ref={current:result as any};
+ const events:string[]=[];let reject!:(error:Error)=>void;
+ const pending=new Promise((_resolve,fail)=>{reject=fail});
+ const exit=new Function('latestResultRef','setIsPlaying','saveScoreForUser','console',code+';return exit;')(ref,(playing:boolean)=>{assert.equal(playing,false);events.push('closed')},(score:any)=>{assert.equal(score,result);events.push('saving');return pending},{warn:()=>events.push('save-failed')});
+ assert.equal(exit(),undefined);
+ assert.deepEqual(events,['closed','saving']);assert.equal(ref.current,null);
+ exit();assert.deepEqual(events,['closed','saving','closed']);
+ reject(new Error('offline'));await Promise.resolve();
+ assert.deepEqual(events,['closed','saving','closed','save-failed']);
+});
+
+test('stadium slogans hang horizontally beside the original image banner below the stands',()=>{
+ const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='XC')!;
+ const labels:any[]=[];
+ const env:any={kC(){},oe:class{position={set(){}}},pi:class{},bf(){return {rotation:{}}},addStadiumFanBanner(){}};
+ const render=new Function('env','with(env){return '+fn.getText(source)+'}')(env);
+ render({add(){}},1,{box:()=>({rotation:{},userData:{}}),cylinder:()=>({rotation:{}}),label:(_g:any,text:string,...args:any[])=>{const label={text,args,rotation:{},name:''};labels.push(label);return label}});
+ const slogans=labels.filter(l=>l.text==='الاتحاد سيد البلد');assert.equal(slogans.length,2);
+ for(const s of slogans){const [x,y,z,width,height]=s.args;assert.ok(x>9);assert.ok(y-height/2>0&&y+height/2<2);assert.ok(width/height>10);assert.ok(Math.abs(z)-width/2>9);assert.equal(s.rotation.y,-Math.PI/2);}
+ const engine=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
+ assert.doesNotMatch(engine.members.find(n=>n.name?.getText(source)==='segment')!.getText(source),/Be\(t,"الاتحاد سيد البلد",12,4/);
+});
+
+test('gate celebration faces the player and keeps banners, supporters, flags and flares outside the route',()=>{
+ const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='addGateCelebration')!;
+ const banners:any[]=[],shapes:any[]=[],crowds:any[]=[];
+ const shape=(kind:string)=>(_g:any,...args:any[])=>{const mesh={kind,args,rotation:{},userData:{},material:{}};shapes.push(mesh);return mesh};
+ const env:any={addStadiumFanBanner:(_g:any,_i:number,layout:any)=>banners.push(layout),Xt:shape('box'),Le:shape('cylinder'),ea:shape('ball'),kC:(_g:any,seats:any[])=>crowds.push(...seats),pi:class{constructor(options:any){Object.assign(this,options)}}};
+ const render=new Function('env','with(env){return '+fn.getText(source)+'}')(env);render({});
+ assert.equal(banners.length,2);
+ for(const b of banners){assert.equal(b.rotation,0);assert.equal(b.z,-5.9);assert.ok(Math.abs(b.x)-b.width/2>7.4);}
+ assert.ok(crowds.length>30);assert.ok(crowds.every(s=>Math.abs(s[0])>=10));
+ assert.equal(shapes.filter(s=>s.userData.flag).length,5);
+ assert.equal(shapes.filter(s=>s.kind==='ball'&&s.material.opacity===1).length,5);
+ assert.ok(shapes.every(s=>Math.abs(s.args[0])>9));
+ const banner=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='addStadiumFanBanner')!.getText(source);
+ assert.match(banner,/stadium-fan-banners-hd\.png/);
+ assert.match(banner,/texture\.offset\.set\(\.158,\.393\)/);
 });
