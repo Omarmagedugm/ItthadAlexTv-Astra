@@ -311,12 +311,12 @@ export function addRegionDetails(group, region, index, { box, cylinder, ball, la
   }
   if (region.id === 'mex' && index%10===9) {
     box(group,-33,.3,0,12,.7,12,0x999b94);
-    cylinder(group,-33,1,0,2.8,3.1,1.3,0xe7e5de,20);
-    for(let band=0;band<8;band++) cylinder(group,-33,2.6+band*1.6,0,1.5-band*.065,1.56-band*.065,1.6,band%2?0x202729:0xf6f4ea,20);
-    cylinder(group,-33,14.8,0,2.1,2.1,.35,0x202729,20);
-    cylinder(group,-33,15.7,0,1.25,1.25,1.5,0xe4d28f,12);
-    for(let rail=0;rail<8;rail++) cylinder(group,-33+Math.cos(rail*Math.PI/4)*1.6,15.5,Math.sin(rail*Math.PI/4)*1.6,.05,.05,1.4,0x202729,6);
-    cylinder(group,-33,16.7,0,0,2.1,1,0x202729,20);
+    cylinder(group,-33,1,0,3.5,3.8,1.3,0xe7e5de,20);
+    for(let band=0;band<8;band++) cylinder(group,-33,2.6+band*1.6,0,2.7-band*.07,2.77-band*.07,1.6,band%2?0x202729:0xf6f4ea,20);
+    cylinder(group,-33,14.8,0,3.2,3.2,.35,0x202729,20);
+    cylinder(group,-33,15.7,0,2.1,2.1,1.5,0xe4d28f,12);
+    for(let rail=0;rail<8;rail++) cylinder(group,-33+Math.cos(rail*Math.PI/4)*2.6,15.5,Math.sin(rail*Math.PI/4)*2.6,.05,.05,1.4,0x202729,6);
+    cylinder(group,-33,16.7,0,0,3.2,1,0x202729,20);
     ball(group,-33,15.8,0,.45,0xffe8a1);
   }
 }

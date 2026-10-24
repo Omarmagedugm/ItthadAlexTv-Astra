@@ -7,6 +7,7 @@ import { addRegionDetails } from './lib/game-region-details.mjs';
 import { addMovingObstacles } from './lib/game-moving-obstacles.mjs';
 import { addTrainRooftopGameplay } from './lib/game-train-rooftops.mjs';
 import ts from 'typescript';
+import { restoreRouteContinuity } from './lib/game-route-continuity.mjs';
 
 const root=new URL('../public/games/ittihadawy/',import.meta.url);
 let html=readFileSync(new URL('index.html',root),'utf8');
@@ -18,9 +19,9 @@ const parsed=ts.createSourceFile('game.js',code,ts.ScriptTarget.Latest,true,ts.S
 const regionDetails=parsed.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='addRegionDetails');
 if(!regionDetails)throw new Error('Could not locate embedded district scenery');
 code=code.slice(0,regionDetails.getStart(parsed))+addRegionDetails.toString()+code.slice(regionDetails.end);
+code=restoreRouteContinuity(code);
 const validated=ts.createSourceFile('game.js',code,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
 if(validated.parseDiagnostics.length)throw new Error('Refusing to write an invalid game bundle');
-code=code.replaceAll('محطة سيدي جابر','محطة مصر');
 const hash=createHash('sha256').update(code).digest('hex').slice(0,8),name=`assets/index-${hash}.js`;
 writeFileSync(new URL(name,root),code);
 html=html.replace(old,name);

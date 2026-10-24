@@ -93,10 +93,8 @@ test('one blue entrance sign per region in each route loop, never repeated down 
  const sign=new Function('x0','Mr','Uf','Xt','Be','return ({'+method.getText(source)+'}).regionSign')(
    (distance:number)=>({current:route.find((r:any)=>distance%length<r.end)}),route,length,()=>{},(_group:any,name:string)=>signs.push(name));
  for(let i=-2;i<length/60*2;i++)sign({},i);
- assert.equal(route.length,28);assert.equal(signs.length,56);
+ assert.equal(route.length,42);assert.equal(signs.length,route.length*2);
  for(const region of route)assert.equal(signs.filter(name=>name===region.name).length,2);
- assert.deepEqual(route.map((r:any)=>r.id),['stadium','komeldikka','misrstation','moharrambek','karmouz','bahary','mansheya','mahatetraml','azareeta','shatby','hadra','smouha','zahreya','bakous','ghabriel','victoria','sidiBishr','miami','asafra','mandara','montaza','maamoura','abouqir','minabasal','mex','dekheila','agamy','borgelarab']);
- assert.deepEqual(route.filter((r:any)=>r.sea).map((r:any)=>r.id),['bahary','mansheya','mahatetraml','azareeta','shatby','sidiBishr','miami','asafra','mandara','montaza','maamoura','abouqir','mex','agamy']);
  assert.deepEqual(extended.map((r:any)=>r.id),route.map((r:any)=>r.id));
  const lookup=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='YR')!;
  const findRegion=new Function('_0','return '+lookup.getText(source))(extended);
@@ -456,7 +454,7 @@ test('stadium uses original renderer and gate on every lap instead of generic st
  const engine=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
  const method=engine.members.find(m=>m.name?.getText(source)==='segment')!;
  const shape=()=>({rotation:{},material:{},position:{set(){}}});
- const env:any={Uf:lap,vr:(d:number)=>route.find((r:any)=>d%lap<r.end).id,Me:{white:1,green:2,skin:3,black:4},br:new Map(),YR:(id:string)=>{calls.push('generic:'+id);return route.find((r:any)=>r.id===id)},XC:()=>calls.push('original-stands'),addGateGrandstands:()=>calls.push('gate-stands'),oC:()=>calls.push('komeldikka'),vf:()=>false,Xt:shape,ea:shape,Le:shape,Be:shape,kC:()=>{},Kp:()=>{},jp:()=>{}};
+ const env:any={Uf:lap,vr:(d:number)=>route.find((r:any)=>d%lap<r.end).id,Me:{white:1,green:2,skin:3,black:4},br:new Map(),YR:(id:string)=>{calls.push('generic:'+id);return route.find((r:any)=>r.id===id)},XC:()=>calls.push('original-stands'),addGateGrandstands:()=>calls.push('gate-stands'),oC:()=>calls.push('komeldikka'),addRegionDetails(){},vf:()=>false,Xt:shape,ea:shape,Le:shape,Be:shape,kC:()=>{},Kp:()=>{},jp:()=>{}};
  const segment=new Function('env','with(env){return ({'+method.getText(source)+'}).segment}')(env);
  const self={disposeGroup(){},regionSign(){},flag(){},light(){},gate(){calls.push('original-gate')}};
  for(const offset of [0,lap/60]){
@@ -526,4 +524,64 @@ test('Shatby reference building stands on the left with its dome clear of the ru
  assert.ok(shapes.every(s=>s.args[0]<-23));
  assert.ok(shapes.some(s=>s.kind==='ball'&&s.args[1]===13.4&&s.args[3]===4.5));
  assert.ok(shapes.some(s=>s.kind==='box'&&s.args[6]===0x934e43));
+});
+
+test('route preserves every earlier district and keeps inland neighborhoods dry',()=>{
+ const variables=source.statements.flatMap(s=>ts.isVariableStatement(s)?[...s.declarationList.declarations]:[]);
+ const route=new Function('return '+variables.find(d=>d.name.getText(source)==='Mr')!.initializer!.getText(source))();
+ const old=ts.createSourceFile('old.js',readFileSync('public/games/ittihadawy/assets/index-e2d85a39.js','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
+ const oldVars=old.statements.flatMap(s=>ts.isVariableStatement(s)?[...s.declarationList.declarations]:[]);
+ const extended=new Function('return '+oldVars.find(d=>d.name.getText(old)==='_0')!.initializer!.getText(old))();
+ const previous=new Function('_0','return '+oldVars.find(d=>d.name.getText(old)==='Mr')!.initializer!.getText(old))(extended);
+ const aliases:Record<string,string>={gate:'stadium',corniche:'azareeta',citadel:'bahary'};
+ assert.equal(new Set(route.map((r:any)=>r.id)).size,route.length);
+ for(const r of previous)assert.ok(route.some((n:any)=>n.id===(aliases[r.id]||r.id)),r.id);
+ for(const id of ['zahreya','bakous','ghabriel','victoria','wardian'])assert.equal(route.find((r:any)=>r.id===id).sea,false,id);
+ for(let i=0;i<route.length;i++){assert.ok(route[i].end>(route[i-1]?.end||0));assert.equal(route[i].end%60,0);}
+});
+
+test('recovered landmarks render exactly once in their own district on successive laps',()=>{
+ const declarations=source.statements.flatMap(s=>ts.isVariableStatement(s)?[...s.declarationList.declarations]:[]);
+ const route=new Function('return '+declarations.find(d=>d.name.getText(source)==='Mr')!.initializer!.getText(source))();
+ const lap=route.at(-1).end,calls:string[]=[];
+ const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='renderRecoveredDistrict')!;
+ const env:any={Mr:route,Uf:lap,Yx(){},Xt(){},Le(){},Be(){},ea(){},Zx(){},Kp(){},br:new Map(),cC:()=>calls.push('stanley'),tC:()=>calls.push('memorial'),dC:(_g:any,id:string)=>calls.push(id)};
+ const render=new Function('env','with(env){return '+fn.getText(source)+'}')(env);
+ const engine={light(){},building(){}};
+ for(const zone of ['stanley','gleem','sanstefano','memorial'])for(const loop of [0,1,2]){
+  calls.length=0;const start=route[route.findIndex((r:any)=>r.id===zone)-1].end/60;
+  for(let i=0;i<10;i++)render(engine,{},loop*lap/60+start+i,zone);
+  assert.deepEqual(calls,[zone]);
+ }
+});
+
+test('Kom el Dikka dispatch includes its furniture and provides pavement outside the lanes',()=>{
+ const engine=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
+ const method=engine.members.find(n=>n.name?.getText(source)==='segment')!;
+ const calls:string[]=[];
+ const env:any={Uf:25020,vr:()=> 'komeldikka',oC:()=>calls.push('alley'),addRegionDetails:(_g:any,r:any)=>calls.push(r.id),Xt(){},Le(){},Be(){},ea(){},jp(){},Kp(){},br:new Map()};
+ const segment=new Function('env','with(env){return ({'+method.getText(source)+'}).segment}')(env);
+ segment.call({disposeGroup(){},regionSign(){}},{},9);
+ assert.deepEqual(calls,['alley','komeldikka']);
+ const alley=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='oC')!.getText(source);
+ assert.match(alley,/v=h\*12\.3,_=h\*9\.4/);
+ const furniture=regionScenery('komeldikka',9).filter(s=>s.kind==='box');
+ for(const {args:a} of furniture){assert.ok(Math.abs(a[0])-a[3]/2>4);assert.ok(Math.abs(a[0])+a[3]/2<9.4);}
+});
+
+test('Mex lighthouse has a broad striped shaft clear of the playable road',()=>{
+ const bands=regionScenery('mex',9).filter(s=>s.kind==='cylinder'&&s.args[5]===1.6);
+ assert.equal(bands.length,8);
+ assert.ok(bands.every(s=>s.args[3]*2>=4.4));
+ assert.ok(bands.every(s=>s.args[0]+s.args[4]<-25));
+});
+
+test('station scenery reaches the station renderer without covering its facade with generic buildings',()=>{
+ const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='ZR')!;
+ const calls:string[]=[];
+ const render=new Function('addRegionDetails','return '+fn.getText(source))((_g:any,r:any)=>calls.push(r.id));
+ // Any generic geometry construction would access unavailable Three.js constructors.
+ render({}, {id:'misrstation',theme:'station'},25,{});
+ assert.deepEqual(calls,['misrstation']);
+ assert.match(fn.getText(source),/t.id==="sidigaber"\?"محطة سيدي جابر"/);
 });
