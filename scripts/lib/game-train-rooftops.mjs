@@ -7,11 +7,8 @@ export function addTrainRooftopGameplay(code) {
   const getObject=engine.members.find(m=>m.name?.getText(source)==='getObject');
   const spawn=engine.members.find(m=>m.name?.getText(source)==='spawn');
   if(!getObject||!spawn)throw new Error('Could not locate train obstacle creation methods');
-  const replace=(text,from,to)=>{
-    if(text.includes(to))return text;
-    if(text.split(from).length!==2)throw new Error('Missing unique train rooftop obstacle insertion point');
-    return text.replace(from,to);
-  };
+  // Restore normal street obstacles; the player now runs between ground-level trains.
+  const replace=(text,from,to)=>text.includes(to)?text.replace(to,from):text;
   let objectText=getObject.getText(source);
   objectText=replace(objectText,'t==="low"){Xt(u,0,.55,0,1.9,1.1,.55,14190398);','t==="low"){if(vr(a)==="misrstation"){Xt(u,0,.55,0,1.75,1.1,1.1,0xb57837);Xt(u,0,1.12,0,1.35,.12,.8,0xe5c484)}else{Xt(u,0,.55,0,1.9,1.1,.55,14190398);');
   objectText=replace(objectText,'p.rotation.z=-.4}}else if(t==="high"){','p.rotation.z=-.4}}}else if(t==="high"){');

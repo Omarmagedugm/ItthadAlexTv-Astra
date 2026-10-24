@@ -291,10 +291,14 @@ test('Mex has one black and white lighthouse per region pass, and HUD names the 
  assert.match(ui,/className:"current-region",title:z\.current\.name},z\.current\.name/);
 });
 
-test('Misr Station receives train rooftop scenery and Montaza landmarks are prominent',()=>{
+test('Misr Station trains rest on rails beside ground-level lanes and Montaza landmarks are prominent',()=>{
  const trains=regionScenery('misrstation',4);
- assert.equal(trains.filter(s=>s.kind==='box'&&s.args[1]===-1.05).length,3);
- assert.equal(trains.filter(s=>s.kind==='box'&&s.args[1]===.08).length,3);
+ const bodies=trains.filter(s=>s.kind==='box'&&s.args[4]===2.6);
+ assert.equal(bodies.length,6);
+ assert.ok(bodies.every(s=>Math.abs(s.args[0])-s.args[3]/2>5));
+ const wheels=trains.filter(s=>s.kind==='cylinder'&&s.args[3]===.36);
+ assert.equal(wheels.length,24);assert.ok(wheels.every(s=>Math.abs(s.args[1]-s.args[3]-.04)<1e-6));
+ assert.ok(trains.filter(s=>s.kind==='box'&&s.args[1]-s.args[4]/2<2).every(s=>Math.abs(s.args[0])-s.args[3]/2>4.5));
  const montaza=regionScenery('montaza',5);
  assert.ok(montaza.some(s=>s.kind==='label'&&s.args[0]==='قصر المنتزه'));
  assert.ok(montaza.some(s=>s.kind==='box'&&s.args[0]===25&&s.args[3]===22&&s.args[4]===10));
@@ -309,9 +313,9 @@ test('district trams and moving street obstacles are assigned to their required 
  const spawner=engine.members.find(n=>n.name?.getText(source)==='spawn')!.getText(source);
  const runner=engine.members.find(n=>n.name?.getText(source)==='tickRun')!.getText(source);
  assert.match(objectMaker,/t==="tuktuk"/);assert.match(objectMaker,/t==="motorcycle"/);assert.match(objectMaker,/t==="dog"/);
- assert.match(objectMaker,/vr\(a\)==="misrstation"/);
+ assert.doesNotMatch(objectMaker,/vr\(a\)==="misrstation"/);
  assert.match(spawner,/\["komeldikka","karmouz","asafra"\]\.includes\(zone\)/);
- assert.match(spawner,/zone==="misrstation"/);
+ assert.doesNotMatch(spawner,/zone==="misrstation"/);
  assert.match(runner,/g\.group\.userData\.movingWheels/);assert.match(runner,/g\.group\.userData\.dogLegs/);
  const collision=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='MC')!;
  const avoids=new Function('return '+collision.getText(source))();
@@ -443,4 +447,83 @@ test('existing app and persisted account sessions unlock gameplay without anothe
   if(embedded){send(parent,true);assert.equal(opened,2);send(account,false);assert.equal(locked,0);send(parent,false)}else send(account,false);
   assert.equal(locked,1);assert.equal(fields.a.hidden,false);
  }
+});
+
+test('stadium uses original renderer and gate on every lap instead of generic streets',()=>{
+ const declarations=source.statements.flatMap(s=>ts.isVariableStatement(s)?[...s.declarationList.declarations]:[]);
+ const route=new Function('return '+declarations.find(d=>d.name.getText(source)==='Mr')!.initializer!.getText(source))();
+ const lap=route.at(-1).end, calls:string[]=[];
+ const engine=source.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration;
+ const method=engine.members.find(m=>m.name?.getText(source)==='segment')!;
+ const shape=()=>({rotation:{},material:{},position:{set(){}}});
+ const env:any={Uf:lap,vr:(d:number)=>route.find((r:any)=>d%lap<r.end).id,Me:{white:1,green:2,skin:3,black:4},br:new Map(),YR:(id:string)=>{calls.push('generic:'+id);return route.find((r:any)=>r.id===id)},XC:()=>calls.push('original-stands'),addGateGrandstands:()=>calls.push('gate-stands'),oC:()=>calls.push('komeldikka'),vf:()=>false,Xt:shape,ea:shape,Le:shape,Be:shape,kC:()=>{},Kp:()=>{},jp:()=>{}};
+ const segment=new Function('env','with(env){return ({'+method.getText(source)+'}).segment}')(env);
+ const self={disposeGroup(){},regionSign(){},flag(){},light(){},gate(){calls.push('original-gate')}};
+ for(const offset of [0,lap/60]){
+  calls.length=0;segment.call(self,{},offset);assert.ok(calls.includes('original-stands'));assert.ok(!calls.some(c=>c.startsWith('generic:')));
+  calls.length=0;segment.call(self,{},offset+5);assert.deepEqual(calls,['original-stands','original-gate','gate-stands']);
+  calls.length=0;segment.call(self,{},offset+7);assert.deepEqual(calls,['komeldikka']);
+ }
+});
+
+test('gate grandstands contain eight supported seating tiers on each side and keep the route clear',()=>{
+ const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='addGateGrandstands')!;
+ const build=new Function('return '+fn.getText(source))();const boxes:number[][]=[],crowds:any[]=[];
+ build({}, {box:(_g:any,...args:number[])=>boxes.push(args),cylinder(){},crowd:(_g:any,seats:any[],options:any)=>crowds.push({seats,options})});
+ const tiers=boxes.filter(b=>b[4]===.5&&b[5]===1.2);assert.equal(tiers.length,16);
+ for(const b of boxes)assert.ok(b[0]+b[3]/2<=-7.39||b[0]-b[3]/2>=7.39);
+ assert.ok(crowds[0].seats.length>200);assert.equal(crowds[0].options.seats,true);
+});
+
+test('Shatby restores original club facilities and Azarita restores the original library each lap',()=>{
+ const declarations=source.statements.flatMap(s=>ts.isVariableStatement(s)?[...s.declarationList.declarations]:[]);
+ const route=new Function('return '+declarations.find(d=>d.name.getText(source)==='Mr')!.initializer!.getText(source))();
+ const lap=route.at(-1).end,calls:string[]=[];
+ const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='renderOriginalLandmarks')!;
+ const shape=()=>({rotation:{},material:{}});
+ const env:any={Mr:route,Uf:lap,Yx(){},Xt:shape,Le:shape,Be:shape,ea:shape,Zx(){},Kp(){},br:new Map(),addShatbyReferenceBuilding:()=>calls.push('reference-building-left'),sC:()=>calls.push('tram'),$R:()=>calls.push('fence'),Xy:(_g:any,h:number)=>calls.push('facilities:'+h),hC:()=>calls.push('club-gate'),nC(){}};
+ const render=new Function('env','with(env){return '+fn.getText(source)+'}')(env);
+ const engine={light(){},palm(){},building(){},club(){calls.push('original-club')},library(){calls.push('original-library')},citadel(){calls.push('original-citadel')}};
+ for(const offset of [0,lap/60]){
+  calls.length=0;const shatbyStart=route[route.findIndex((r:any)=>r.id==='shatby')-1].end/60;
+  for(let i=0;i<10;i++)render(engine,{},offset+shatbyStart+i,'shatby');
+  assert.equal(calls.filter(c=>c==='original-club').length,1);assert.equal(calls.filter(c=>c==='club-gate').length,1);
+  for(const h of [9,10,11,12,13])assert.ok(calls.includes('facilities:'+h));
+  calls.length=0;const libraryStart=route[route.findIndex((r:any)=>r.id==='azareeta')-1].end/60;
+  for(let i=0;i<10;i++)render(engine,{},offset+libraryStart+i,'azareeta');
+  assert.deepEqual(calls,['original-library']);
+  calls.length=0;const baharyStart=route[route.findIndex((r:any)=>r.id==='bahary')-1].end/60;
+  for(let i=0;i<10;i++)render(engine,{},offset+baharyStart+i,'bahary');
+  assert.deepEqual(calls,['original-citadel']);
+ }
+});
+
+test('original stadium, gate, Shatby club and library models are preserved verbatim',()=>{
+ const old=ts.createSourceFile('old.js',readFileSync('public/games/ittihadawy/assets/index-e2d85a39.js','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
+ for(const name of ['XC','uC','sC','hC','Xy','fC']){
+  const find=(s:ts.SourceFile)=>s.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text===name)!.getText(s);
+  assert.equal(find(source),find(old),name);
+ }
+ for(const name of ['gate','club','library','citadel']){
+  const find=(s:ts.SourceFile)=>(s.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC') as ts.ClassDeclaration).members.find(m=>m.name?.getText(s)===name)!.getText(s);
+  assert.equal(find(source),find(old),name);
+ }
+});
+
+test('uploaded station reference is represented by arched bays, clock towers and overhead trusses',()=>{
+ const station=regionScenery('misrstation',5);
+ assert.equal(station.filter(s=>s.kind==='box'&&s.args[0]===16.1).length,39);
+ assert.equal(station.filter(s=>s.kind==='cylinder'&&s.args[0]===14.99).length,2);
+ assert.ok(station.some(s=>s.kind==='label'&&s.args[0]==='محطة مصر'));
+ assert.ok(station.some(s=>s.kind==='box'&&s.args[6]===0xb5d8de&&s.args[1]>12));
+});
+
+test('Shatby reference building stands on the left with its dome clear of the runner and tram',()=>{
+ const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='addShatbyReferenceBuilding')!;
+ const create=new Function('return '+fn.getText(source))();const shapes:any[]=[];
+ const primitive=(kind:string)=>(_g:any,...args:any[])=>{shapes.push({kind,args});return {rotation:{}}};
+ create({}, {box:primitive('box'),cylinder:primitive('cylinder'),ball:primitive('ball')});
+ assert.ok(shapes.every(s=>s.args[0]<-23));
+ assert.ok(shapes.some(s=>s.kind==='ball'&&s.args[1]===13.4&&s.args[3]===4.5));
+ assert.ok(shapes.some(s=>s.kind==='box'&&s.args[6]===0x934e43));
 });

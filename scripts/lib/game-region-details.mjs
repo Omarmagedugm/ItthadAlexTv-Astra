@@ -10,25 +10,73 @@ export function plantVillaTrees(group, { cylinder, ball }) {
 export function addRegionDetails(group, region, index, { box, cylinder, ball, label }) {
   const zoneOffset=((index%10)+10)%10;
   if(region.id==='misrstation') {
-    // Rooftop corridor: train roofs cover every playable lane; rails/platforms remain scenery.
-      for(const x of [-4.2,0,4.2]) {
-        box(group,x,-1.05,0,4.25,2.1,58,0x28414b);
-        box(group,x,.08,0,4.2,.25,57,0x66757a);
-        for(const z of [-24,-12,0,12,24]) {
-          box(group,x,.25,z,1.35,.14,2.4,0xb7bdba);
-          box(group,x,.34,z,1.08,.06,2.05,0x68777b);
-        }
+    // Ground-level running between trains: wheels rest on rails beside the road.
+    for(const x of [-7.5,7.5]) {
+      for(const rail of [-.9,.9])box(group,x+rail,.04,0,.12,.08,60,0x596369);
+      for(const z of [-20,0,20]) {
+        box(group,x,1.9,z,2.8,2.6,18,0x28414b);
+        box(group,x,3.27,z,2.9,.18,18.2,0x66757a);
         for(const side of [-1,1]) {
-          box(group,x+side*1.92,-.15,0,.12,.45,57,0xe0b238);
-          for(const z of [-20,-8,4,16,28]) cylinder(group,x+side*1.5,-1.9,z,.16,.16,.2,0x24292b,10);
+          for(const wz of [-6,6]) {
+            const wheel=cylinder(group,x+side*1.12,.4,z+wz,.36,.36,.2,0x24292b,10);
+            wheel.rotation.z=Math.PI/2;
+          }
+          for(const wz of [-6,-2,2,6])box(group,x+side*1.42,2.3,z+wz,.08,1.05,2.3,0xa8c9d2);
+          box(group,x+side*1.43,1.2,z,.08,.15,17,0xe0b238);
         }
       }
-      for(const x of [-8.5,8.5]) {
-        box(group,x,-2.3,0,.25,.25,60,0x41474a);
-        box(group,x+Math.sign(x)*.45,-2.45,0,.22,.18,60,0x9ca3a1);
-        box(group,x*1.55,-.05,0,3,.5,60,0x938f82);
-        for(const z of [-22,0,22]) box(group,x*1.55,2.1,z,2.8,4.2,.35,0xe0d6c2);
+    }
+    // Reference: exposed steel trusses, blue roof panels and a glazed central ridge.
+    for(const z of [-24,-4,16]) {
+      for(const side of [-1,1]) {
+        cylinder(group,side*15,4.8,z,.13,.16,9.6,0x33474f,8);
+        const rafter=box(group,side*7.5,11,z,15.9,.18,.2,0x33474f);
+        rafter.rotation.z=-side*.25;
+        const roof=box(group,side*9,11.1,z,12.4,.12,19.8,0x56889a);
+        roof.rotation.z=-side*.25;
+        const glass=box(group,side*1.6,12.9,z,3.2,.08,19.8,0xb5d8de);
+        glass.rotation.z=-side*.25;
+        for(const x of [3,6,9,12]) {
+          const brace=box(group,side*x,10.1+(15-x)*.24,z,.09,1.5,.1,0x33474f);
+          brace.rotation.z=side*.5;
+        }
       }
+      box(group,0,9.6,z,30,.1,.1,0x33474f);
+    }
+    if(zoneOffset===5) {
+      // Three arched bays and paired clock towers, matching the exterior reference.
+      const stone=0xd8d0b8,brick=0x9a6653;
+      box(group,25,6,0,15,12,34,brick);
+      box(group,16.9,6,0,.7,12,34,stone);
+      for(const z of [-10,0,10]) {
+        box(group,16.45,3,z,.15,6,6.2,0x294349);
+        for(const side of [-1,1]) {
+          cylinder(group,16.15,3.4,z+side*3.3,.3,.36,6.8,stone,12);
+          box(group,16.15,6.8,z+side*3.3,.9,.35,1,stone);
+        }
+        for(let i=0;i<13;i++) {
+          const angle=i*Math.PI/12;
+          const arch=box(group,16.1,6.8+Math.sin(angle)*3.3,z+Math.cos(angle)*3.3,.8,.6,.88,stone);
+          arch.rotation.x=angle-Math.PI/2;
+        }
+        for(const wz of [-2,0,2])box(group,16.25,2.8,z+wz,.08,4.8,.12,stone);
+      }
+      for(const y of [10.7,11.8,12.3])box(group,16.2,y,0,1,.35,35,stone);
+      for(const z of [-16.5,16.5]) {
+        box(group,16.3,7,z,2.5,14,2.5,stone);
+        box(group,16.3,14.2,z,3.4,.5,3.4,stone);
+        cylinder(group,16.3,15.2,z,.65,.8,1.7,stone,12);
+        const clock=cylinder(group,14.99,12.6,z,1,1,.12,0xf4edda,24);clock.rotation.z=Math.PI/2;
+        box(group,14.88,12.85,z,.08,.6,.07,0x263b40);
+        box(group,14.87,12.6,z+.22,.08,.07,.5,0x263b40);
+      }
+      const title=label(group,'محطة مصر',15.9,11.25,0,12,.8,'#d8d0b8','#36494b');title.rotation.y=-Math.PI/2;
+    }
+    for(const x of [-12.5,12.5]) {
+      box(group,x,.22,0,3,.44,60,0x938f82);
+      box(group,x,4.3,0,4,.2,60,0xe0d6c2);
+      for(const z of [-24,0,24])cylinder(group,x,2.3,z,.13,.16,4,0x69756c,8);
+    }
   }
   if(region.id==='montaza'&&zoneOffset===5) {
     // Prominent palace and garden wing on the right; the route keeps sea to the left.

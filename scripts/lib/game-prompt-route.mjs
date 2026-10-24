@@ -32,7 +32,7 @@ const route = [
 ];
 
 export const requiredRegions = Object.freeze(route.map(([id,name,theme,sea],index)=>({
-  id,name,theme,end:index===0?300:300+index*600,sea
+  id,name,theme,end:420+index*600,sea
 })));
 
 export function applyPromptRoute(code) {
