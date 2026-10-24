@@ -45,9 +45,10 @@ export function addRegionDetails(group, region, index, { box, cylinder, ball, la
     }
     if(zoneOffset===5) {
       // Three arched bays and paired clock towers, matching the exterior reference.
-      const stone=0xd8d0b8,brick=0x9a6653;
+      const stone=0xe5d9bd,brick=0x914e43;
       box(group,25,6,0,15,12,34,brick);
-      box(group,16.9,6,0,.7,12,34,stone);
+      // Cream stone frames the red brick instead of covering the entire facade.
+      box(group,16.8,.45,0,1,.9,34,stone);
       for(const z of [-10,0,10]) {
         box(group,16.45,3,z,.15,6,6.2,0x294349);
         for(const side of [-1,1]) {
@@ -62,6 +63,33 @@ export function addRegionDetails(group, region, index, { box, cylinder, ball, la
         for(const wz of [-2,0,2])box(group,16.25,2.8,z+wz,.08,4.8,.12,stone);
       }
       for(const y of [10.7,11.8,12.3])box(group,16.2,y,0,1,.35,35,stone);
+      for(const z of [-10,0,10]) {
+        const surround=cylinder(group,16.15,10.15,z,.68,.68,.18,stone,20);surround.rotation.z=Math.PI/2;
+        const medallion=cylinder(group,16.03,10.15,z,.46,.46,.19,0x25425d,20);medallion.rotation.z=Math.PI/2;
+      }
+      // Recessed two-storey wings: green windows above repeated cream arches.
+      for(const side of [-1,1]) {
+        box(group,25,5.1,side*23.6,12,10.2,12.4,brick);
+        for(const y of [.45,5.9,9.9,10.35])box(group,18.7,y,side*23.6,.8,.35,12.5,stone);
+        for(const z of [side*19.5,side*23.5,side*27.5]) {
+          box(group,18.65,2.2,z,.16,4.4,2.7,0x29433e);
+          for(const edge of [-1,1])box(group,18.35,2.3,z+edge*1.5,.5,4.6,.35,stone);
+          for(let i=0;i<11;i++) {
+            const angle=i*Math.PI/10;
+            const arch=box(group,18.3,4.4+Math.sin(angle)*1.5,z+Math.cos(angle)*1.5,.6,.35,.5,stone);
+            arch.rotation.x=angle-Math.PI/2;
+          }
+          box(group,18.55,7.9,z,.35,3,2.7,stone);
+          box(group,18.3,7.9,z,.18,2.55,2.2,0x29433e);
+          box(group,18.15,7.9,z,.12,2.55,.09,stone);
+          box(group,18.1,6.8,z,.2,.16,2.5,stone);
+        }
+        for(let z=18.5;z<30;z+=2.3)box(group,18.6,10.8,side*z,.75,.65,1.25,stone);
+      }
+      // Decorated parapet and projecting cornice of the main entrance.
+      box(group,16.3,13,0,1.5,1.1,34.5,stone);
+      for(let z=-15;z<=15;z+=2)box(group,15.9,11.5,z,.55,.38,.38,0xc3b18e);
+      for(const z of [-12,-6,0,6,12])box(group,15.9,13.45,z,.5,1.2,.8,stone);
       for(const z of [-16.5,16.5]) {
         box(group,16.3,7,z,2.5,14,2.5,stone);
         box(group,16.3,14.2,z,3.4,.5,3.4,stone);
