@@ -21,3 +21,11 @@ Run `node --import tsx --test tests/game-integration.test.ts tests/game-score-ap
 Outstanding before release: real mobile/WebGL rendering, likeness/accessory clipping review, live multi-device/account synchronization, and Firestore Rules emulator/authorized staging verification. The local environment has no runnable Chromium binary; downloading it failed. New persistence needs the included Firestore rules published when release is authorized. No claim of live authentication, balance or mobile end-to-end verification is made.
 
 Coins, like existing game scores, originate in the client simulation. Rules enforce authenticated ownership, bounded values, atomic ledger deltas and exact catalog prices; they do not independently simulate runs or provide authoritative anti-cheat validation.
+
+## Member gift and revised home navigation
+
+Character selection is on the home screen next to the live showcase. There is one combined shop entry, labeled المتجر, for previewing and buying wearable items. The purchase confirmation button reads شراء.
+
+`config/game-member-gift.json` freezes the existing-member cutoff. The administrative script `node scripts/grant-existing-member-gift.mjs` previews eligibility; adding `--apply` creates one immutable 3000-coin gift per qualifying member. Existing gift documents are skipped transactionally. Only an administrator can create gifts or change their amount. Members can acknowledge their own gift notification; acknowledging does not credit it again. The shop adds this trusted gift balance to earned coins and continues to subtract previous spending.
+
+Gift migration was NOT applied: the runtime has no configured Firebase administrative credentials and its preview failed before reading membership. New rules and administrative migration must be run in an authorized Firebase environment. No current member balance has been changed by this local work.

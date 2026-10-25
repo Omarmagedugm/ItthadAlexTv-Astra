@@ -1,3 +1,6 @@
+import TopHeader from '../components/TopHeader';
+import BottomNav from '../components/BottomNav';
+import './Game.css';
 import {recordRunCoins} from '../lib/gameCoins';
 import { useState, useEffect, useRef } from 'react';
 import { Gamepad2, Play, ArrowRight, Trophy, Zap, Move } from 'lucide-react';
@@ -168,7 +171,8 @@ export default function Game() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24 pt-4 dark:bg-background-dark" dir="rtl">
+    <div className="game-landing" dir="rtl">
+      {!isPlaying && <><TopHeader /><BottomNav /></>}
       <SEOHead
         title="لعبة اتحاداوي — قناة الاتحاد"
         description="اختار شخصيتك، العب ونافس أعضاء قناة الاتحاد على أعلى سكور."
@@ -199,29 +203,25 @@ export default function Game() {
         </div>
       )}
 
-      <div className="mx-auto max-w-6xl space-y-6 px-4 sm:px-6">
-        <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
-          <Link to="/" className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white dark:border-white/10 dark:bg-card-dark" aria-label="الرجوع للتطبيق"><ArrowRight size={18}/></Link>
-          <span>منطقة الألعاب</span><span className="text-emerald-600">/ اتحاداوي</span>
-        </div>
-        <section className="relative isolate overflow-hidden rounded-[2rem] bg-[#073c30] text-white">
-          <div className="grid">
-            <div className="relative z-10 p-5 sm:p-6 lg:p-7">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-[#d3ed9b]"><Gamepad2 size={15}/>اللعبة الرسمية لجمهور الاتحاد</span>
-              <h1 className="mt-4 text-4xl font-black sm:text-5xl">اتحاداوي<span className="text-[#cee991]">.</span></h1>
-              <p className="mt-4 max-w-sm text-sm leading-7 text-emerald-50/75">من قلب المدرج لقلب المنافسة. اختار شخصيتك، عدّي العوائق، وخلي اسمك في الصدارة.</p>
-              <button type="button" onClick={startGameForMember} disabled={isCheckingMember} className="mt-5 flex w-full items-center justify-center gap-3 whitespace-nowrap rounded-2xl bg-[#cee991] px-6 py-4 font-bold text-[#102b23] transition hover:bg-[#dff4b3] active:scale-[.98] disabled:cursor-wait disabled:opacity-70 sm:w-auto"><Play size={20} fill="currentColor"/>{isCheckingMember ? 'جارٍ التحقق من الحساب…' : 'ابدأ اللعب'}</button>
-              {loginRequired && <p role="alert" className="mt-3 text-sm text-amber-100">اللعب متاح للأعضاء المسجلين فقط. <Link to="/auth" className="font-bold underline underline-offset-4">سجّل الدخول أو أنشئ حسابًا</Link>.</p>}
-              <div className="mt-4 flex gap-5 text-xs text-emerald-100/70"><span>٤ شخصيات</span><span>٢٨ منطقة</span><span>تحدّي بلا نهاية</span></div>
-            </div>
+      <div className="game-landing-content" hidden={isPlaying}>
+        <div className="game-page-label"><Link to="/" aria-label="الرجوع للتطبيق"><ArrowRight size={18}/></Link><span>منطقة الألعاب</span><span className="game-edition">ITTIHADAWY / 1914</span></div>
+        <section className="game-hero" aria-labelledby="game-title">
+          <div className="game-hero-art" aria-hidden="true"><div className="game-pitch"/><img src="/games/ittihadawy/references/ittihad-crest.png" alt=""/><span>إسكندرية كلها وراك</span></div>
+          <div className="game-hero-copy">
+            <span className="game-eyebrow"><span/> من المدرج… لشوارع إسكندرية</span>
+            <h1 id="game-title">اتحاداوي<span>.</span></h1>
+            <p>مدينتك. شخصيتك. تحدّيك.<br/>عدّي العوائق، اجمع الكوينات، وسيب بصمتك في الصدارة.</p>
+            <button type="button" onClick={startGameForMember} disabled={isCheckingMember} className="game-start"><Play size={22} fill="currentColor"/>{isCheckingMember ? 'جارٍ التحقق…' : 'ابدأ اللعب'}<span aria-hidden="true">←</span></button>
+            {loginRequired && <p role="alert" className="game-login">اللعب متاح للأعضاء. <Link to="/auth">سجّل الدخول أو أنشئ حسابًا</Link></p>}
+            <div className="game-hero-stats"><span><strong>٥</strong> شخصيات</span><span><strong>∞</strong> تحدّي بلا نهاية</span><span><Trophy size={15}/> صدارة الأعضاء</span></div>
           </div>
         </section>
+        <div className="game-section-heading"><span>الجولة بتبدأ بيك</span><a href="#game-ranking-title">شوف المتصدرين <Trophy size={15}/></a></div>
         <div className="grid items-start gap-6 lg:grid-cols-[1fr_300px]">
           <div className="space-y-6">
-            <GameLeaderboard />
             <section aria-labelledby="characters-title">
-          <div className="mb-3 flex items-center justify-between"><h2 id="characters-title" className="text-base font-bold text-slate-900 dark:text-white">اختار نجم الجولة</h2><span className="text-xs text-slate-500">كل شخصية وليها طريقتها</span></div>
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          <div className="mb-3 flex items-center justify-between"><h2 id="characters-title" className="text-base font-bold text-slate-900 dark:text-white">نجوم اتحاداوي</h2><span className="text-xs text-slate-500">كل شخصية وليها طريقتها</span></div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               ['عادل شكل', 'زمارة ٦ إلا تلت', 'adel-horn.png'],
               ['جمال الدولي', 'المبخرة', 'gamal-avatar.jpg'],
@@ -235,6 +235,8 @@ export default function Game() {
             ))}
           </div>
         </section>
+            <div className="game-fifth-character"><Gamepad2 size={22}/><div><strong>إسلام الفار كمان في الملعب</strong><p>شوف الشخصيات وافتح نجومك المفضلين بالكوينات من داخل اللعبة.</p></div></div>
+            <GameLeaderboard />
           </div>
           <section className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-card-dark">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600"><Gamepad2 size={21}/></span>

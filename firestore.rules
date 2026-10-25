@@ -105,12 +105,19 @@ service cloud.firestore {
         cosmeticChoice(outfit.glasses,'glasses',owned) && cosmeticChoice(outfit.shorts,'shorts',owned) &&
         cosmeticChoice(outfit.shoes,'shoes',owned);
     }
+    // Grant creation and amounts are administrator-only. Members may acknowledge once.
+    match /game_gifts/{uid} {
+      allow read: if isOwner(uid);
+      allow update: if isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seen']) && request.resource.data.seen==true;
+    }
     match /game_cosmetics/{userId} {
       allow read: if isOwner(userId);
       allow create, update: if isOwner(userId) && validCosmetics(userId);
     }
     function validCosmetics(uid) {
-      let score=exists(/databases/$(database)/documents/game_progress/$(uid)) ? get(/databases/$(database)/documents/game_progress/$(uid)).data.totalCoins : 0;
+      let earned=exists(/databases/$(database)/documents/game_progress/$(uid)) ? get(/databases/$(database)/documents/game_progress/$(uid)).data.totalCoins : 0;
+      let gift=exists(/databases/$(database)/documents/game_gifts/$(uid)) ? get(/databases/$(database)/documents/game_gifts/$(uid)).data.amount : 0;
+      let score=earned+gift;
       let old=exists(/databases/$(database)/documents/game_cosmetics/$(uid)) ? get(/databases/$(database)/documents/game_cosmetics/$(uid)).data.get('unlocked',[]) : [];
       let oldCharacters=exists(/databases/$(database)/documents/game_cosmetics/$(uid)) ? get(/databases/$(database)/documents/game_cosmetics/$(uid)).data.get('characters',['gamal']) : ['gamal'];
       let spent=exists(/databases/$(database)/documents/game_cosmetics/$(uid)) ? get(/databases/$(database)/documents/game_cosmetics/$(uid)).data.get('spentCoins',0) : 0;

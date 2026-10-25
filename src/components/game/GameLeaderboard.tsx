@@ -19,7 +19,8 @@ const CHARACTERS: Record<string, string> = {
   adel: 'عادل شكل',
   gamal: 'جمال الدولي',
   hamido: 'حميدو',
-  lazo: 'اللازو'
+  lazo: 'اللازو',
+  islam: 'إسلام الفار'
 };
 
 export default function GameLeaderboard() {
@@ -131,10 +132,10 @@ export default function GameLeaderboard() {
           </span>
           <div>
             <h2 id="game-ranking-title" className="text-lg font-black text-slate-900 dark:text-white">
-              أعلى أرقام اتحاداوي
+              لوحة الأبطال
             </h2>
             <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-              قائمة ترتيب المتنافسين حسب أعلى سكور · من نقطة واحدة وحتى الصدارة
+              أعلى سكور في جولة واحدة. مكانك بينهم مستنيك.
             </p>
           </div>
         </div>
@@ -175,7 +176,7 @@ export default function GameLeaderboard() {
         {state === 'loading' && entries.length === 0 && (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <RefreshCw size={24} className="animate-spin text-emerald-600" />
-            <p className="mt-3 text-sm text-slate-500">جاري تحميل قائمة أعلى أرقام اتحاداوي…</p>
+            <p className="mt-3 text-sm text-slate-500">جاري تحميل قائمة لوحة الأبطال…</p>
           </div>
         )}
 
