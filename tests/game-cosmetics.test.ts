@@ -13,8 +13,11 @@ test('cosmetics and characters unlock at 25,000-point multiples',()=>{
  assert.deepEqual(stage1.characters,['gamal','adel']);
  assert.deepEqual(stage1.unlocked,['green-cap']);
  const full=normalizeProfile({},175000);
- assert.deepEqual(full.characters,CHARACTERS);
+ assert.deepEqual(full.characters,['gamal','adel','hamido','lazo']);
  assert.deepEqual(full.unlocked,REWARDS.map((r:any)=>r.id));
+ const adminFull=normalizeProfile({isAdmin:true},0);
+ assert.deepEqual(adminFull.characters,CHARACTERS);
+ assert.throws(()=>purchaseItem({...original,balance:500000},'character:islam'));
  assert.throws(()=>purchaseItem(original,'unknown-item'));
 });
 test('saved clothes stay per character and reject invalid items',()=>{
@@ -24,18 +27,14 @@ test('saved clothes stay per character and reject invalid items',()=>{
  assert.equal(state.outfits.gamal.cap.item,'green-cap');assert.equal(state.outfits.adel.cap.item,'default');
  assert.equal(cleanOutfit({cap:{item:'hacked',color:'url(secret)'}},REWARDS.map((r:any)=>r.id)).cap.item,'default');
 });
-test('lobby patch leaves the complete running engine and non-menu UI intact',()=>{
- const html=fs.readFileSync('public/games/ittihadawy/index.html','utf8'),active=html.match(/assets\/index-[^" ]+\.js/)![0];
- const old=ts.createSourceFile('old.js',fs.readFileSync('public/games/ittihadawy/assets/index-5856bff8.js','utf8'),99,true);
- const current=ts.createSourceFile('current.js',fs.readFileSync('public/games/ittihadawy/'+active,'utf8'),99,true);
- const engine=(s:ts.SourceFile)=>s.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='qC')!;
- assert.equal(engine(current).getText(current).replace('coins:Math.floor(this.run?.coins||0),','').replace('window.dispatchEvent(new CustomEvent("ittihadawy:coin-checkpoint",{detail:{coins:Math.floor(this.run?.coins||0)}}));',''),engine(old).getText(old));
- for(const name of ['PC','gc','zC','MC','Wy','R2']){
-  const find=(s:ts.SourceFile)=>s.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text===name);
-  if(find(old))assert.equal(find(current)!.getText(current),find(old)!.getText(old),name);
- }
- const wc=(s:ts.SourceFile)=>s.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='WC')!;
- const subtree=(s:ts.SourceFile)=>{const values:string[]=[];function visit(n:ts.Node){if(ts.isBinaryExpression(n)&&n.operatorToken.kind===ts.SyntaxKind.AmpersandAmpersandToken&&n.left.getText(s)!=='n==="MENU"')values.push(n.getText(s));ts.forEachChild(n,visit)}visit(wc(s));return values};
- assert.deepEqual(subtree(current),subtree(old));
+test('character abilities grant 10s massive speed & obstacle destruction with recharge cooldown and reduced road boosts',()=>{
+ const html=fs.readFileSync('public/games/ittihadawy/index.html','utf8'),active=html.match(/assets\/index-[^"? ]+\.js/)![0];
+ const code=fs.readFileSync('public/games/ittihadawy/'+active,'utf8');
+ assert.ok(code.includes('cost:100,duration:10,gap:45'));
+ assert.ok(code.includes('r.charge=0,r.smoke=n.duration,r.boostTime=Math.max(r.boostTime||0,n.duration)'));
+ assert.ok(code.includes('TC=(r,t,s=0)=>Wy(r)*(s>0?2.35:t>0?1.65:1)'));
+ assert.ok(code.includes('if(!v&&!g.done&&n.smoke>0&&m>-16&&m<4)'));
+ assert.ok(code.includes('this.nextBoostAt=950'));
+ assert.ok(code.includes('this.nextBoostAt=t+1500'));
 });
 

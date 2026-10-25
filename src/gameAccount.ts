@@ -122,7 +122,11 @@ if (parentWindow !== window) {
   reply('ready');
   // Reuse the application's persisted Firebase session; never request a new login.
   auth.onAuthStateChanged((user) => {
-    parentWindow.postMessage({ type: 'ittihadawy:member-access', authorized: !!user }, location.origin);
+    const isAdmin = !!user && (
+      ['HRDB2ppkGqOfBrat2D0xThuTkRe2', 'RrpMWEOls8SfFDQj4CJrLnEF5dr1'].includes(user.uid) ||
+      user.email?.toLowerCase() === 'megastudiodm@gmail.com'
+    );
+    parentWindow.postMessage({ type: 'ittihadawy:member-access', authorized: !!user, isAdmin }, location.origin);
   });
 }
 

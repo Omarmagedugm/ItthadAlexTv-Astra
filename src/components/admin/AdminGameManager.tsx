@@ -23,11 +23,26 @@ import {
   Layers, 
   FolderArchive,
   ArrowDownToLine,
-  Info
+  Info,
+  Database,
+  Users
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { auth } from '../../lib/firebase';
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
+import { auth, db } from '../../lib/firebase';
 import JSZip from 'jszip';
+
+interface PlayerScoreBackupRecord {
+  uid: string;
+  name: string;
+  email?: string;
+  score: number;
+  distance: number;
+  coins: number;
+  character: string;
+  outfits?: Record<string, any>;
+  seen?: string[];
+}
 
 // Static hosts may return index.html with status 200 for missing API routes.
 async function readGameResponse(res: Response) {
@@ -104,10 +119,192 @@ export default function AdminGameManager() {
   const [restoringBackupId, setRestoringBackupId] = useState<string | null>(null);
   const [deletingBackupId, setDeletingBackupId] = useState<string | null>(null);
 
+  // Players' Scores Backup & Restore states
+  const [backingUpScores, setBackingUpScores] = useState(false);
+  const [restoringScores, setRestoringScores] = useState(false);
+  const [playersStatsSummary, setPlayersStatsSummary] = useState<{ count: number; topScore: number }>({ count: 0, topScore: 0 });
+  const [cloudScoreBackupMeta, setCloudScoreBackupMeta] = useState<{ createdAt: string; playersCount: number; topScore: number } | null>(null);
+  const scoresBackupFileInputRef = useRef<HTMLInputElement>(null);
+
   // Copy prompt state
   const [copiedPrompt, setCopiedPrompt] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const collectPlayersGameRecords = async (): Promise<PlayerScoreBackupRecord[]> => {
+    const snap = await getDocs(collection(db, 'users'));
+    const records: PlayerScoreBackupRecord[] = [];
+    snap.forEach((docSnap) => {
+      const d = docSnap.data() || {};
+      const stats = d.stats || {};
+      const score = Math.max(0, Math.floor(Number(stats.ittihadawyScore ?? d.ittihadawyScore ?? 0)));
+      const distance = Math.max(0, Math.floor(Number(stats.ittihadawyDistance ?? d.ittihadawyDistance ?? 0)));
+      const coins = Math.max(0, Math.floor(Number(stats.ittihadawyCoins ?? 0)));
+      const character = String(stats.ittihadawyCharacter || d.ittihadawyCharacter || 'gamal');
+      const outfits = stats.ittihadawyOutfits && typeof stats.ittihadawyOutfits === 'object' ? stats.ittihadawyOutfits : undefined;
+      const seen = Array.isArray(stats.ittihadawySeen) ? stats.ittihadawySeen : undefined;
+
+      if (score > 0 || coins > 0 || distance > 0 || outfits) {
+        records.push({
+          uid: docSnap.id,
+          name: String(d.name || d.displayName || d.username || 'عضو الاتحاد'),
+          email: d.email ? String(d.email) : undefined,
+          score,
+          distance,
+          coins,
+          character,
+          ...(outfits ? { outfits } : {}),
+          ...(seen ? { seen } : {}),
+        });
+      }
+    });
+    records.sort((a, b) => b.score - a.score);
+    return records;
+  };
+
+  const fetchPlayersBackupSummary = async () => {
+    try {
+      const [records, cloudSnap] = await Promise.all([
+        collectPlayersGameRecords(),
+        getDoc(doc(db, 'settings', 'game_players_scores_backup')).catch(() => null),
+      ]);
+      const topScore = records.reduce((max, r) => Math.max(max, r.score), 0);
+      setPlayersStatsSummary({ count: records.length, topScore });
+
+      if (cloudSnap && cloudSnap.exists()) {
+        const cd = cloudSnap.data() || {};
+        setCloudScoreBackupMeta({
+          createdAt: String(cd.createdAt || ''),
+          playersCount: Number(cd.playersCount || (Array.isArray(cd.players) ? cd.players.length : 0)),
+          topScore: Number(cd.topScore || 0),
+        });
+      }
+    } catch (err) {
+      console.warn('[AdminGameManager] Could not load players score summary:', err);
+    }
+  };
+
+  const handleBackupPlayersScores = async () => {
+    if (backingUpScores) return;
+    setBackingUpScores(true);
+    try {
+      const records = await collectPlayersGameRecords();
+      const topScore = records.reduce((max, r) => Math.max(max, r.score), 0);
+      const createdAt = new Date().toISOString();
+      const payload = {
+        version: 1,
+        type: 'ittihadawy_players_scores_backup',
+        createdAt,
+        createdBy: auth.currentUser?.email || auth.currentUser?.uid || 'admin',
+        playersCount: records.length,
+        topScore,
+        players: records,
+      };
+
+      // 1. Save cloud backup snapshot in Firestore settings
+      await setDoc(doc(db, 'settings', 'game_players_scores_backup'), payload);
+      setCloudScoreBackupMeta({ createdAt, playersCount: records.length, topScore });
+      setPlayersStatsSummary({ count: records.length, topScore });
+
+      // 2. Download JSON backup file to admin's device
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ittihadawy-players-backup-${createdAt.slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success(`تم حفظ النسخة الاحتياطية لأرقام ${records.length} لاعب (سحابياً وملف JSON) بنجاح! 🛡️`);
+    } catch (err: any) {
+      console.error('[AdminGameManager] Backup players scores error:', err);
+      toast.error(err?.message || 'تعذّر إنشاء النسخة الاحتياطية لأرقام اللاعبين');
+    } finally {
+      setBackingUpScores(false);
+    }
+  };
+
+  const restorePlayersRecordsList = async (players: PlayerScoreBackupRecord[]) => {
+    if (!Array.isArray(players) || players.length === 0) {
+      toast.error('لا توجد بيانات لاعبين صالحة في هذه النسخة الاحتياطية.');
+      return;
+    }
+    setRestoringScores(true);
+    try {
+      let restoredCount = 0;
+      for (const p of players) {
+        if (!p?.uid) continue;
+        const userRef = doc(db, 'users', p.uid);
+        const snap = await getDoc(userRef);
+        if (!snap.exists()) continue;
+        const data = snap.data() || {};
+        const stats = data.stats || {};
+        const currentScore = Math.max(0, Math.floor(Number(stats.ittihadawyScore ?? data.ittihadawyScore ?? 0)));
+        const currentDistance = Math.max(0, Math.floor(Number(stats.ittihadawyDistance ?? data.ittihadawyDistance ?? 0)));
+        const currentCoins = Math.max(0, Math.floor(Number(stats.ittihadawyCoins ?? 0)));
+
+        const mergedScore = Math.max(currentScore, Math.max(0, Math.floor(Number(p.score || 0))));
+        const mergedDistance = Math.max(currentDistance, Math.max(0, Math.floor(Number(p.distance || 0))));
+        const mergedCoins = Math.max(currentCoins, Math.max(0, Math.floor(Number(p.coins || 0))));
+        const character = ['gamal', 'adel', 'hamido', 'lazo', 'islam'].includes(p.character)
+          ? p.character
+          : String(stats.ittihadawyCharacter || 'gamal');
+
+        const updatePayload: Record<string, any> = {
+          'stats.ittihadawyScore': mergedScore,
+          'stats.ittihadawyDistance': mergedDistance,
+          'stats.ittihadawyCoins': mergedCoins,
+          'stats.ittihadawyCharacter': character,
+        };
+        if (p.outfits && typeof p.outfits === 'object' && !stats.ittihadawyOutfits) {
+          updatePayload['stats.ittihadawyOutfits'] = p.outfits;
+        }
+        if (Array.isArray(p.seen) && !stats.ittihadawySeen) {
+          updatePayload['stats.ittihadawySeen'] = p.seen;
+        }
+        await updateDoc(userRef, updatePayload);
+        restoredCount++;
+      }
+      await fetchPlayersBackupSummary();
+      toast.success(`تمت استعادة وتأمين أرقام ${restoredCount} لاعب بنجاح! 🏆`);
+    } catch (err: any) {
+      console.error('[AdminGameManager] Restore players scores error:', err);
+      toast.error(err?.message || 'حدث خطأ أثناء استعادة أرقام اللاعبين');
+    } finally {
+      setRestoringScores(false);
+    }
+  };
+
+  const handleRestoreFromCloudScoresBackup = async () => {
+    if (restoringScores) return;
+    try {
+      const snap = await getDoc(doc(db, 'settings', 'game_players_scores_backup'));
+      if (!snap.exists()) {
+        toast.error('لا توجد نسخة احتياطية سحابية محفوظة بعد.');
+        return;
+      }
+      const data = snap.data() || {};
+      await restorePlayersRecordsList(data.players || []);
+    } catch (err: any) {
+      toast.error(err?.message || 'تعذّر قراءة النسخة الاحتياطية السحابية');
+    }
+  };
+
+  const handleRestoreFromScoresFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const list = Array.isArray(parsed) ? parsed : parsed?.players;
+      await restorePlayersRecordsList(list || []);
+    } catch (err: any) {
+      toast.error('ملف النسخة الاحتياطية غير صالح. تأكد من اختيار ملف JSON الصحيح.');
+    }
+  };
 
   // Fetch Game Metadata from Server
   const fetchGameInfo = async () => {
@@ -135,6 +332,7 @@ export default function AdminGameManager() {
 
   useEffect(() => {
     fetchGameInfo();
+    fetchPlayersBackupSummary();
   }, []);
 
   // Handle Full Game Download
@@ -454,14 +652,26 @@ export default function AdminGameManager() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={fetchGameInfo}
+              onClick={() => {
+                fetchGameInfo();
+                fetchPlayersBackupSummary();
+              }}
               disabled={loading}
               className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors"
               title="تحديث البيانات"
             >
               <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
+            </button>
+            <button
+              type="button"
+              onClick={handleBackupPlayersScores}
+              disabled={backingUpScores}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-sm disabled:opacity-60"
+            >
+              <Database size={15} className={backingUpScores ? 'animate-bounce' : ''} />
+              <span>{backingUpScores ? 'جاري حفظ أرقام اللاعبين…' : 'نسخة احتياطية لأرقام اللاعبين'}</span>
             </button>
             <a
               href="/game"
@@ -490,9 +700,9 @@ export default function AdminGameManager() {
             </strong>
           </div>
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200/60 dark:border-border-dark">
-            <span className="text-xs text-slate-500 dark:text-slate-400 block mb-1">النسخ الاحتياطية</span>
-            <strong className="text-lg font-black text-slate-900 dark:text-white block">
-              {gameData?.backups?.length || 0} نسخة
+            <span className="text-xs text-slate-500 dark:text-slate-400 block mb-1">اللاعبين المسجلين بالأرقام</span>
+            <strong className="text-lg font-black text-emerald-600 dark:text-emerald-400 block">
+              {playersStatsSummary.count.toLocaleString('ar-EG')} لاعب
             </strong>
           </div>
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200/60 dark:border-border-dark">
@@ -500,6 +710,76 @@ export default function AdminGameManager() {
             <strong className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 block truncate" title="public/games/ittihadawy">
               {loading ? 'جاري التحقق…' : serviceError ? 'الخدمة غير متصلة' : gameData?.exists ? 'جاهزة ونشطة' : 'لا توجد حزمة لعبة'}
             </strong>
+          </div>
+        </div>
+      </div>
+
+      {/* Players' Scores & Progress Backup Card */}
+      <div className="bg-white dark:bg-card-dark p-5 rounded-2xl border border-emerald-500/30 dark:border-emerald-500/20 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <Users size={22} />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                  حماية وأرشفة أرقام وسكورات اللاعبين
+                </h3>
+                <span className="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                  {playersStatsSummary.count.toLocaleString('ar-EG')} لاعب • أعلى سكور: {playersStatsSummary.topScore.toLocaleString('ar-EG')}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                احفظ نسخة احتياطية كاملة لكل سكورات اللاعبين والعملات والأطقم المفتوحة (سحابياً في قاعدة البيانات + ملف JSON على جهازك) عشان أرقام اللاعبين ما تضيعش أبداً عند أي تحديث.
+              </p>
+              {cloudScoreBackupMeta && (
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold mt-1.5">
+                  ✓ آخر نسخة سحابية محفوظة: {new Date(cloudScoreBackupMeta.createdAt).toLocaleString('ar-EG')} ({cloudScoreBackupMeta.playersCount.toLocaleString('ar-EG')} لاعب)
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              ref={scoresBackupFileInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={handleRestoreFromScoresFile}
+            />
+            <button
+              type="button"
+              onClick={handleBackupPlayersScores}
+              disabled={backingUpScores || restoringScores}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-sm disabled:opacity-50"
+            >
+              <Download size={15} className={backingUpScores ? 'animate-bounce' : ''} />
+              <span>{backingUpScores ? 'جاري حفظ النسخة…' : 'حفظ وتحميل نسخة احتياطية للأرقام'}</span>
+            </button>
+
+            {cloudScoreBackupMeta && (
+              <button
+                type="button"
+                onClick={handleRestoreFromCloudScoresBackup}
+                disabled={restoringScores || backingUpScores}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-emerald-500/40 bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 text-xs font-bold hover:bg-emerald-100/70 transition-colors disabled:opacity-50"
+              >
+                <RotateCcw size={14} className={restoringScores ? 'animate-spin' : ''} />
+                <span>{restoringScores ? 'جاري الاستعادة…' : 'استعادة من النسخة السحابية'}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => scoresBackupFileInputRef.current?.click()}
+              disabled={restoringScores || backingUpScores}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors disabled:opacity-50"
+            >
+              <Upload size={14} />
+              <span>استعادة أرقام من ملف JSON</span>
+            </button>
           </div>
         </div>
       </div>

@@ -77,7 +77,7 @@ export default function Game() {
       const user = auth.currentUser;
       if (!user) {
         setLoginRequired(true);
-        setShareFeedback('سجّل دخولك عشان تاخد +٣,٠٠٠ كوين هدية على كل مشاركة!');
+        setShareFeedback('سجّل دخولك عشان تاخد +٣,٠٠٠ عملة هدية على كل مشاركة!');
         return;
       }
 
@@ -119,21 +119,42 @@ export default function Game() {
         localStorage.setItem('gamal-coins', String(newTotalCoins));
       } catch (_) {}
 
-      setShareFeedback(`تمت المشاركة! 🎉 كسبت +${numberFormatter.format(SHARE_REWARD_COINS)} كوين • رصيد الكوينز الآن: ${numberFormatter.format(newTotalCoins)} كوين`);
+      setShareFeedback(`تمت المشاركة! 🎉 كسبت +${numberFormatter.format(SHARE_REWARD_COINS)} عملة • رصيد العملات الآن: ${numberFormatter.format(newTotalCoins)} عملة`);
     } catch (err) {
       console.warn('[GamePage] Could not credit share coins:', err);
-      setShareFeedback('تعذّر إضافة كوينز المشاركة حالياً. حاول مرة أخرى.');
+      setShareFeedback('تعذّر إضافة عملات المشاركة حالياً. حاول مرة أخرى.');
     } finally {
       setIsSharing(false);
     }
   };
 
-  const authorizeGameFrame = () => {
-    if (!auth.currentUser) return;
+  const authorizeGameFrame = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+    let isAdmin =
+      ['HRDB2ppkGqOfBrat2D0xThuTkRe2', 'RrpMWEOls8SfFDQj4CJrLnEF5dr1'].includes(user.uid) ||
+      user.email === 'megastudiodm@gmail.com';
     iframeRef.current?.contentWindow?.postMessage(
-      { type: 'ittihadawy:member-access', authorized: true },
+      { type: 'ittihadawy:member-access', authorized: true, isAdmin },
       window.location.origin
     );
+    if (!isAdmin) {
+      try {
+        const { getDoc } = await import('firebase/firestore');
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        const d = snap.data() || {};
+        if (
+          d.isAdmin === true ||
+          ['admin', 'superadmin'].includes(d.role) ||
+          (Array.isArray(d.roles) && d.roles.some((r: string) => ['admin', 'superadmin'].includes(r)))
+        ) {
+          iframeRef.current?.contentWindow?.postMessage(
+            { type: 'ittihadawy:member-access', authorized: true, isAdmin: true },
+            window.location.origin
+          );
+        }
+      } catch (_) {}
+    }
   };
 
   const saveScoreForUser = async (result: { score: number; distance?: number; character?: string }, requestId?: string) => {
@@ -299,7 +320,7 @@ export default function Game() {
             <h1 id="game-title">اتحاداوي<span>.</span></h1>
             <p>مدينتك. شخصيتك. تحدّيك.<br/>عدّي العوائق، جمّع النقاط، وافتح الشخصيات والملابس كل ٢٥,٠٠٠ نقطة.</p>
             <button type="button" onClick={startGameForMember} disabled={isCheckingMember} className="game-start"><Play size={22} fill="currentColor"/>{isCheckingMember ? 'جارٍ التحقق…' : 'ابدأ اللعب'}<span aria-hidden="true">←</span></button>
-            <button type="button" onClick={handleShareGame} disabled={isSharing} className="game-share-btn"><Share2 size={18}/>{isSharing ? 'جارٍ المشاركة…' : 'شارك اللعبة واكسب +٣,٠٠٠ كوين'}<span className="game-share-badge">+٣٠٠٠ كوين</span></button>
+            <button type="button" onClick={handleShareGame} disabled={isSharing} className="game-share-btn"><Share2 size={18}/>{isSharing ? 'جارٍ المشاركة…' : 'شارك اللعبة واكسب +٣,٠٠٠ عملة'}<span className="game-share-badge">+٣٠٠٠ عملة</span></button>
             {shareFeedback && <p role="status" className="game-share-feedback">{shareFeedback}</p>}
             {loginRequired && <p role="alert" className="game-login">اللعب متاح للأعضاء. <Link to="/auth">سجّل الدخول أو أنشئ حسابًا</Link></p>}
             <div className="game-hero-stats"><span><strong>٥</strong> شخصيات</span><span><strong>٢٥ ألف</strong> لكل مرحلة</span><span><Trophy size={15}/> صدارة الأعضاء</span></div>
@@ -325,7 +346,7 @@ export default function Game() {
                 ))}
               </div>
             </section>
-            <div className="game-fifth-character"><Gamepad2 size={22}/><div><strong>إسلام الفار عند ١٠٠,٠٠٠ نقطة</strong><p>كل ما تحقق ٢٥,٠٠٠ نقطة ومضاعفاتها في أعلى سكور ليك، بتفتح شخصيات جديدة وملابس وأطقم حصرية في المتجر!</p></div></div>
+            <div className="game-fifth-character"><Gamepad2 size={22}/><div><strong>إسلام الفار (قريباً 🔒) • وموتوسيكل الزعيم عند ١,٠٠٠,٠٠٠ نقطة 🏍️</strong><p>كل ٢٥,٠٠٠ نقطة بتفتح شخصيات وأطقم جديدة، وأول ما تعدي مليون نقطة تقدر تختار تلعب بالموتوسيكل مع أي شخصية!</p></div></div>
           </div>
           <section className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-card-dark">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600"><Gamepad2 size={21}/></span>

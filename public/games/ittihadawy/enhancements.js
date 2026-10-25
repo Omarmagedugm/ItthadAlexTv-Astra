@@ -18,6 +18,11 @@ window.addEventListener('message', event => {
   if (!fromApp && !fromAccount) return;
   if (event.data?.type !== 'ittihadawy:member-access') return;
   if (event.data.authorized === true) {
+    if (event.data.isAdmin === true) {
+      window.__ittihadawyIsAdmin = true;
+      window.__ittihadawyUnlockedCharacters = ['gamal', 'adel', 'hamido', 'lazo', 'islam'];
+      window.dispatchEvent(new CustomEvent('ittihadawy:lobby-coin-saved'));
+    }
     accessGate?.remove();
     document.getElementById('root')?.removeAttribute('inert');
   } else if (event.data.authorized === false && accessGate) {
