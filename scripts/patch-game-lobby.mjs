@@ -1,0 +1,18 @@
+import ts from 'typescript';
+import {readFileSync,writeFileSync,unlinkSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+const root=new URL('../public/games/ittihadawy/',import.meta.url);
+let html=readFileSync(new URL('index.html',root),'utf8');const old=html.match(/assets\/index-[^" ]+\.js/)[0];let code=readFileSync(new URL(old,root),'utf8');
+if(code.includes('const IttLobby='))throw Error('Lobby already installed; edit the external lobby modules directly');
+const source=ts.createSourceFile('game.js',code,99,true,ts.ScriptKind.JS),wc=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='WC'),pose=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='OC');
+let menu;function find(n){if(ts.isBinaryExpression(n)&&n.left.getText(source)==='n==="MENU"'&&n.operatorToken.kind===ts.SyntaxKind.AmpersandAmpersandToken)menu=n.right;ts.forEachChild(n,find)}find(wc);if(!menu||!pose)throw Error('Missing menu integration point');
+const render='at.createElement(IttLobby,{engine:t.current,characters:$p,selected:w,onSelect:H,onStart:()=>C("start"),onAudio:()=>setAudioModalOpen(true),quality:U,onQuality:()=>{const value=U==="high"?"low":"high";N(value);t.current?.quality(value)}})';
+for(const [start,end,text] of [[menu.getStart(source),menu.end,render],[pose.getStart(source),pose.end,'function OC(engine,time){lobbyPose(engine,time)}']].sort((a,b)=>b[0]-a[0]))code=code.slice(0,start)+text+code.slice(end);
+const target='return n.userData={characterId:t,hornCarry:';
+if(!code.includes(target))throw Error('Missing model customization joints');
+code=code.replace(target,'return n.userData={cosmeticParts:{shirt:[N,Wt,Jt],shorts:[Da,Q],shoes:[Xs,J],originalCap:Kt,capVisible:Kt.visible},characterId:t,hornCarry:');
+code='import {createLobby} from "../lobby/menu.js";\nimport {lobbyPose} from "../lobby/model.js";\n'+code;
+const anchor='I2.createRoot(document.getElementById("root"))';if(!code.includes(anchor))throw Error('Missing bootstrap');
+code=code.replace(anchor,'const IttLobby=createLobby(di,{Group:oe,Material:Ee,Box:Jn,Sphere:dn,Mesh:Mt});'+anchor);
+if(ts.createSourceFile('game.js',code,99,true,ts.ScriptKind.JS).parseDiagnostics.length)throw Error('Invalid game bundle');
+const file='assets/index-'+createHash('sha256').update(code).digest('hex').slice(0,8)+'.js';writeFileSync(new URL(file,root),code);html=html.replace(old,file).replace('</head>','<link rel="stylesheet" href="/games/ittihadawy/lobby/menu.css"/></head>');writeFileSync(new URL('index.html',root),html);unlinkSync(new URL(old,root));console.log(file);

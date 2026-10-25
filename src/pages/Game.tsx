@@ -1,3 +1,4 @@
+import {recordRunCoins} from '../lib/gameCoins';
 import { useState, useEffect, useRef } from 'react';
 import { Gamepad2, Play, ArrowRight, Trophy, Zap, Move } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -12,7 +13,7 @@ export default function Game() {
   const [isCheckingMember, setIsCheckingMember] = useState(false);
   const [loginRequired, setLoginRequired] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const latestResultRef = useRef<{ score: number; distance: number; character: string } | null>(null);
+  const latestResultRef = useRef<{ score: number; distance: number; character: string; coins?: number; runId?: string } | null>(null);
 
   useEffect(() => auth.onAuthStateChanged((user) => {
     if (!user) setIsPlaying(false);
@@ -120,6 +121,9 @@ export default function Game() {
   const handleExitGame = () => {
     const pendingScore = latestResultRef.current;
     latestResultRef.current = null;
+    if(pendingScore?.runId && Number.isSafeInteger(pendingScore.coins) && auth.currentUser) {
+      void recordRunCoins(pendingScore.runId,auth.currentUser.uid,pendingScore.coins!).catch(error=>console.warn('[GamePage] Coin save pending:',error));
+    }
     // Return to the game page immediately, even if score storage is offline or slow.
     setIsPlaying(false);
     if (pendingScore && typeof pendingScore.score === 'number' && pendingScore.score >= 1) {
@@ -143,7 +147,7 @@ export default function Game() {
 
       if (data.type === 'ittihadawy:live-progress' && data.result) {
         if (typeof data.result.score === 'number' && data.result.score >= 1) {
-          latestResultRef.current = data.result;
+          latestResultRef.current = {...data.result,runId:data.id};
         }
         return;
       }
@@ -154,7 +158,7 @@ export default function Game() {
       }
 
       if (data.type === 'ittihadawy:run-end' && data.result) {
-        latestResultRef.current = data.result;
+        latestResultRef.current = {...data.result,runId:data.id};
         await saveScoreForUser(data.result, data.id);
       }
     };

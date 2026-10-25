@@ -10,10 +10,13 @@ export function plantVillaTrees(group, { cylinder, ball }) {
 export function addRegionDetails(group, region, index, { box, cylinder, ball, label }) {
   const zoneOffset=((index%10)+10)%10;
   if(region.id==='misrstation') {
+    const stationExit=typeof Uf==='number'&&Number.isFinite(region.end)
+      ? Math.floor(((index*60%Uf)+Uf)%Uf/60)===region.end/60-1
+      : zoneOffset===9;
     // Ground-level running between trains: wheels rest on rails beside the road.
     for(const x of [-7.5,7.5]) {
       for(const rail of [-.9,.9])box(group,x+rail,.04,0,.12,.08,60,0x596369);
-      for(const z of [-20,0,20]) {
+      for(const z of (stationExit?[0,20]:[-20,0,20])) {
         box(group,x,1.9,z,2.8,2.6,18,0x28414b);
         box(group,x,3.27,z,2.9,.18,18.2,0x66757a);
         for(const side of [-1,1]) {
@@ -27,7 +30,7 @@ export function addRegionDetails(group, region, index, { box, cylinder, ball, la
       }
     }
     // Reference: exposed steel trusses, blue roof panels and a glazed central ridge.
-    for(const z of [-24,-4,16]) {
+    for(const z of (stationExit?[-4,16]:[-24,-4,16])) {
       for(const side of [-1,1]) {
         cylinder(group,side*15,4.8,z,.13,.16,9.6,0x33474f,8);
         const rafter=box(group,side*7.5,11,z,15.9,.18,.2,0x33474f);
@@ -43,62 +46,54 @@ export function addRegionDetails(group, region, index, { box, cylinder, ball, la
       }
       box(group,0,9.6,z,30,.1,.1,0x33474f);
     }
-    if(zoneOffset===5) {
-      // Three arched bays and paired clock towers, matching the exterior reference.
-      const stone=0xe5d9bd,brick=0x914e43;
-      box(group,25,6,0,15,12,34,brick);
-      // Cream stone frames the red brick instead of covering the entire facade.
-      box(group,16.8,.45,0,1,.9,34,stone);
-      for(const z of [-10,0,10]) {
-        box(group,16.45,3,z,.15,6,6.2,0x294349);
-        for(const side of [-1,1]) {
-          cylinder(group,16.15,3.4,z+side*3.3,.3,.36,6.8,stone,12);
-          box(group,16.15,6.8,z+side*3.3,.9,.35,1,stone);
-        }
-        for(let i=0;i<13;i++) {
-          const angle=i*Math.PI/12;
-          const arch=box(group,16.1,6.8+Math.sin(angle)*3.3,z+Math.cos(angle)*3.3,.8,.6,.88,stone);
-          arch.rotation.x=angle-Math.PI/2;
-        }
-        for(const wz of [-2,0,2])box(group,16.25,2.8,z+wz,.08,4.8,.12,stone);
+    if(stationExit) {
+      // Front-facing exit at the final edge of the station, with a real open central bay.
+      const stone=0xe5d9bd,brick=0x914e43,z=-28;
+      for(const x of [-18,-6,6,18]) {
+        box(group,x,6.5,z,2,13,2,brick);
+        for(const edge of [-.7,.7])cylinder(group,x+edge,3.8,z+.95,.24,.3,7.6,stone,12);
+        box(group,x,7.6,z+.95,2.5,.35,.7,stone);
       }
-      for(const y of [10.7,11.8,12.3])box(group,16.2,y,0,1,.35,35,stone);
-      for(const z of [-10,0,10]) {
-        const surround=cylinder(group,16.15,10.15,z,.68,.68,.18,stone,20);surround.rotation.z=Math.PI/2;
-        const medallion=cylinder(group,16.03,10.15,z,.46,.46,.19,0x25425d,20);medallion.rotation.z=Math.PI/2;
+      for(const x of [-12,0,12]) {
+        const radius=x===0?5.1:4.9;
+        for(let i=0;i<17;i++) {
+          const angle=i*Math.PI/16;
+          const arch=box(group,x+Math.cos(angle)*radius,7.6+Math.sin(angle)*radius,z+.95,.85,.55,.6,stone);
+          arch.rotation.z=angle-Math.PI/2;
+        }
+        if(x!==0) {
+          box(group,x,3.2,z,8.5,6.4,.25,0x294349);
+          for(const dx of [-2,0,2])box(group,x+dx,3.2,z+.2,.12,6.4,.12,stone);
+        }
+        const surround=cylinder(group,x,14,z+1.1,.65,.65,.18,stone,20);surround.rotation.x=Math.PI/2;
+        const medallion=cylinder(group,x,14,z+1.22,.44,.44,.15,0x25425d,20);medallion.rotation.x=Math.PI/2;
       }
-      // Recessed two-storey wings: green windows above repeated cream arches.
+      // Only the upper facade spans the playable road; no wall or sill closes the opening.
+      box(group,0,14.2,z,38,2.9,2,brick);
+      for(const y of [13,15.5,16])box(group,0,y,z+.95,39,.35,.7,stone);
       for(const side of [-1,1]) {
-        box(group,25,5.1,side*23.6,12,10.2,12.4,brick);
-        for(const y of [.45,5.9,9.9,10.35])box(group,18.7,y,side*23.6,.8,.35,12.5,stone);
-        for(const z of [side*19.5,side*23.5,side*27.5]) {
-          box(group,18.65,2.2,z,.16,4.4,2.7,0x29433e);
-          for(const edge of [-1,1])box(group,18.35,2.3,z+edge*1.5,.5,4.6,.35,stone);
+        const x=side*27;
+        box(group,x,5.1,z-1,15,10.2,4,brick);
+        for(const y of [.45,5.9,9.9,10.35])box(group,x,y,z+1.1,15,.35,.6,stone);
+        for(const wx of [side*22,side*27,side*32]) {
+          box(group,wx,2.3,z+1.15,3,4.6,.16,0x29433e);
+          for(const edge of [-1,1])box(group,wx+edge*1.65,2.4,z+1.25,.35,4.8,.5,stone);
           for(let i=0;i<11;i++) {
             const angle=i*Math.PI/10;
-            const arch=box(group,18.3,4.4+Math.sin(angle)*1.5,z+Math.cos(angle)*1.5,.6,.35,.5,stone);
-            arch.rotation.x=angle-Math.PI/2;
+            const arch=box(group,wx+Math.cos(angle)*1.65,4.6+Math.sin(angle)*1.65,z+1.25,.5,.35,.5,stone);
+            arch.rotation.z=angle-Math.PI/2;
           }
-          box(group,18.55,7.9,z,.35,3,2.7,stone);
-          box(group,18.3,7.9,z,.18,2.55,2.2,0x29433e);
-          box(group,18.15,7.9,z,.12,2.55,.09,stone);
-          box(group,18.1,6.8,z,.2,.16,2.5,stone);
+          box(group,wx,8,z+1.15,3.1,2.8,.3,stone);
+          box(group,wx,8,z+1.35,2.6,2.4,.12,0x29433e);
         }
-        for(let z=18.5;z<30;z+=2.3)box(group,18.6,10.8,side*z,.75,.65,1.25,stone);
+        box(group,side*19,8.5,z,2.5,17,2.8,stone);
+        box(group,side*19,17.2,z,3.4,.5,3.6,stone);
+        cylinder(group,side*19,18.2,z,.65,.8,1.7,stone,12);
+        const clock=cylinder(group,side*19,15.6,z+1.5,1,1,.12,0xf4edda,24);clock.rotation.x=Math.PI/2;
+        box(group,side*19,15.85,z+1.6,.07,.6,.08,0x263b40);
+        box(group,side*19+.22,15.6,z+1.61,.5,.07,.08,0x263b40);
       }
-      // Decorated parapet and projecting cornice of the main entrance.
-      box(group,16.3,13,0,1.5,1.1,34.5,stone);
-      for(let z=-15;z<=15;z+=2)box(group,15.9,11.5,z,.55,.38,.38,0xc3b18e);
-      for(const z of [-12,-6,0,6,12])box(group,15.9,13.45,z,.5,1.2,.8,stone);
-      for(const z of [-16.5,16.5]) {
-        box(group,16.3,7,z,2.5,14,2.5,stone);
-        box(group,16.3,14.2,z,3.4,.5,3.4,stone);
-        cylinder(group,16.3,15.2,z,.65,.8,1.7,stone,12);
-        const clock=cylinder(group,14.99,12.6,z,1,1,.12,0xf4edda,24);clock.rotation.z=Math.PI/2;
-        box(group,14.88,12.85,z,.08,.6,.07,0x263b40);
-        box(group,14.87,12.6,z+.22,.08,.07,.5,0x263b40);
-      }
-      const title=label(group,'محطة مصر',15.9,11.25,0,12,.8,'#d8d0b8','#36494b');title.rotation.y=-Math.PI/2;
+      label(group,'محطة مصر',0,15.1,z+1.4,11,.8,'#d8d0b8','#36494b');
     }
     for(const x of [-12.5,12.5]) {
       box(group,x,.22,0,3,.44,60,0x938f82);

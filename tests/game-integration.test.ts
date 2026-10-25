@@ -104,7 +104,7 @@ test('one blue entrance sign per region in each route loop, never repeated down 
 test('account bridge rejects outside frames and cannot credit a run to a different member',async()=>{
  const handlers:Record<string,Function>={}, replies:any[]=[], writes:any[]=[];
  const parent={postMessage:(message:any)=>replies.push(message)};
- const window={parent,addEventListener:(name:string,handler:Function)=>handlers[name]=handler};
+ const window={parent,addEventListener:(name:string,handler:Function)=>handlers[name] ||= handler};
  const auth:any={currentUser:{uid:'member-a'},authStateReady:async()=>{},onAuthStateChanged(callback:Function){handlers.auth=callback;callback(this.currentUser);return ()=>{}}};
  const input=readFileSync('src/gameAccount.ts','utf8').replace(/^import .*;\n/gm,'');
  const js=ts.transpile(input,{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None});
@@ -340,7 +340,7 @@ test('all refined characters build with their animation joints and ability attac
  const surface=(kind:string)=>({kind});
  const build=new Function('oe','Ee','Ve','Mt','Jn','Un','dn','pi','l0','ob','$n','naturalSurface','return ({'+method+'}).createGamalCharacter')(Group,Material,Geometry,Mesh,Geometry,Geometry,Geometry,Material,Geometry,Group,2,surface);
  const factory={createAlIttihadScarfTexture:()=>({}),createMabkharaFiligreeTexture:()=>({})};
- for(const id of ['gamal','adel','hamido','lazo']){
+ for(const id of ['gamal','adel','hamido','lazo','islam']){
   const model=build.call(factory,id),rig=model.userData;
   assert.equal(rig.characterId,id);assert.equal(rig.headPivot.scale.x,.84);
   assert.equal(rig.leftLegPivot.scale.y,1.1);assert.equal(rig.rightLegPivot.position.y,1.23);
@@ -408,14 +408,15 @@ test('Gamal, Adel and Hamido have separate opening clips',()=>{
  s.playOpening('lazo');assert.equal(s.gamalOpeningAudio.plays,1);assert.equal(adel.plays,1);
  s.muted=true;s.playOpening('adel');assert.equal(adel.plays,1);s.muted=false;s.playOpening('adel');assert.equal(adel.plays,2);
 });
-test('all playable characters are unlocked immediately regardless of score',()=>{
+test('character access follows account coin milestones and ignores high scores',()=>{
  const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='characterUnlocked')!;
- const unlocked=new Function('return '+fn.getText(source))();
- for(const id of ['gamal','adel','hamido'])for(const score of [0,undefined,200000,300000])assert.equal(unlocked(id,score),true);
- const availableNode=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='availableCharacter')!;
- const available=new Function('characterUnlocked','sc','return '+availableNode.getText(source))(unlocked,(id:string)=>({id}));
- assert.equal(available('hamido',0),'hamido');
+ const account:any={__ittihadawyUnlockedCharacters:['gamal']};
+ const unlocked=new Function('window','return '+fn.getText(source))(account);
+ assert.equal(unlocked('gamal',0),true);assert.equal(unlocked('hamido',999999),false);
+ account.__ittihadawyUnlockedCharacters=['gamal','adel','hamido','lazo','islam'];
+ for(const id of account.__ittihadawyUnlockedCharacters)assert.equal(unlocked(id,0),true);
 });
+
 test('Hadra taxis and Kom el Dikka food cart and cafe stay off the runner lanes',()=>{
  const taxis=regionScenery('hadra',0).filter(s=>typeof s.args[0]==='number'&&s.args[0]>0);
  assert.ok(taxis.length>10);assert.ok(taxis.every(s=>s.args[0]>6));
@@ -505,12 +506,35 @@ test('original stadium, gate, Shatby club and library models are preserved verba
  }
 });
 
-test('uploaded station reference is represented by arched bays, clock towers and overhead trusses',()=>{
- const station=regionScenery('misrstation',5);
- assert.equal(station.filter(s=>s.kind==='box'&&s.args[0]===16.1).length,39);
- assert.equal(station.filter(s=>s.kind==='cylinder'&&s.args[0]===14.99).length,2);
- assert.ok(station.some(s=>s.kind==='label'&&s.args[0]==='محطة مصر'));
+test('station exit faces the runner with three arches and paired clocks',()=>{
+ const station=regionScenery('misrstation',9);
+ assert.equal(station.filter(s=>s.kind==='box'&&s.args[1]>=7.6&&s.args[1]<=12.71&&s.args[2]===-27.05&&s.args[3]===.85).length,51);
+ assert.equal(station.filter(s=>s.kind==='cylinder'&&s.args[1]===15.6&&s.args[3]===1).length,2);
+ const title=station.find(s=>s.kind==='label'&&s.args[0]==='محطة مصر');
+ assert.ok(title);assert.equal(title.args[1],0);assert.ok(title.args[3]<-25);
  assert.ok(station.some(s=>s.kind==='box'&&s.args[6]===0xb5d8de&&s.args[1]>12));
+});
+
+ test('Misr Station has one open exit at its final boundary on every lap',()=>{
+ const vars=source.statements.flatMap(s=>ts.isVariableStatement(s)?[...s.declarationList.declarations]:[]);
+ const route=new Function('return '+vars.find(d=>d.name.getText(source)==='Mr')!.initializer!.getText(source))();
+ const lap=route.at(-1).end,region=route.find((r:any)=>r.id==='misrstation');
+ const start=route[route.indexOf(region)-1].end/60;
+ const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='addRegionDetails')!;
+ const decorate=new Function('Uf','return '+fn.getText(source))(lap);
+ for(const loop of [0,1,2,3]){
+  const exits:number[]=[];
+  for(let offset=0;offset<10;offset++){
+   const shapes:any[]=[],primitives=Object.fromEntries(['box','cylinder','ball','label'].map(kind=>[kind,(_g:any,...args:any[])=>{shapes.push({kind,args});return {rotation:{}}}]));
+   decorate({},region,loop*lap/60+start+offset,primitives);
+   if(shapes.some(s=>s.kind==='label'&&s.args[0]==='محطة مصر')){
+    exits.push(offset);
+    for(const {args:a} of shapes.filter(s=>s.kind==='box'&&s.args[1]-s.args[4]/2<5&&s.args[2]<-25))
+     assert.ok(Math.abs(a[0])-a[3]/2>4.5,'Exit opening must remain clear across all running lanes');
+   }
+  }
+  assert.deepEqual(exits,[9]);
+ }
 });
 
 test('Shatby reference building stands on the left with its dome clear of the runner and tram',()=>{

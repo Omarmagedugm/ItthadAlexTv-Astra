@@ -67,7 +67,7 @@ function showStatus() {
 
 // Live Game Stats Extractor: reads live score/distance at any moment even if not caught
 function getLiveGameStats() {
-  let score = 0, distance = 0, character = 'gamal';
+  let score = 0, distance = 0, coins = 0, character = 'gamal';
   
   // 1. Read live score from active HUD
   const hudPoints = document.querySelector('.hud-points');
@@ -85,10 +85,12 @@ function getLiveGameStats() {
     }
   });
 
+  for (const chip of chips) if(chip.textContent?.includes('عملة')) coins=Number(chip.querySelector('b')?.textContent?.replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[^\d]/g,''))||0;
+
   // 3. Read character from localStorage
   try {
     const savedChar = JSON.parse(localStorage.getItem('ittihadawy-character') || '""');
-    if (savedChar && ['adel', 'gamal', 'hamido', 'lazo'].includes(savedChar)) {
+    if (savedChar && ['adel', 'gamal', 'hamido', 'lazo','islam'].includes(savedChar)) {
       character = savedChar;
     }
   } catch (_) {}
@@ -102,7 +104,7 @@ function getLiveGameStats() {
     }
   } catch (_) {}
 
-  return { score, distance, character };
+  return { score, distance, character, coins };
 }
 
 // Intercept back button clicks inside iframe to save live score and exit cleanly
@@ -222,3 +224,30 @@ window.addEventListener('ittihadawy:state', event => {
   }
 });
 
+
+// Lobby requests only reach the same-origin authenticated account frame.
+window.addEventListener('ittihadawy:lobby-request', event => {
+ const data=event.detail;
+ if(data?.type==='ittihadawy:cosmetics'||data?.type==='ittihadawy:get-leaderboard')send(data);
+});
+window.addEventListener('message', event => {
+ if(event.origin!==location.origin||event.source!==frame.contentWindow)return;
+ if(['ittihadawy:cosmetics-data','ittihadawy:leaderboard-data'].includes(event.data?.type))
+  window.dispatchEvent(new CustomEvent('ittihadawy:lobby-response',{detail:event.data}));
+});
+
+window.addEventListener('message',event=>{
+ if(event.origin!==location.origin||event.source!==frame.contentWindow)return;
+ if(event.data?.type==='ittihadawy:coins-error')window.dispatchEvent(new CustomEvent('ittihadawy:lobby-coin-error'));
+ if(event.data?.type==='ittihadawy:coins-saved')window.dispatchEvent(new CustomEvent('ittihadawy:lobby-coin-saved'));
+});
+
+let lastCoinCheckpoint=0;
+setInterval(()=>{
+ if(!runId||Date.now()-lastCoinCheckpoint<15000)return;
+ const current=getLiveGameStats();if(current.coins<1)return;
+ lastCoinCheckpoint=Date.now();send({type:'ittihadawy:coin-progress',id:runId,result:current});
+},15000);
+window.addEventListener('ittihadawy:coin-checkpoint',event=>{
+ if(runId&&Number.isSafeInteger(event.detail?.coins))send({type:'ittihadawy:coin-progress',id:runId,result:{coins:event.detail.coins}});
+});

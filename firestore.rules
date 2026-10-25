@@ -66,6 +66,67 @@ service cloud.firestore {
              (!('lastActive' in data) || (data.lastActive is string && data.lastActive.size() <= 100));
     }
 
+    match /game_progress/{uid} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validCoinCredit(uid);
+      match /runs/{runId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && request.resource.data.keys().hasOnly(['coins','createdAt']) && request.resource.data.coins==0 && request.resource.data.createdAt==request.time;
+        allow update: if isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coins']) &&
+          request.resource.data.coins is int && request.resource.data.coins>=resource.data.coins && request.resource.data.coins<=1000000 &&
+          getAfter(/databases/$(database)/documents/game_progress/$(uid)).data.lastRun==runId &&
+          getAfter(/databases/$(database)/documents/game_progress/$(uid)).data.totalCoins==
+           (exists(/databases/$(database)/documents/game_progress/$(uid))?get(/databases/$(database)/documents/game_progress/$(uid)).data.totalCoins:0)+request.resource.data.coins-resource.data.coins;
+      }
+    }
+    function validCoinCredit(uid) {
+      let data=request.resource.data;
+      let path=/databases/$(database)/documents/game_progress/$(uid)/runs/$(data.lastRun);
+      let previous=exists(/databases/$(database)/documents/game_progress/$(uid))?get(/databases/$(database)/documents/game_progress/$(uid)).data.totalCoins:0;
+      return data.keys().hasOnly(['totalCoins','lastRun']) && data.totalCoins is int && data.totalCoins>=previous && data.totalCoins<=2147483647 &&
+        exists(path) && data.totalCoins==previous+getAfter(path).data.coins-get(path).data.coins;
+    }
+    // Purchases atomically deduct from credited coins and preserve ownership.
+
+    function cosmeticChoice(choice, slot, owned) {
+      return choice is map && choice.keys().hasOnly(['item','color']) &&
+        choice.color in ['#087b46','#ffffff','#171d1b','#e9c64b','#2d5792','#9e3438'] &&
+        (choice.item == 'default' ||
+         (choice.item in owned && (choice.item in ['ittihad-kit','legendary-kit'] ||
+          (slot == 'cap' && choice.item == 'green-cap') ||
+          (slot == 'glasses' && choice.item == 'sunglasses') ||
+          (slot == 'shirt' && choice.item == 'exclusive-shirt') ||
+          (slot == 'shorts' && choice.item == 'special-shorts') ||
+          (slot == 'shoes' && choice.item == 'premium-shoes'))));
+    }
+    function cosmeticOutfit(outfit, owned) {
+      return outfit is map && outfit.keys().hasOnly(['cap','shirt','glasses','shorts','shoes']) &&
+        cosmeticChoice(outfit.cap,'cap',owned) && cosmeticChoice(outfit.shirt,'shirt',owned) &&
+        cosmeticChoice(outfit.glasses,'glasses',owned) && cosmeticChoice(outfit.shorts,'shorts',owned) &&
+        cosmeticChoice(outfit.shoes,'shoes',owned);
+    }
+    match /game_cosmetics/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId) && validCosmetics(userId);
+    }
+    function validCosmetics(uid) {
+      let score=exists(/databases/$(database)/documents/game_progress/$(uid)) ? get(/databases/$(database)/documents/game_progress/$(uid)).data.totalCoins : 0;
+      let old=exists(/databases/$(database)/documents/game_cosmetics/$(uid)) ? get(/databases/$(database)/documents/game_cosmetics/$(uid)).data.get('unlocked',[]) : [];
+      let oldCharacters=exists(/databases/$(database)/documents/game_cosmetics/$(uid)) ? get(/databases/$(database)/documents/game_cosmetics/$(uid)).data.get('characters',['gamal']) : ['gamal'];
+      let spent=exists(/databases/$(database)/documents/game_cosmetics/$(uid)) ? get(/databases/$(database)/documents/game_cosmetics/$(uid)).data.get('spentCoins',0) : 0;
+      let addedItems=request.resource.data.unlocked.removeAll(old);
+      let addedCharacters=request.resource.data.characters.removeAll(oldCharacters);
+      let prices={'green-cap':100,'sunglasses':300,'exclusive-shirt':600,'special-shorts':1000,'premium-shoes':2000,'ittihad-kit':4000,'legendary-kit':10000};
+      let characterPrices={'adel':250,'hamido':750,'lazo':1500,'islam':3000};
+      let cost=addedItems.size()==1?prices.get(addedItems[0],2147483647):(addedCharacters.size()==1?characterPrices.get(addedCharacters[0],2147483647):0);
+      let data=request.resource.data;
+      return data.keys().hasOnly(['outfits','unlocked','seen','characters','spentCoins']) && data.characters is list && data.characters.size()<=5 && data.characters.hasOnly(['gamal','adel','hamido','lazo','islam']) && data.characters.hasAll(oldCharacters) && addedItems.size()+addedCharacters.size()<=1 && data.spentCoins is int && data.spentCoins==spent+cost && data.spentCoins<=score && data.unlocked is list && data.unlocked.size()<=7 &&
+        data.unlocked.hasOnly(['green-cap','sunglasses','exclusive-shirt','special-shorts','premium-shoes','ittihad-kit','legendary-kit']) && data.unlocked.hasAll(old) && data.seen is list && data.seen.size()<=7 && data.seen.hasOnly(data.unlocked) &&
+        data.outfits.keys().hasOnly(['gamal','adel','hamido','lazo','islam']) &&
+        cosmeticOutfit(data.outfits.gamal,data.unlocked) && cosmeticOutfit(data.outfits.adel,data.unlocked) &&
+        cosmeticOutfit(data.outfits.hamido,data.unlocked) && cosmeticOutfit(data.outfits.lazo,data.unlocked) && cosmeticOutfit(data.outfits.islam,data.unlocked);
+    }
+
     match /test/connection {
       allow read: if true;
     }

@@ -1,3 +1,5 @@
+import {startCoinRun,recordRunCoins} from './lib/gameCoins';
+import { syncGameCosmetics } from './lib/gameCosmetics';
 import { auth, db } from './lib/firebase';
 import { doc, runTransaction, setDoc, serverTimestamp } from 'firebase/firestore';
 import { improvedGameStats, validGameResult } from './lib/gameScores';
@@ -12,6 +14,13 @@ window.addEventListener('message', (event) => {
   if (parentWindow === window || event.source !== parentWindow || event.origin !== location.origin) return;
   const data = event.data;
   if (!data || typeof data.id !== 'string' || data.id.length > 80) return;
+
+  if (data.type === 'ittihadawy:cosmetics') {
+    queue=queue.then(async()=>{
+      try { await coinQueue; const profile=await syncGameCosmetics(data.input); parentWindow.postMessage({type:'ittihadawy:cosmetics-data',id:data.id,profile},location.origin); }
+      catch { parentWindow.postMessage({type:'ittihadawy:cosmetics-data',id:data.id,error:true},location.origin); }
+    }); return;
+  }
 
   if (data.type === 'ittihadawy:get-leaderboard') {
     queue = queue.then(async () => {
@@ -138,3 +147,18 @@ async function recordVisit() {
   try { sessionStorage.setItem('ittihadawy-visit', JSON.stringify({id:visit, at:Date.now(), saved:true})); } catch {}
 }
 if (parentWindow !== window) recordVisit().catch(error => console.warn('Game visit could not be recorded:', error.code));
+
+// Coin credits are bound to the member at run start, independent of leaderboard writes.
+let coinQueue=Promise.resolve();const coinOwners=new Map<string,string>();
+window.addEventListener('message',event=>{
+ if(parentWindow===window||event.source!==parentWindow||event.origin!==location.origin)return;
+ const data=event.data;if(!data||typeof data.id!=='string'||!/^[a-zA-Z0-9_-]{1,80}$/.test(data.id))return;
+ if(!['ittihadawy:run-start','ittihadawy:run-end','ittihadawy:coin-progress'].includes(data.type))return;
+ coinQueue=coinQueue.then(async()=>{
+  await auth.authStateReady();const user=auth.currentUser;if(!user)return;
+  if(data.type==='ittihadawy:run-start'){coinOwners.clear();await startCoinRun(data.id,user.uid);coinOwners.set(data.id,user.uid);return;}
+  if(coinOwners.get(data.id)!==user.uid||!Number.isSafeInteger(data.result?.coins))return;
+  await recordRunCoins(data.id,user.uid,data.result.coins);
+  parentWindow.postMessage({type:'ittihadawy:coins-saved',id:data.id},location.origin);
+ }).catch(()=>parentWindow.postMessage({type:'ittihadawy:coins-error',id:data.id},location.origin));
+});
