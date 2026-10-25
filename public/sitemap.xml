@@ -3,31 +3,31 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://itthadalextv.com</loc>
-    <lastmod>2026-10-19T14:34:29Z</lastmod>
+    <lastmod>2026-10-23T12:12:17Z</lastmod>
     <changefreq>hourly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/news</loc>
-    <lastmod>2026-10-19T14:34:29Z</lastmod>
+    <lastmod>2026-10-23T12:12:17Z</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/matches</loc>
-    <lastmod>2026-10-19T14:34:29Z</lastmod>
+    <lastmod>2026-10-23T12:12:17Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/media</loc>
-    <lastmod>2026-10-19T14:34:29Z</lastmod>
+    <lastmod>2026-10-23T12:12:17Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/live</loc>
-    <lastmod>2026-10-19T14:34:29Z</lastmod>
+    <lastmod>2026-10-23T12:12:17Z</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -39,37 +39,37 @@
   </url>
   <url>
     <loc>https://itthadalextv.com/fanzone</loc>
-    <lastmod>2026-10-19T14:34:29Z</lastmod>
+    <lastmod>2026-10-23T12:12:17Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/club-members</loc>
-    <lastmod>2026-10-19T14:34:29Z</lastmod>
+    <lastmod>2026-10-23T12:12:17Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/discounts</loc>
-    <lastmod>2026-10-19T14:34:29Z</lastmod>
+    <lastmod>2026-10-23T12:12:17Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/business</loc>
-    <lastmod>2026-10-19T14:34:29Z</lastmod>
+    <lastmod>2026-10-23T12:12:17Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/world-fans</loc>
-    <lastmod>2026-10-19T14:34:29Z</lastmod>
+    <lastmod>2026-10-23T12:12:17Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/services</loc>
-    <lastmod>2026-10-19T14:34:29Z</lastmod>
+    <lastmod>2026-10-23T12:12:17Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -84,6 +84,46 @@
     <lastmod>2026-08-01T00:00:00Z</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://itthadalextv.com/news/NfeSZqJVKwkZkJNJgx02</loc>
+    <lastmod>2026-10-23T12:12:17Z</lastmod>
+    <changefreq>never</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0026252792.firebasestorage.app/o/admin_image%2F1792757515810_Gemini_Generated_Image_n3epm9n3epm9n3ep_compressed_compresse?alt=media&amp;token=d74a3917-03e6-4d89-9854-f653d7c5da1b</image:loc>
+      <image:title>تغطية خاصة لمهرجان الاسكندرية للأبداع الرياضي</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://itthadalextv.com/news/Q49g6BU1yc1LjJreMi8d</loc>
+    <lastmod>2026-10-22T11:13:07Z</lastmod>
+    <changefreq>never</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0026252792.firebasestorage.app/o/admin_image%2F1792667577610_1001043738_compressed.webp?alt=media&amp;token=5c983dc7-dbd3-42ae-8d5c-3c1ecb7f8e30</image:loc>
+      <image:title>الاتحاد السكندري يواجه غزل المحلة في دور الـ 32 بكأس مصر</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://itthadalextv.com/news/xIS37v3pH9ycLLajgM9Q</loc>
+    <lastmod>2026-10-21T16:14:47Z</lastmod>
+    <changefreq>never</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0026252792.firebasestorage.app/o/admin_image%2F1792599211487_IMG_0921_compressed.webp?alt=media&amp;token=323a7a72-b0c1-45e5-9a35-d8001193a955</image:loc>
+      <image:title>الاتحاد السكندري يتلقى الهزيمة أمام غزل المحلة</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://itthadalextv.com/news/3IfSn19uts8wuhyzNUKT</loc>
+    <lastmod>2026-10-20T14:39:02Z</lastmod>
+    <changefreq>never</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0026252792.firebasestorage.app/o/admin_image%2F1792507133940_833460_compressed_compressed.webp?alt=media&amp;token=c4eeca81-c912-4bb8-90c6-9d5e0b2239b9</image:loc>
+      <image:title>​زعيم الثغر يعلن قائمة مواجهة غزل المحلة في الدوري</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://itthadalextv.com/news/eafkAsEMNbzkYQoJaZKF</loc>
@@ -392,7 +432,7 @@
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0026252792.firebasestorage.app/o/admin_image%2F1790267588320_151912.png?alt=media&amp;token=80337306-2b92-4755-814f-af098b90a82f</image:loc>
-      <image:title>مرتبط 16 سنة.. الاتحاد السكندري يواصل انتصاراته ويهزم سبورتنج</image:title>
+      <image:title>مرتبط 16 ��نة.. الاتحاد السكندري يواصل انتصاراته ويهزم سبورتنج</image:title>
     </image:image>
   </url>
   <url>
@@ -1072,7 +1112,7 @@
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://itthadalextv.com/storage/migrated/51_lj5nyrwc0pprwkbiqm9h.jpg</image:loc>
-      <image:title>اتحاد السلة يعلن حضور 2000 مشجع في نهائي دوري السوبر</image:title>
+      <image:title>اتحاد السلة يعلن ح��ور 2000 مشجع في نهائي دوري السوبر</image:title>
     </image:image>
   </url>
   <url>

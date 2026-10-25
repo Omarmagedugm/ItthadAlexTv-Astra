@@ -122,7 +122,7 @@ document.addEventListener('click', (e) => {
 
     // Grab current live score before exiting, even if not game over
     const current = getLiveGameStats();
-    if (current.score >= 1) {
+    if (current.score >= 1 || current.coins >= 1) {
       send({ type: 'ittihadawy:run-end', id: runId || 'early-exit', result: current });
       if (window.parent && window.parent !== window) {
         try {
@@ -146,7 +146,7 @@ document.addEventListener('click', (e) => {
 // Send periodic live score updates so parent window always has the freshest score
 setInterval(() => {
   const current = getLiveGameStats();
-  if (current.score >= 1) {
+  if (current.score >= 1 || current.coins >= 1) {
     if (window.parent && window.parent !== window) {
       try {
         window.parent.postMessage({
@@ -162,7 +162,7 @@ setInterval(() => {
 // Capture score if window or tab is closed/navigated away
 window.addEventListener('beforeunload', () => {
   const current = getLiveGameStats();
-  if (current.score >= 1) {
+  if (current.score >= 1 || current.coins >= 1) {
     send({ type: 'ittihadawy:run-end', id: runId || 'early-exit', result: current });
     if (window.parent && window.parent !== window) {
       try {
@@ -251,8 +251,13 @@ let lastCoinCheckpoint=0;
 setInterval(()=>{
  if(!runId||Date.now()-lastCoinCheckpoint<15000)return;
  const current=getLiveGameStats();if(current.coins<1)return;
- lastCoinCheckpoint=Date.now();send({type:'ittihadawy:coin-progress',id:runId,result:current});
+ lastCoinCheckpoint=Date.now();
+ send({type:'ittihadawy:coin-progress',id:runId,result:current});
+ if(window.parent&&window.parent!==window){try{window.parent.postMessage({type:'ittihadawy:coin-progress',id:runId,result:current},'*')}catch{}}
 },15000);
 window.addEventListener('ittihadawy:coin-checkpoint',event=>{
- if(runId&&Number.isSafeInteger(event.detail?.coins))send({type:'ittihadawy:coin-progress',id:runId,result:{coins:event.detail.coins}});
+ if(runId&&Number.isSafeInteger(event.detail?.coins)&&event.detail.coins>0){
+  send({type:'ittihadawy:coin-progress',id:runId,result:{coins:event.detail.coins}});
+  if(window.parent&&window.parent!==window){try{window.parent.postMessage({type:'ittihadawy:coin-progress',id:runId,result:{coins:event.detail.coins}},'*')}catch{}}
+ }
 });

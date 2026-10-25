@@ -256,8 +256,18 @@ export default function Game() {
         return;
       }
 
+      if (data.type === 'ittihadawy:run-start' && data.id && auth.currentUser) {
+        void startCoinRun(data.id, auth.currentUser.uid).catch(() => {});
+        return;
+      }
+
+      if (data.type === 'ittihadawy:coin-progress' && data.id && Number.isSafeInteger(data.result?.coins) && auth.currentUser) {
+        void recordRunCoins(data.id, auth.currentUser.uid, data.result.coins).catch(() => {});
+        return;
+      }
+
       if (data.type === 'ittihadawy:live-progress' && data.result) {
-        if (typeof data.result.score === 'number' && data.result.score >= 1) {
+        if ((typeof data.result.score === 'number' && data.result.score >= 1) || (typeof data.result.coins === 'number' && data.result.coins >= 1)) {
           latestResultRef.current = {...data.result,runId:data.id};
         }
         return;
@@ -270,6 +280,11 @@ export default function Game() {
 
       if (data.type === 'ittihadawy:run-end' && data.result) {
         latestResultRef.current = {...data.result,runId:data.id};
+        if (data.id && Number.isSafeInteger(data.result.coins) && data.result.coins >= 1 && auth.currentUser) {
+          void recordRunCoins(data.id, auth.currentUser.uid, data.result.coins).catch((err) => {
+            console.warn('[GamePage] Coin save warning:', err);
+          });
+        }
         await saveScoreForUser(data.result, data.id);
       }
     };

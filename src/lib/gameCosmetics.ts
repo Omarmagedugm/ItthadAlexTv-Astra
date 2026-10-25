@@ -30,11 +30,15 @@ export async function syncGameCosmetics(input: any = {}) {
     state.outfits[input.character]=checked;
    }
    if(input.seen===true)state.seen=[...state.unlocked];
-   if(member.exists()&&(input.character||input.seen===true)){
-    tx.update(profileRef,{
-     'stats.ittihadawyOutfits':state.outfits,
-     'stats.ittihadawySeen':state.seen
-    });
+   if(member.exists()&&(input.character||input.seen===true||totalCoins>statsCoins||bestScore>dbScore)){
+    const updates:Record<string,any>={};
+    if(totalCoins>statsCoins)updates['stats.ittihadawyCoins']=totalCoins;
+    if(bestScore>dbScore)updates['stats.ittihadawyScore']=bestScore;
+    if(input.character||input.seen===true){
+     updates['stats.ittihadawyOutfits']=state.outfits;
+     updates['stats.ittihadawySeen']=state.seen;
+    }
+    tx.update(profileRef,updates);
    }
    return {...state,uid:user.uid,welcomeGiftPending:false};
   });

@@ -27,12 +27,13 @@ test('saved clothes stay per character and reject invalid items',()=>{
  assert.equal(state.outfits.gamal.cap.item,'green-cap');assert.equal(state.outfits.adel.cap.item,'default');
  assert.equal(cleanOutfit({cap:{item:'hacked',color:'url(secret)'}},REWARDS.map((r:any)=>r.id)).cap.item,'default');
 });
-test('character abilities grant 10s massive speed & obstacle destruction with recharge cooldown and reduced road boosts',()=>{
+test('character abilities grant 10s massive speed & obstacle destruction with recharge cooldown, reduced road boosts, and faster motorcycle speed',()=>{
  const html=fs.readFileSync('public/games/ittihadawy/index.html','utf8'),active=html.match(/assets\/index-[^"? ]+\.js/)![0];
  const code=fs.readFileSync('public/games/ittihadawy/'+active,'utf8');
  assert.ok(code.includes('cost:100,duration:10,gap:45'));
  assert.ok(code.includes('r.charge=0,r.smoke=n.duration,r.boostTime=Math.max(r.boostTime||0,n.duration)'));
- assert.ok(code.includes('TC=(r,t,s=0)=>Wy(r)*(s>0?2.35:t>0?1.65:1)'));
+ assert.ok(code.includes('TC=(r,t,s=0,m=!1)=>Wy(r)*(m?1.38:1)*(s>0?2.35:t>0?1.65:1)'));
+ assert.ok(code.includes('localStorage.setItem("gamal-coins",String(b+n.coins))'));
  assert.ok(code.includes('if(!v&&!g.done&&n.smoke>0&&m>-16&&m<4)'));
  assert.ok(code.includes('this.nextBoostAt=950'));
  assert.ok(code.includes('this.nextBoostAt=t+1500'));

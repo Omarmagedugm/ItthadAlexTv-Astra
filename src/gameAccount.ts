@@ -160,7 +160,8 @@ window.addEventListener('message',event=>{
  if(!['ittihadawy:run-start','ittihadawy:run-end','ittihadawy:coin-progress'].includes(data.type))return;
  coinQueue=coinQueue.then(async()=>{
   await auth.authStateReady();const user=auth.currentUser;if(!user)return;
-  if(data.type==='ittihadawy:run-start'){coinOwners.clear();await startCoinRun(data.id,user.uid);coinOwners.set(data.id,user.uid);return;}
+  if(data.type==='ittihadawy:run-start'){coinOwners.clear();coinOwners.set(data.id,user.uid);await startCoinRun(data.id,user.uid);return;}
+  if(!coinOwners.has(data.id))coinOwners.set(data.id,user.uid);
   if(coinOwners.get(data.id)!==user.uid||!Number.isSafeInteger(data.result?.coins))return;
   await recordRunCoins(data.id,user.uid,data.result.coins);
   parentWindow.postMessage({type:'ittihadawy:coins-saved',id:data.id},location.origin);
