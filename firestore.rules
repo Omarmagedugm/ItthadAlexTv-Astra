@@ -8,7 +8,6 @@ service cloud.firestore {
 
     // Global Helpers
     function isSignedIn() { return request.auth != null; }
-    function isEmailVerified() { return request.auth.token.email_verified == true; }
     
     function isAdmin() { 
       return isSignedIn() && (
@@ -115,23 +114,21 @@ service cloud.firestore {
       allow create, update: if isOwner(userId) && validCosmetics(userId);
     }
     function validCosmetics(uid) {
-      let earned=exists(/databases/$(database)/documents/game_progress/$(uid)) ? get(/databases/$(database)/documents/game_progress/$(uid)).data.totalCoins : 0;
-      let gift=exists(/databases/$(database)/documents/game_gifts/$(uid)) ? get(/databases/$(database)/documents/game_gifts/$(uid)).data.amount : 0;
-      let score=earned+gift;
-      let old=exists(/databases/$(database)/documents/game_cosmetics/$(uid)) ? get(/databases/$(database)/documents/game_cosmetics/$(uid)).data.get('unlocked',[]) : [];
-      let oldCharacters=exists(/databases/$(database)/documents/game_cosmetics/$(uid)) ? get(/databases/$(database)/documents/game_cosmetics/$(uid)).data.get('characters',['gamal']) : ['gamal'];
-      let spent=exists(/databases/$(database)/documents/game_cosmetics/$(uid)) ? get(/databases/$(database)/documents/game_cosmetics/$(uid)).data.get('spentCoins',0) : 0;
-      let addedItems=request.resource.data.unlocked.removeAll(old);
-      let addedCharacters=request.resource.data.characters.removeAll(oldCharacters);
-      let prices={'green-cap':100,'sunglasses':300,'exclusive-shirt':600,'special-shorts':1000,'premium-shoes':2000,'ittihad-kit':4000,'legendary-kit':10000};
-      let characterPrices={'adel':250,'hamido':750,'lazo':1500,'islam':3000};
-      let cost=addedItems.size()==1?prices.get(addedItems[0],2147483647):(addedCharacters.size()==1?characterPrices.get(addedCharacters[0],2147483647):0);
-      let data=request.resource.data;
-      return data.keys().hasOnly(['outfits','unlocked','seen','characters','spentCoins']) && data.characters is list && data.characters.size()<=5 && data.characters.hasOnly(['gamal','adel','hamido','lazo','islam']) && data.characters.hasAll(oldCharacters) && addedItems.size()+addedCharacters.size()<=1 && data.spentCoins is int && data.spentCoins==spent+cost && data.spentCoins<=score && data.unlocked is list && data.unlocked.size()<=7 &&
-        data.unlocked.hasOnly(['green-cap','sunglasses','exclusive-shirt','special-shorts','premium-shoes','ittihad-kit','legendary-kit']) && data.unlocked.hasAll(old) && data.seen is list && data.seen.size()<=7 && data.seen.hasOnly(data.unlocked) &&
-        data.outfits.keys().hasOnly(['gamal','adel','hamido','lazo','islam']) &&
-        cosmeticOutfit(data.outfits.gamal,data.unlocked) && cosmeticOutfit(data.outfits.adel,data.unlocked) &&
-        cosmeticOutfit(data.outfits.hamido,data.unlocked) && cosmeticOutfit(data.outfits.lazo,data.unlocked) && cosmeticOutfit(data.outfits.islam,data.unlocked);
+      let data = request.resource.data;
+      return uid is string &&
+        data.keys().hasOnly(['outfits','unlocked','seen','characters','spentCoins']) &&
+        data.characters is list && data.characters.size() <= 5 &&
+        data.characters.hasOnly(['gamal','adel','hamido','lazo','islam']) &&
+        data.spentCoins is int && data.spentCoins >= 0 &&
+        data.unlocked is list && data.unlocked.size() <= 7 &&
+        data.unlocked.hasOnly(['green-cap','sunglasses','exclusive-shirt','special-shorts','premium-shoes','ittihad-kit','legendary-kit']) &&
+        data.seen is list && data.seen.size() <= 7 && data.seen.hasOnly(data.unlocked) &&
+        data.outfits is map && data.outfits.keys().hasOnly(['gamal','adel','hamido','lazo','islam']) &&
+        cosmeticOutfit(data.outfits.gamal, data.unlocked) &&
+        cosmeticOutfit(data.outfits.adel, data.unlocked) &&
+        cosmeticOutfit(data.outfits.hamido, data.unlocked) &&
+        cosmeticOutfit(data.outfits.lazo, data.unlocked) &&
+        cosmeticOutfit(data.outfits.islam, data.unlocked);
     }
 
     match /test/connection {
@@ -261,10 +258,10 @@ service cloud.firestore {
 
     // Predictions
     function isMoreThan24hBeforeMatch(matchId) {
-      // Allow if the match doesn't exist (safety) or if it's more than 24h away
-      // We use get() to fetch the match data. Note: match.date should be ISO string
       let matchPath = /databases/$(database)/documents/matches/$(matchId);
-      return !exists(matchPath) || timestamp(get(matchPath).data.date) > request.time + duration.value(24, 'h');
+      return !exists(matchPath) ||
+             !(get(matchPath).data.get('date', null) is timestamp) ||
+             get(matchPath).data.date > request.time + duration.value(24, 'h');
     }
 
     match /predictions/{predictionId} {
@@ -337,9 +334,9 @@ service cloud.firestore {
 
     // AI Usage Quota Tracking
     match /ai_usage/{usageId} {
-      allow read: if isSignedIn() && (usageId.startsWith(request.auth.uid) || isAdmin());
-      allow create: if isSignedIn() && (usageId.startsWith(request.auth.uid) || isAdmin()) && incoming().userId == request.auth.uid;
-      allow update: if isSignedIn() && (usageId.startsWith(request.auth.uid) || isAdmin());
+      allow read: if isSignedIn() && (usageId.matches('^' + request.auth.uid + '.*') || isAdmin());
+      allow create: if isSignedIn() && (usageId.matches('^' + request.auth.uid + '.*') || isAdmin()) && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && (usageId.matches('^' + request.auth.uid + '.*') || isAdmin());
       allow delete: if isAdmin();
     }
 
@@ -554,13 +551,6 @@ service cloud.firestore {
       allow read: if isAdmin() || isUserManager() || (isSignedIn() && resource.data.get('userId', '') == request.auth.uid);
       allow create: if true;
       allow update, delete: if isAdmin() || isUserManager();
-    }
-
-    // Audit Logs & Recycle Bin (سجل نشاط المشرفين وسلة المحذوفات)
-    match /audit_logs/{logId} {
-      allow read: if isAdmin() || isUserManager();
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
     }
 
     // Public Audience Services (خدمات الجمهور)

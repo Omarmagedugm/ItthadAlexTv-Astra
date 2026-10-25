@@ -98,13 +98,13 @@ function getLiveGameStats() {
   // 4. Also check localStorage gamal-best if higher
   try {
     const best = JSON.parse(localStorage.getItem('gamal-best') || 'null');
-    if (best && typeof best.score === 'number' && best.score > score) {
-      score = best.score;
-      distance = Math.max(distance, best.distance || 0);
+    if (best && typeof best.score === 'number' && Math.floor(best.score) > score) {
+      score = Math.floor(best.score);
+      distance = Math.max(distance, Math.floor(best.distance || 0));
     }
   } catch (_) {}
 
-  return { score, distance, character, coins };
+  return { score: Math.floor(score), distance: Math.floor(distance), character, coins: Math.floor(coins) };
 }
 
 // Intercept back button clicks inside iframe to save live score and exit cleanly

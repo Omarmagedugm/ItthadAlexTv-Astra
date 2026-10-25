@@ -3,20 +3,24 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import ts from 'typescript';
 // @ts-ignore shared browser catalog
-import {REWARDS,purchaseItem,normalizeProfile,emptyOutfit,cleanOutfit} from '../public/games/ittihadawy/lobby/catalog.js';
-test('coins buy cosmetics once, decrease only available balance, and never auto-unlock items',()=>{
- const original=normalizeProfile({},500000);
- assert.deepEqual(original.unlocked,[]);assert.deepEqual(original.characters,['gamal']);
- const bought=purchaseItem(original,'green-cap');
- assert.equal(bought.balance,499900);assert.equal(bought.totalCoins,500000);assert.equal(bought.spentCoins,100);
- assert.deepEqual(bought.unlocked,['green-cap']);assert.equal(purchaseItem(bought,'green-cap'),bought);
- assert.equal(original.balance,500000);assert.throws(()=>purchaseItem(normalizeProfile({},99),'green-cap'));
+import {CHARACTERS,REWARDS,purchaseItem,normalizeProfile,emptyOutfit,cleanOutfit} from '../public/games/ittihadawy/lobby/catalog.js';
+test('cosmetics and characters unlock at 25,000-point multiples',()=>{
+ const original=normalizeProfile({},0);
+ assert.deepEqual(original.unlocked,[]);
+ assert.deepEqual(original.characters,['gamal']);
+ assert.equal(original.balance,0);
+ const stage1=normalizeProfile({},25000);
+ assert.deepEqual(stage1.characters,['gamal','adel']);
+ assert.deepEqual(stage1.unlocked,['green-cap']);
+ const full=normalizeProfile({},175000);
+ assert.deepEqual(full.characters,CHARACTERS);
+ assert.deepEqual(full.unlocked,REWARDS.map((r:any)=>r.id));
  assert.throws(()=>purchaseItem(original,'unknown-item'));
 });
-test('locked preview cannot become an equipped outfit and saved clothes stay per character',()=>{
+test('saved clothes stay per character and reject invalid items',()=>{
  const outfit=emptyOutfit();outfit.cap={item:'green-cap',color:'#087b46'};
- assert.equal(cleanOutfit(outfit,[]).cap.item,'default');assert.equal(cleanOutfit(outfit,[],true).cap.item,'green-cap');
- const state=normalizeProfile({unlocked:['green-cap'],outfits:{gamal:outfit}},5000);
+ assert.equal(cleanOutfit(outfit,['green-cap']).cap.item,'green-cap');
+ const state=normalizeProfile({outfits:{gamal:outfit}},25000);
  assert.equal(state.outfits.gamal.cap.item,'green-cap');assert.equal(state.outfits.adel.cap.item,'default');
  assert.equal(cleanOutfit({cap:{item:'hacked',color:'url(secret)'}},REWARDS.map((r:any)=>r.id)).cap.item,'default');
 });
@@ -35,10 +39,3 @@ test('lobby patch leaves the complete running engine and non-menu UI intact',()=
  assert.deepEqual(subtree(current),subtree(old));
 });
 
-test('Islam El Far is purchased with coins and remains owned after spending',()=>{
- let state=normalizeProfile({},3000);assert.deepEqual(state.characters,['gamal']);
- state=purchaseItem(state,'character:islam');assert.ok(state.characters.includes('islam'));assert.equal(state.balance,0);
- assert.equal(purchaseItem(state,'character:islam'),state);
- const restored=normalizeProfile(state,3000);assert.ok(restored.characters.includes('islam'));assert.equal(restored.balance,0);
- assert.throws(()=>purchaseItem(restored,'character:adel'));
-});

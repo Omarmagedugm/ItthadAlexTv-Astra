@@ -1,9 +1,9 @@
 import TopHeader from '../components/TopHeader';
 import BottomNav from '../components/BottomNav';
 import './Game.css';
-import {recordRunCoins} from '../lib/gameCoins';
+import {recordRunCoins, startCoinRun} from '../lib/gameCoins';
 import { useState, useEffect, useRef } from 'react';
-import { Gamepad2, Play, ArrowRight, Trophy, Zap, Move } from 'lucide-react';
+import { Gamepad2, Play, ArrowRight, Trophy, Zap, Move, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { doc, runTransaction } from 'firebase/firestore';
 import { improvedGameStats, validGameResult } from '../lib/gameScores';
@@ -11,9 +11,14 @@ import SEOHead from '../components/SEOHead';
 import GameLeaderboard from '../components/game/GameLeaderboard';
 import { auth, db } from '../lib/firebase';
 
+const SHARE_REWARD_COINS = 3000;
+const numberFormatter = new Intl.NumberFormat('ar-EG');
+
 export default function Game() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isCheckingMember, setIsCheckingMember] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState('');
   const [loginRequired, setLoginRequired] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const latestResultRef = useRef<{ score: number; distance: number; character: string; coins?: number; runId?: string } | null>(null);
@@ -38,6 +43,88 @@ export default function Game() {
       setLoginRequired(true);
     } finally {
       setIsCheckingMember(false);
+    }
+  };
+
+  const handleShareGame = async () => {
+    if (isSharing) return;
+    setIsSharing(true);
+    setShareFeedback('');
+    setLoginRequired(false);
+
+    const shareUrl = `${window.location.origin}/game`;
+    const shareData = {
+      title: 'لعبة اتحاداوي — قناة الاتحاد',
+      text: 'العب اتحاداوي ونافسني على صدارة لوحة الأبطال في قناة الاتحاد! 🟢⚪',
+      url: shareUrl,
+    };
+
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        await navigator.share(shareData);
+      } else if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(`${shareData.text}\n${shareUrl}`);
+      }
+    } catch (shareErr: any) {
+      if (shareErr?.name === 'AbortError') {
+        setIsSharing(false);
+        return;
+      }
+    }
+
+    try {
+      await auth.authStateReady();
+      const user = auth.currentUser;
+      if (!user) {
+        setLoginRequired(true);
+        setShareFeedback('سجّل دخولك عشان تاخد +٣,٠٠٠ كوين هدية على كل مشاركة!');
+        return;
+      }
+
+      let localCoins = 0;
+      try {
+        localCoins = Math.max(0, Math.floor(Number(localStorage.getItem('gamal-coins')) || 0));
+      } catch (_) {}
+
+      const shareRunId = `share_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      try {
+        await startCoinRun(shareRunId, user.uid);
+        await recordRunCoins(shareRunId, user.uid, SHARE_REWARD_COINS);
+      } catch (coinErr) {
+        console.warn('[GamePage] game_progress coin credit warning:', coinErr);
+      }
+
+      let newTotalCoins = localCoins + SHARE_REWARD_COINS;
+      const userRef = doc(db, 'users', user.uid);
+      const progressRef = doc(db, 'game_progress', user.uid);
+      await runTransaction(db, async (transaction) => {
+        const [snap, progressSnap] = await Promise.all([
+          transaction.get(userRef),
+          transaction.get(progressRef),
+        ]);
+        if (!snap.exists()) throw new Error('Member profile missing');
+        const data = snap.data() || {};
+        const stats = data.stats || {};
+        const currentStatsCoins = Math.max(0, Math.floor(Number(stats.ittihadawyCoins ?? 0)));
+        const currentProgressCoins = Math.max(0, Math.floor(Number(progressSnap.data()?.totalCoins ?? 0)));
+        const baseCoins = Math.max(currentStatsCoins, localCoins);
+        newTotalCoins = Math.min(2147483647, Math.max(currentProgressCoins, baseCoins + SHARE_REWARD_COINS));
+
+        transaction.update(userRef, {
+          'stats.ittihadawyCoins': newTotalCoins,
+        });
+      });
+
+      try {
+        localStorage.setItem('gamal-coins', String(newTotalCoins));
+      } catch (_) {}
+
+      setShareFeedback(`تمت المشاركة! 🎉 كسبت +${numberFormatter.format(SHARE_REWARD_COINS)} كوين • رصيد الكوينز الآن: ${numberFormatter.format(newTotalCoins)} كوين`);
+    } catch (err) {
+      console.warn('[GamePage] Could not credit share coins:', err);
+      setShareFeedback('تعذّر إضافة كوينز المشاركة حالياً. حاول مرة أخرى.');
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -210,33 +297,35 @@ export default function Game() {
           <div className="game-hero-copy">
             <span className="game-eyebrow"><span/> من المدرج… لشوارع إسكندرية</span>
             <h1 id="game-title">اتحاداوي<span>.</span></h1>
-            <p>مدينتك. شخصيتك. تحدّيك.<br/>عدّي العوائق، اجمع الكوينات، وسيب بصمتك في الصدارة.</p>
+            <p>مدينتك. شخصيتك. تحدّيك.<br/>عدّي العوائق، جمّع النقاط، وافتح الشخصيات والملابس كل ٢٥,٠٠٠ نقطة.</p>
             <button type="button" onClick={startGameForMember} disabled={isCheckingMember} className="game-start"><Play size={22} fill="currentColor"/>{isCheckingMember ? 'جارٍ التحقق…' : 'ابدأ اللعب'}<span aria-hidden="true">←</span></button>
+            <button type="button" onClick={handleShareGame} disabled={isSharing} className="game-share-btn"><Share2 size={18}/>{isSharing ? 'جارٍ المشاركة…' : 'شارك اللعبة واكسب +٣,٠٠٠ كوين'}<span className="game-share-badge">+٣٠٠٠ كوين</span></button>
+            {shareFeedback && <p role="status" className="game-share-feedback">{shareFeedback}</p>}
             {loginRequired && <p role="alert" className="game-login">اللعب متاح للأعضاء. <Link to="/auth">سجّل الدخول أو أنشئ حسابًا</Link></p>}
-            <div className="game-hero-stats"><span><strong>٥</strong> شخصيات</span><span><strong>∞</strong> تحدّي بلا نهاية</span><span><Trophy size={15}/> صدارة الأعضاء</span></div>
+            <div className="game-hero-stats"><span><strong>٥</strong> شخصيات</span><span><strong>٢٥ ألف</strong> لكل مرحلة</span><span><Trophy size={15}/> صدارة الأعضاء</span></div>
           </div>
         </section>
         <div className="game-section-heading"><span>الجولة بتبدأ بيك</span><a href="#game-ranking-title">شوف المتصدرين <Trophy size={15}/></a></div>
         <div className="grid items-start gap-6 lg:grid-cols-[1fr_300px]">
           <div className="space-y-6">
-            <section aria-labelledby="characters-title">
-          <div className="mb-3 flex items-center justify-between"><h2 id="characters-title" className="text-base font-bold text-slate-900 dark:text-white">نجوم اتحاداوي</h2><span className="text-xs text-slate-500">كل شخصية وليها طريقتها</span></div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              ['عادل شكل', 'زمارة ٦ إلا تلت', 'adel-horn.png'],
-              ['جمال الدولي', 'المبخرة', 'gamal-avatar.jpg'],
-              ['حميدو', 'أبو جلمبو', 'hamido.png'],
-              ['اللازو', 'حبيبي اخالي', 'lazo.jpeg'],
-            ].map(([name, ability, image]) => (
-              <div key={name} className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-card-dark">
-                <div className="relative h-24 overflow-hidden bg-emerald-950/5 sm:h-28"><img src={`/games/ittihadawy/references/${image}`} alt={name} className="h-full w-full object-cover object-[center_25%]" loading="lazy"/>{name === 'اللازو' && <span className="absolute right-3 top-3 rounded-full bg-[#cee991] px-2.5 py-1 text-[10px] font-bold text-emerald-950">وصل جديد</span>}</div>
-                <div className="p-3"><h3 className="text-sm font-bold text-slate-900 dark:text-white">{name}</h3><p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{ability}</p></div>
-              </div>
-            ))}
-          </div>
-        </section>
-            <div className="game-fifth-character"><Gamepad2 size={22}/><div><strong>إسلام الفار كمان في الملعب</strong><p>شوف الشخصيات وافتح نجومك المفضلين بالكوينات من داخل اللعبة.</p></div></div>
             <GameLeaderboard />
+            <section aria-labelledby="characters-title">
+              <div className="mb-3 flex items-center justify-between"><h2 id="characters-title" className="text-base font-bold text-slate-900 dark:text-white">نجوم اتحاداوي</h2><span className="text-xs text-slate-500">تحدي النقاط: افتح نجم جديد كل ٢٥,٠٠٠ نقطة</span></div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  ['جمال الدولي', 'المبخرة • مفتوح من البداية', 'gamal-avatar.jpg'],
+                  ['عادل شكل', 'زمارة ٦ إلا تلت • ٢٥,٠٠٠ نقطة', 'adel-horn.png'],
+                  ['حميدو', 'أبو جلمبو • ٥٠,٠٠٠ نقطة', 'hamido.png'],
+                  ['اللازو', 'حبيبي اخالي • ٧٥,٠٠٠ نقطة', 'lazo.jpeg'],
+                ].map(([name, ability, image]) => (
+                  <div key={name} className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-card-dark">
+                    <div className="relative h-24 overflow-hidden bg-emerald-950/5 sm:h-28"><img src={`/games/ittihadawy/references/${image}`} alt={name} className="h-full w-full object-cover object-[center_25%]" loading="lazy"/>{name === 'اللازو' && <span className="absolute right-3 top-3 rounded-full bg-[#cee991] px-2.5 py-1 text-[10px] font-bold text-emerald-950">وصل جديد</span>}</div>
+                    <div className="p-3"><h3 className="text-sm font-bold text-slate-900 dark:text-white">{name}</h3><p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{ability}</p></div>
+                  </div>
+                ))}
+              </div>
+            </section>
+            <div className="game-fifth-character"><Gamepad2 size={22}/><div><strong>إسلام الفار عند ١٠٠,٠٠٠ نقطة</strong><p>كل ما تحقق ٢٥,٠٠٠ نقطة ومضاعفاتها في أعلى سكور ليك، بتفتح شخصيات جديدة وملابس وأطقم حصرية في المتجر!</p></div></div>
           </div>
           <section className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-card-dark">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600"><Gamepad2 size={21}/></span>

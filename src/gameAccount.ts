@@ -42,7 +42,7 @@ window.addEventListener('message', (event) => {
             rank: index + 1,
             id: docItem.id,
             name: d.name || d.displayName || d.username || 'عضو الاتحاد',
-            score: Number(d.stats?.ittihadawyScore ?? d.ittihadawyScore ?? 0),
+            score: Math.floor(Number(d.stats?.ittihadawyScore ?? d.ittihadawyScore ?? 0)),
             character: d.stats?.ittihadawyCharacter || '',
           };
         }).filter(item => Number.isSafeInteger(item.score) && item.score >= 1);

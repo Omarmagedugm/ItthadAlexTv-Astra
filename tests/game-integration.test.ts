@@ -380,7 +380,7 @@ test('Lazo arrest stops all other voice tracks without stopping background music
 
 
 test('game engine uses prepared buffers for Lazo arrest and preserves the volume slider',async()=>{
- const Bank=class extends GameVoiceBank{constructor(ctx:any){super(ctx,async(url:string)=>({ok:true,arrayBuffer:async()=>({url})}))}};
+ const Bank=class extends GameVoiceBank{constructor(ctx:any){super(ctx,(async(url:string)=>({ok:true,arrayBuffer:async()=>({url})})) as any)}};
  const s=makeSound({},Bank),sources:any[]=[];s.ctx={...context(),state:'running',resume:async()=>{},decodeAudioData:async(b:any)=>b,createBufferSource(){const n={connect(){},disconnect(){},start(){},stop(){this.stopped=true}};sources.push(n);return n}};
  s.prepareVoices();await s.voiceBank.preload(['/games/ittihadawy/audio/lazo-caught.mp3']);s.caught('lazo');await new Promise(r=>setTimeout(r,0));
  assert.equal(sources.length,1);assert.equal(sources[0].buffer.url,'/games/ittihadawy/audio/lazo-caught.mp3');
@@ -408,13 +408,18 @@ test('Gamal, Adel and Hamido have separate opening clips',()=>{
  s.playOpening('lazo');assert.equal(s.gamalOpeningAudio.plays,1);assert.equal(adel.plays,1);
  s.muted=true;s.playOpening('adel');assert.equal(adel.plays,1);s.muted=false;s.playOpening('adel');assert.equal(adel.plays,2);
 });
-test('character access follows account coin milestones and ignores high scores',()=>{
+test('characters unlock at 25,000-point milestones or via account unlocked list',()=>{
  const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='characterUnlocked')!;
- const account:any={__ittihadawyUnlockedCharacters:['gamal']};
+ const account:any={};
  const unlocked=new Function('window','return '+fn.getText(source))(account);
- assert.equal(unlocked('gamal',0),true);assert.equal(unlocked('hamido',999999),false);
- account.__ittihadawyUnlockedCharacters=['gamal','adel','hamido','lazo','islam'];
- for(const id of account.__ittihadawyUnlockedCharacters)assert.equal(unlocked(id,0),true);
+ assert.equal(unlocked('gamal',0),true);
+ assert.equal(unlocked('adel',0),false);
+ assert.equal(unlocked('adel',25000),true);
+ assert.equal(unlocked('hamido',50000),true);
+ assert.equal(unlocked('lazo',75000),true);
+ assert.equal(unlocked('islam',100000),true);
+ account.__ittihadawyUnlockedCharacters=['gamal','adel','islam'];
+ assert.equal(unlocked('islam',0),true);
 });
 
 test('Hadra taxis and Kom el Dikka food cart and cafe stay off the runner lanes',()=>{
