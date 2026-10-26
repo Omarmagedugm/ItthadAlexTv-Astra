@@ -78,7 +78,7 @@ export function attachCharacterPrototype(player,api,{id,url,partJoint:jointForPa
   data.model.traverse(object=>{if(object.isMesh)object.visible=false});
   data.model.add(root);data.prototypeRoot=root;data.prototypeHeadwear=slots.headwear;data.prototypeEyewear=slots.eyewear;data.prototypeBones=bones;data.prototypeStatus='ready';
   for(const slot of ['shirt','shorts','shoes'])data.cosmeticParts[slot]=slots[slot];
-  if(id==='lazo')data.prototypeAccessoryAnchors=new Map(Object.entries(joints).map(([key,[,,source]])=>[data[source],bones[key]]));
+  if(id==='lazo'||id==='hamido'||id==='gamal'||id==='islam')data.prototypeAccessoryAnchors=new Map(Object.entries(joints).map(([key,[,,source]])=>[data[source],bones[key]]));
   // Reapply any outfit selected while the GLB was downloading.
   if(data.lastOutfit){data.cosmeticSignature=null;data.refreshPrototypeOutfit?.()}
   const update=root.updateMatrixWorld.bind(root);

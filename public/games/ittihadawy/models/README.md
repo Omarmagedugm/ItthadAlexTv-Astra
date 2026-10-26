@@ -46,3 +46,18 @@ rigid articulation. It does not contain a skinned skeleton or baked run clips.
 Validated: GLB geometry/index ranges, draw-call batching, failed-download fallback,
 all movement pivots, cap/glasses replacement and reset, and disposal during loading.
 A CPU render was inspected. Mobile WebGL appearance still requires device testing.
+
+## Hamido reference prototype
+
+`hamido-prototype.glb` is generated with `python scripts/models/build_hamido.py` (NumPy). Original procedural geometry inspired by the supplied character sheet: white bucket hat and vest, green sleeves with white stripes, loose black trousers and blue darbuka. Approximate likeness, not a scan or skinned rig. The drum sits at the hip to leave existing running/ability motions unchanged; no new drumming animation is claimed. Existing engine pivots animate rigid body parts. Headwear and clothing support the existing store. Use `?hamidoModel=classic` on the standalone game URL to compare the original.
+
+Validated geometry, loader fallback, articulation, wardrobe and build locally. Real mobile visual/performance validation remains necessary.
+
+## Gamal El Dawly reference prototype
+
+`gamal-prototype.glb` is generated with `python scripts/models/build_gamal.py` (NumPy). Reference-inspired mature face with grey beard, green turban and scarf, black waistcoat, green shirt, whistle and hand-held censer. The photograph does not show the lower legs; black trousers/shoes are a design assumption. Approximate procedural likeness with rigid articulation, not a scanned or skinned model. Existing voices, ability and physics stay unchanged. Wardrobe accessories use prototype anchors. Use `?gamalModel=classic` on the standalone game to compare.
+
+Locally checked GLB geometry, fallback, movement-pivot synchronization, outfit changes and production build; actual mobile/WebGL visual validation is pending.
+
+## Islam El Far prototype
+`islam-prototype.glb` is rebuilt with `python scripts/models/build_islam.py` (NumPy). Reference-inspired quiff, short beard, blue sweatshirt, jeans, white shoes and watch. Approximate procedural likeness, rigid articulation through existing game pivots. Supports wardrobe and `?islamModel=classic`. Mobile visual testing remains pending.
