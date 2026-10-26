@@ -1,59 +1,10 @@
 import {cleanOutfit} from './catalog.js';
+import {createReferenceMotorcycle} from './vehicles.js?v=1';
 function buildMotorcycle(attach,box,api){
- const bike=attach();bike.name='IttihadMotorcycle';
- const green=0x087b46,gold=0xe9c64b,dark=0x161b19,tireCol=0x121514,chrome=0xd9e0dc,white=0xf5f6e9;
- const makeWheel=zPos=>{
-  const w=new api.Group;w.position.set(0,.34,zPos);bike.add(w);
-  for(let i=0;i<12;i++){
-   const a=i*Math.PI/6,seg=box(w,0,Math.cos(a)*27/100,Math.sin(a)*27/100,.17,.12,.18,tireCol);
-   seg.rotation.x=-a;
-  }
-  for(let i=0;i<4;i++){
-   const spoke=box(w,0,0,0,.11,.48,.042,i%2===0?gold:chrome);
-   spoke.rotation.x=i*Math.PI/4;
-  }
-  const hub=new api.Mesh(new api.Sphere(.11,12,10),new api.Material({color:gold,roughness:.35}));
-  hub.scale.set(1.35,1,1);w.add(hub);
-  return w;
- };
- const frontWheel=makeWheel(.78),rearWheel=makeWheel(-.72);
- box(bike,0,.43,0,.32,.28,.52,dark);
- box(bike,0,.45,.04,.38,.18,.34,chrome);
- for(const side of [-1,1]){
-  box(bike,side*.19,.42,.04,.04,.14,.18,gold);
-  const fork=box(bike,side*.13,.68,.64,.055,.68,.055,chrome);fork.rotation.x=-.36;
-  const pipe=box(bike,side*.21,.34,-.42,.065,.065,.78,chrome);pipe.rotation.x=.14;
-  box(bike,side*.21,.39,-.78,.08,.08,.18,dark);
-  box(bike,side*.27,.36,-.08,.12,.04,.06,dark);
-  const swing=box(bike,side*.14,.36,-.38,.045,.07,.62,dark);swing.rotation.x=.06;
- }
- const fender=box(bike,0,.62,.76,.21,.045,.36,green);fender.rotation.x=.25;
- const tankMat=new api.Material({color:green,roughness:.4});
- const tank=new api.Mesh(new api.Sphere(.25,16,12),tankMat);
- tank.scale.set(.95,.68,1.65);tank.position.set(0,.78,.24);bike.add(tank);
- box(bike,0,.92,.24,.12,.03,.54,gold);
- box(bike,0,.82,.24,.38,.04,.46,white);
- box(bike,0,.72,-.24,.34,.11,.56,dark);
- const tail=box(bike,0,.81,-.58,.28,.12,.3,green);tail.rotation.x=.18;
- box(bike,0,.88,-.58,.14,.025,.24,gold);
- const tailLight=box(bike,0,.81,-.73,.16,.065,.04,0xff2b2b);
- tailLight.material.emissive?.setHex(0xd91b1b);tailLight.material.emissiveIntensity=.9;
- const stem=box(bike,0,.94,.5,.12,.18,.12,dark);stem.rotation.x=-.3;
- box(bike,0,1.03,.46,.78,.045,.045,chrome);
- for(const side of [-1,1]){
-  box(bike,side*.36,1.03,.46,.18,.062,.062,dark);
-  box(bike,side*.39,1.03,.5,.14,.07,.03,green);
-  box(bike,side*.34,1.13,.47,.025,.12,.025,chrome);
-  box(bike,side*.37,1.19,.47,.11,.07,.03,gold);
- }
- const cowl=box(bike,0,.9,.65,.28,.22,.16,green);cowl.rotation.x=-.22;
- const shield=box(bike,0,1.04,.61,.24,.16,.03,0x102f31);shield.rotation.x=-.45;
- const lampMat=new api.Material({color:0xfff6cf,roughness:.2});
- lampMat.emissive?.setHex(0xf2d15c);lampMat.emissiveIntensity=1.2;
- const lamp=new api.Mesh(new api.Sphere(.11,14,10),lampMat);
- lamp.scale.set(1,1,.55);lamp.position.set(0,.88,.73);bike.add(lamp);
- bike.userData={frontWheel,rearWheel,lamp,tailLight};
- return bike;
+ const attachment=attach(),bike=createReferenceMotorcycle(api);
+ attachment.add(bike);attachment.name='IttihadMotorcycle';
+ attachment.userData=bike.userData;
+ return attachment;
 }
 function applyMotorcyclePose(player,data){
  const bike=data.motorcycleGroup;if(!bike)return;
