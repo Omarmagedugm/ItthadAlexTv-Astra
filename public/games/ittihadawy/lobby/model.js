@@ -97,16 +97,21 @@ export function applyOutfit(player,outfit,api){
    mesh.material.color.set(outfit[slot]?.item==='default'?mesh.userData.originalColor:outfit[slot].color);
   }
  }
- const attach=parent=>{const group=new api.Group;(parent||player).add(group);data.cosmeticGroups.push(group);return group};
+ const attach=parent=>{const group=new api.Group,target=data.prototypeAccessoryAnchors?.get(parent);
+  (target||parent||player).add(group);
+  if(target){group.scale.setScalar(parent===data.headPivot?.7:.75);if(parent===data.headPivot)group.position.set(0,.005,-.07);else if(parent===data.torsoPivot)group.position.z=-.19}
+  data.cosmeticGroups.push(group);return group};
  const box=(g,x,y,z,w,h,d,color)=>{const m=new api.Mesh(new api.Box(w,h,d),new api.Material({color,roughness:.65}));m.position.set(x,y,z);g.add(m);return m};
  const cap=outfit.cap;
  for(const mesh of data.prototypeHeadwear||[])mesh.visible=cap.item==='default';
+ for(const mesh of data.prototypeEyewear||[])mesh.visible=outfit.glasses.item==='default';
  if(!data.originalHeadwear){data.originalHeadwear=[];data.headPivot.traverse(item=>{if(item===parts.originalCap||item.name==='LazoBackwardsCap')data.originalHeadwear.push({item,visible:item===parts.originalCap?parts.capVisible:item.visible})})}
- for(const saved of data.originalHeadwear)saved.item.visible=cap.item==='default'&&saved.visible;
+ for(const saved of data.originalHeadwear)saved.item.visible=!data.prototypeRoot&&cap.item==='default'&&saved.visible;
  if(!data.originalEyewear)data.originalEyewear=data.headPivot.children.filter(item=>item.isMesh&&item.geometry?.parameters?.width&&item.position.z>=.35&&((item.geometry.parameters.width===.27&&item.geometry.parameters.height===.18)||(item.geometry.parameters.width===.07&&item.geometry.parameters.height===.035))).map(item=>({item,visible:item.visible}));
- for(const saved of data.originalEyewear)saved.item.visible=outfit.glasses.item==='default'&&saved.visible;
+ for(const saved of data.originalEyewear)saved.item.visible=!data.prototypeRoot&&outfit.glasses.item==='default'&&saved.visible;
  if(cap.item!=='default'){
   const g=attach(data.headPivot),material=new api.Material({color:cap.color,roughness:.8});
+  if(data.prototypeAccessoryAnchors){g.scale.setScalar(.58);g.position.set(0,.10,0)}
   const crown=new api.Mesh(new api.Sphere(.39,20,12,0,Math.PI*2,0,Math.PI/2),material);crown.position.y=.61;g.add(crown);
   box(g,0,.62,.32,.68,.045,.47,cap.color);
   if(cap.item!=='green-cap')box(g,0,.71,.37,.18,.1,.025,0xe9c64b);
