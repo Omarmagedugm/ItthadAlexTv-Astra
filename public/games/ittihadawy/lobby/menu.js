@@ -1,5 +1,5 @@
 import {CHARACTERS,CHARACTER_STAGES,MOTORCYCLE_STAGE,REWARDS,SLOTS,COLORS,emptyOutfit,cleanOutfit,normalizeProfile} from './catalog.js';
-import {applyOutfit} from './model.js';
+import {applyOutfit} from './model.js?v=2';
 let serial=0;
 function request(type,input){return new Promise((resolve,reject)=>{
  const id='lobby-'+Date.now()+'-'+(++serial);let timer;

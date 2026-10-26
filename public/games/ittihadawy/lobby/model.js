@@ -84,6 +84,7 @@ function applyMotorcyclePose(player,data){
  bike.rotation.x=isJumping?-.18:0;
 }
 export function applyOutfit(player,outfit,api){
+ player.userData.lastOutfit=outfit;player.userData.refreshPrototypeOutfit=()=>applyOutfit(player,player.userData.lastOutfit,api);
  const data=player.userData,ride=Boolean(outfit?.motorcycle??data.motorcycleEnabled),signature=JSON.stringify({outfit,ride});if(data.cosmeticSignature===signature)return;
  data.cosmeticSignature=signature;
  for(const group of data.cosmeticGroups||[]){group.removeFromParent();group.traverse(m=>{m.geometry?.dispose();m.material?.dispose()})}data.cosmeticGroups=[];
@@ -99,6 +100,7 @@ export function applyOutfit(player,outfit,api){
  const attach=parent=>{const group=new api.Group;(parent||player).add(group);data.cosmeticGroups.push(group);return group};
  const box=(g,x,y,z,w,h,d,color)=>{const m=new api.Mesh(new api.Box(w,h,d),new api.Material({color,roughness:.65}));m.position.set(x,y,z);g.add(m);return m};
  const cap=outfit.cap;
+ for(const mesh of data.prototypeHeadwear||[])mesh.visible=cap.item==='default';
  if(!data.originalHeadwear){data.originalHeadwear=[];data.headPivot.traverse(item=>{if(item===parts.originalCap||item.name==='LazoBackwardsCap')data.originalHeadwear.push({item,visible:item===parts.originalCap?parts.capVisible:item.visible})})}
  for(const saved of data.originalHeadwear)saved.item.visible=cap.item==='default'&&saved.visible;
  if(!data.originalEyewear)data.originalEyewear=data.headPivot.children.filter(item=>item.isMesh&&item.geometry?.parameters?.width&&item.position.z>=.35&&((item.geometry.parameters.width===.27&&item.geometry.parameters.height===.18)||(item.geometry.parameters.width===.07&&item.geometry.parameters.height===.035))).map(item=>({item,visible:item.visible}));

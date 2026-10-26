@@ -5,7 +5,7 @@ import ts from 'typescript';
 import { GameVoiceBank } from '../public/games/ittihadawy/voice-bank.js';
 import { validGameResult, improvedGameStats } from '../src/lib/gameScores';
 const html=readFileSync('public/games/ittihadawy/index.html','utf8');
-const asset=html.match(/src="\/games\/ittihadawy\/(assets\/index-[^"]+.js)"/)![1];
+const asset=html.match(/src="\/games\/ittihadawy\/(assets\/index-[^"?]+\.js)(?:\?[^"]*)?"/)![1];
 const source=ts.createSourceFile('game.js',readFileSync('public/games/ittihadawy/'+asset,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
 test('only a signed-in app member can open the game or unlock its standalone frame',()=>{
  const page=readFileSync('src/pages/Game.tsx','utf8');
@@ -286,7 +286,7 @@ test('Mex has one black and white lighthouse per region pass, and HUD names the 
  assert.deepEqual(bands.map(s=>s.args[6]),[0xf6f4ea,0x202729,0xf6f4ea,0x202729,0xf6f4ea,0x202729,0xf6f4ea,0x202729]);
  assert.ok(shapes.every(s=>s.args[0]<-25));
  const ui=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='WC')!.getText(source);
- assert.match(ui,/className:"current-region",title:z\.current\.name},z\.current\.name/);
+ assert.match(ui,/regionBanner\(at,z\)/);
 });
 
 test('Misr Station trains rest on rails beside ground-level lanes and stay outside the running lanes',()=>{
@@ -417,8 +417,10 @@ test('characters unlock at 25,000-point milestones or via account unlocked list'
  assert.equal(unlocked('adel',25000),true);
  assert.equal(unlocked('hamido',50000),true);
  assert.equal(unlocked('lazo',75000),true);
- assert.equal(unlocked('islam',100000),true);
+ assert.equal(unlocked('islam',100000),false);
  account.__ittihadawyUnlockedCharacters=['gamal','adel','islam'];
+ assert.equal(unlocked('islam',0),false);
+ account.__ittihadawyIsAdmin=true;
  assert.equal(unlocked('islam',0),true);
 });
 
