@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import { injectNewsMetaTags, serializeJsonLd } from '../api/news-meta.ts';
+const template = '<html><head><title>old</title></head><body></body></html>';
+const payload = '</title><script>alert(1)</script>';
+const meta = { id: 'article', title: payload, summary: '"/><script>alert(1)</script>', image: '/icon.png', date: '2026-10-27', author: '</script><script>alert(1)</script>', category: 'أخبار' };
+const html = injectNewsMetaTags(template, meta);
+assert(!html.includes('<script>alert(1)</script>'));
+const schemas = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+assert.equal(schemas.length, 1);
+assert.equal(JSON.parse(schemas[0][1]).author.name, meta.author);
+assert.equal(JSON.parse(serializeJsonLd({ text: '</script>' })).text, '</script>');
+assert(injectNewsMetaTags(template, { ...meta, title: '$& عنوان عربي' }).includes('$& عنوان عربي'));
+console.log('News metadata injection regression checks passed');

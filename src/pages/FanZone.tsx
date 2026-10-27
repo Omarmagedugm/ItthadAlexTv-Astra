@@ -62,7 +62,8 @@ import {
   where,
   setDoc,
   documentId,
-  getDocs
+  getDocs,
+  runTransaction
 } from 'firebase/firestore';
 
 export default function FanZone() {
@@ -562,34 +563,20 @@ export default function FanZone() {
 
   const handleLikePost = async (postId: string) => {
     if (!auth.currentUser) return;
-    const post = fanPosts.find(p => p.id === postId);
-    if (!post) return;
-    
-    const userId = auth.currentUser.uid;
-    const likedBy = (post as any).likedBy || [];
-    
-    if (likedBy.includes(userId)) {
-      // Unlike
-      try {
-        const postRef = doc(db, 'fan_posts', postId);
-        await updateDoc(postRef, {
-          likes: increment(-1),
-          likedBy: likedBy.filter((id: string) => id !== userId)
-        });
-      } catch (error) {
-        console.error('Error unliking post:', error);
-      }
-      return;
-    }
-
+    const uid = auth.currentUser.uid;
     try {
-      const postRef = doc(db, 'fan_posts', postId);
-      await updateDoc(postRef, {
-        likes: increment(1),
-        likedBy: arrayUnion(userId)
+      await runTransaction(db, async transaction => {
+        const reference = doc(db, 'fan_posts', postId);
+        const snapshot = await transaction.get(reference);
+        if (!snapshot.exists()) return;
+        const previous = Array.isArray(snapshot.data().likedBy) ? snapshot.data().likedBy : [];
+        const members = [...new Set<string>(previous)];
+        const next = members.includes(uid) ? members.filter(id => id !== uid) : [...members, uid];
+        transaction.update(reference, { likedBy: next, likes: next.length });
       });
     } catch (error) {
-      console.error('Error liking post:', error);
+      console.error('Error toggling post like:', error);
+      toast.error('تعذر حفظ الإعجاب، حاول مرة أخرى');
     }
   };
 
@@ -1263,7 +1250,7 @@ export default function FanZone() {
                         className={`flex items-center justify-center gap-2 h-10 rounded-lg ds-surface transition-all ${post.likedBy?.includes(auth.currentUser?.uid) ? 'bg-red-500/10 text-red-500' : 'text-slate-500'}`}
                       >
                         <Heart size={18} fill={post.likedBy?.includes(auth.currentUser?.uid) ? 'currentColor' : 'none'} className="transition-transform group-active:scale-125" />
-                        <span className="text-[11px] font-bold tabular-nums">{post.likes || 0}</span>
+                        <span className="text-[11px] font-bold tabular-nums">{Math.max(0, Number(post.likes) || 0)}</span>
                       </motion.button>
                       
                       <motion.button 
@@ -1354,7 +1341,7 @@ export default function FanZone() {
                                     className={`ds-control flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 rounded-lg transition-all ${comment.likedBy?.includes(auth.currentUser?.uid) ? 'bg-red-500/10 text-red-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}
                                   >
                                     <Heart size={10} fill={comment.likedBy?.includes(auth.currentUser?.uid) ? 'currentColor' : 'none'} />
-                                    {comment.likes || 0}
+                                    {Math.max(0, Number(comment.likes) || 0)}
                                   </button>
                                   {(comment.userId === auth.currentUser?.uid || isAdmin) && (
                                     <div className="flex items-center gap-1 opacity-0 group-hover/comment:opacity-100 transition-opacity">
@@ -2204,7 +2191,7 @@ export default function FanZone() {
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${moment.likedBy?.includes(auth.currentUser?.uid) ? 'bg-red-500/10 text-red-500 shadow-sm' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}
                         >
                           <Heart size={14} fill={moment.likedBy?.includes(auth.currentUser?.uid) ? 'currentColor' : 'none'} />
-                          <span className="text-[12px] font-bold">{moment.likes || 0}</span>
+                          <span className="text-[12px] font-bold">{Math.max(0, Number(moment.likes) || 0)}</span>
                         </motion.button>
                       </div>
 

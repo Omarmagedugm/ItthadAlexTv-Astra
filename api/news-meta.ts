@@ -1,3 +1,5 @@
+import { escapeHtml, serializeJsonLd } from '../server/htmlSafety';
+export { escapeHtml, serializeJsonLd } from '../server/htmlSafety';
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
@@ -132,13 +134,13 @@ export function injectNotFoundMetaTags(html: string): string {
   let result = html;
 
   // 1. Replace <title>
-  result = result.replace(/<title>.*?<\/title>/i, `<title>${notFoundTitle}</title>`);
+  result = result.replace(/<title>.*?<\/title>/i, () => `<title>${notFoundTitle}</title>`);
 
   // 2. Robots meta: strictly noindex, nofollow for missing articles
   if (result.includes('name="robots"')) {
-    result = result.replace(/<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/i, `<meta name="robots" content="noindex, nofollow" />`);
+    result = result.replace(/<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/i, () => `<meta name="robots" content="noindex, nofollow" />`);
   } else {
-    result = result.replace('</head>', `  <meta name="robots" content="noindex, nofollow" />\n  </head>`);
+    result = result.replace('</head>', () => `  <meta name="robots" content="noindex, nofollow" />\n  </head>`);
   }
 
   // 3. Remove canonical link (missing page should not specify a canonical URL)
@@ -146,18 +148,18 @@ export function injectNotFoundMetaTags(html: string): string {
 
   // 4. Update meta description
   if (result.includes('name="description"')) {
-    result = result.replace(/<meta\s+name="description"\s+content="[^"]*"\s*\/?>/i, `<meta name="description" content="${notFoundDesc}" />`);
+    result = result.replace(/<meta\s+name="description"\s+content="[^"]*"\s*\/?>/i, () => `<meta name="description" content="${notFoundDesc}" />`);
   } else {
-    result = result.replace('</head>', `  <meta name="description" content="${notFoundDesc}" />\n  </head>`);
+    result = result.replace('</head>', () => `  <meta name="description" content="${notFoundDesc}" />\n  </head>`);
   }
 
   // 5. Update OpenGraph tags
-  result = result.replace(/<meta\s+property="og:title"\s+content="[^"]*"\s*\/?>/i, `<meta property="og:title" content="${notFoundTitle}" />`);
-  result = result.replace(/<meta\s+property="og:description"\s+content="[^"]*"\s*\/?>/i, `<meta property="og:description" content="${notFoundDesc}" />`);
+  result = result.replace(/<meta\s+property="og:title"\s+content="[^"]*"\s*\/?>/i, () => `<meta property="og:title" content="${notFoundTitle}" />`);
+  result = result.replace(/<meta\s+property="og:description"\s+content="[^"]*"\s*\/?>/i, () => `<meta property="og:description" content="${notFoundDesc}" />`);
 
   // 6. Update Twitter tags
-  result = result.replace(/<meta\s+name="twitter:title"\s+content="[^"]*"\s*\/?>/i, `<meta name="twitter:title" content="${notFoundTitle}" />`);
-  result = result.replace(/<meta\s+name="twitter:description"\s+content="[^"]*"\s*\/?>/i, `<meta name="twitter:description" content="${notFoundDesc}" />`);
+  result = result.replace(/<meta\s+name="twitter:title"\s+content="[^"]*"\s*\/?>/i, () => `<meta name="twitter:title" content="${notFoundTitle}" />`);
+  result = result.replace(/<meta\s+name="twitter:description"\s+content="[^"]*"\s*\/?>/i, () => `<meta name="twitter:description" content="${notFoundDesc}" />`);
 
   // 7. Strip any NewsArticle JSON-LD schema
   result = result.replace(/<script\s+type="application\/ld\+json">[\s\S]*?"NewsArticle"[\s\S]*?<\/script>/gi, '');
@@ -184,20 +186,20 @@ export function injectNewsMetaTags(html: string, meta: NewsMeta, canonicalUrl?: 
   let result = html;
 
   // 1. Replace <title>
-  result = result.replace(/<title>.*?<\/title>/i, `<title>${title} | ${siteName}</title>`);
+  result = result.replace(/<title>.*?<\/title>/i, () => `<title>${escapeHtml(title)} | ${siteName}</title>`);
 
   // 2. Inject or replace canonical link
   if (result.includes('rel="canonical"')) {
-    result = result.replace(/<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/i, `<link rel="canonical" href="${effectiveCanonical}" />`);
+    result = result.replace(/<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/i, () => `<link rel="canonical" href="${escapeHtml(effectiveCanonical)}" />`);
   } else {
-    result = result.replace('</head>', `  <link rel="canonical" href="${effectiveCanonical}" />\n  </head>`);
+    result = result.replace('</head>', () => `  <link rel="canonical" href="${escapeHtml(effectiveCanonical)}" />\n  </head>`);
   }
 
   // 3. Meta description
   if (result.includes('name="description"')) {
-    result = result.replace(/<meta\s+name="description"\s+content="[^"]*"\s*\/?>/i, `<meta name="description" content="${desc.replace(/"/g, '&quot;')}" />`);
+    result = result.replace(/<meta\s+name="description"\s+content="[^"]*"\s*\/?>/i, () => `<meta name="description" content="${escapeHtml(desc)}" />`);
   } else {
-    result = result.replace('</head>', `  <meta name="description" content="${desc.replace(/"/g, '&quot;')}" />\n  </head>`);
+    result = result.replace('</head>', () => `  <meta name="description" content="${escapeHtml(desc)}" />\n  </head>`);
   }
 
   // 4. OpenGraph tags
@@ -215,9 +217,9 @@ export function injectNewsMetaTags(html: string, meta: NewsMeta, canonicalUrl?: 
   for (const tag of ogTags) {
     const regex = new RegExp(`<meta\\s+property="${tag.prop}"\\s+content="[^"]*"\\s*\\/?>`, 'i');
     if (result.match(regex)) {
-      result = result.replace(regex, `<meta property="${tag.prop}" content="${tag.val.replace(/"/g, '&quot;')}" />`);
+      result = result.replace(regex, () => `<meta property="${tag.prop}" content="${escapeHtml(tag.val)}" />`);
     } else {
-      result = result.replace('</head>', `  <meta property="${tag.prop}" content="${tag.val.replace(/"/g, '&quot;')}" />\n  </head>`);
+      result = result.replace('</head>', () => `  <meta property="${tag.prop}" content="${escapeHtml(tag.val)}" />\n  </head>`);
     }
   }
 
@@ -232,9 +234,9 @@ export function injectNewsMetaTags(html: string, meta: NewsMeta, canonicalUrl?: 
   for (const tag of twitterTags) {
     const regex = new RegExp(`<meta\\s+name="${tag.name}"\\s+content="[^"]*"\\s*\\/?>`, 'i');
     if (result.match(regex)) {
-      result = result.replace(regex, `<meta name="${tag.name}" content="${tag.val.replace(/"/g, '&quot;')}" />`);
+      result = result.replace(regex, () => `<meta name="${tag.name}" content="${escapeHtml(tag.val)}" />`);
     } else {
-      result = result.replace('</head>', `  <meta name="${tag.name}" content="${tag.val.replace(/"/g, '&quot;')}" />\n  </head>`);
+      result = result.replace('</head>', () => `  <meta name="${tag.name}" content="${escapeHtml(tag.val)}" />\n  </head>`);
     }
   }
 
@@ -269,8 +271,8 @@ export function injectNewsMetaTags(html: string, meta: NewsMeta, canonicalUrl?: 
     "articleSection": meta.category || "أخبار النادي"
   };
 
-  const schemaTag = `\n  <script type="application/ld+json">\n${JSON.stringify(schema, null, 2)}\n  </script>\n`;
-  result = result.replace('</head>', `${schemaTag}</head>`);
+  const schemaTag = `\n  <script type="application/ld+json">\n${serializeJsonLd(schema)}\n  </script>\n`;
+  result = result.replace('</head>', () => `${schemaTag}</head>`);
 
   return result;
 }

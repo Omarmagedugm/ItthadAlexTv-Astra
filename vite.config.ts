@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => {
           globIgnores: ['**/storage/**', '**/vendor-charts*', '**/Admin*'],
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // Increase to 5MB
           navigateFallback: 'index.html',
+          navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/(?:robots\.txt|(?:news-)?sitemap\.xml)$/, /\.[^/]+$/],
           // Optimize for Vercel
           runtimeCaching: [
             {

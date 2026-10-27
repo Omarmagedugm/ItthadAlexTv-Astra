@@ -46,6 +46,30 @@ service cloud.firestore {
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
 
+    // Permit one member's like transition, without replacing other members' IDs.
+    function ownLikeList(before, after) {
+      return isSignedIn() && before is list && after is list &&
+        after.toSet().difference(before.toSet()).hasOnly([request.auth.uid]) &&
+        before.toSet().difference(after.toSet()).hasOnly([request.auth.uid]) &&
+        after.size() == after.toSet().size();
+    }
+    function validLikeUpdate() {
+      let before = existing().get('likedBy', []);
+      let after = incoming().get('likedBy', []);
+      return incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'likedBy']) &&
+        ownLikeList(before, after) && incoming().likes is int && incoming().likes >= 0 &&
+        incoming().likes == after.size();
+    }
+    function validPublicEngagement() {
+      let changed = incoming().diff(existing()).affectedKeys();
+      return (changed.hasOnly(['views']) && incoming().views is int && incoming().views >= 0 &&
+              incoming().views == (existing().get('views', 0) is int ? existing().views : 0) + 1) ||
+        (isSignedIn() && changed.hasOnly(['shares']) && incoming().shares is int &&
+              incoming().shares == existing().get('shares', 0) + 1) ||
+        validLikeUpdate() ||
+        (changed.hasOnly(['likes']) && ownLikeList(existing().get('likes', []), incoming().likes));
+    }
+
     // User Profile Validation
     function isValidUser(data) {
       return (data.get('name', '') is string) && (data.get('name', '').size() <= 100) &&
@@ -213,7 +237,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if (isMediaEditor() || isAdmin()) && isValidMedia(incoming());
       allow update: if ((isMediaEditor() || isAdmin()) && isValidMedia(incoming())) ||
-                       (incoming().diff(existing()).affectedKeys().hasOnly(['views', 'likes', 'likedBy', 'shares']));
+                       validPublicEngagement();
       allow delete: if isMediaEditor() || isAdmin();
     }
 
@@ -232,7 +256,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if (isAdmin() || isWriter()) && isValidNews(incoming());
       allow update: if ((isAdmin() || isWriter()) && isValidNews(incoming())) ||
-                       (incoming().diff(existing()).affectedKeys().hasOnly(['views', 'shares', 'reactions', 'likes', 'likedBy']));
+                       validPublicEngagement();
       allow delete: if isAdmin() || isWriter();
     }
 
@@ -281,13 +305,14 @@ service cloud.firestore {
       allow create: if isSignedIn() && incoming().userId == request.auth.uid;
       allow update: if isSignedIn() && (
         (resource.data.userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'image', 'location', 'poll'])) ||
-        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'likedBy', 'poll', 'commentsCount']))
+        validLikeUpdate() ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['poll', 'commentsCount']))
       );
       allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
 
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if isSignedIn();
+        allow create: if isSignedIn() && incoming().userId == request.auth.uid;
         allow update: if isSignedIn() && resource.data.userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['text']);
         allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
       }
@@ -312,7 +337,7 @@ service cloud.firestore {
 
     // Orders
     match /orders/{orderId} {
-      allow create: if isSignedIn();
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
       allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isStoreEditor());
       allow update: if isAdmin() || isStoreEditor();
       allow delete: if isAdmin() || isStoreEditor();
