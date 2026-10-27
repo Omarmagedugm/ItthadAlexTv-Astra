@@ -68,7 +68,7 @@ input[type=range]{direction:ltr;touch-action:none;min-height:36px}
 @media(max-width:360px){.current-region{width:155px;padding:8px}.motorcycle-speed{width:104px}.runner-hud .velocity:not(.motorcycle-speed) b{font-size:40px}}
 @media(max-height:500px){.mini-route{top:calc(env(safe-area-inset-top,0px) + 190px)!important}.current-region{width:185px;padding:7px 10px;gap:2px}.region-ar{font-size:13px}.motorcycle-speed{height:90px;width:105px}.motorcycle-speed b{font-size:28px!important}}
 /* Cartoon reference HUD. Independent full-screen canvas remains unchanged. */
-:is(.playing,.paused) .runner-hud{top:calc(env(safe-area-inset-top,0px) + 56px)!important;left:12px;width:30vw;max-width:150px;pointer-events:none!important}
+:is(.playing,.paused) .runner-hud{top:calc(env(safe-area-inset-top,0px) + 68px)!important;left:12px;width:30vw;max-width:150px;pointer-events:none!important}
 :is(.playing,.paused) .velocity:not(.motorcycle-speed){gap:4px;filter:drop-shadow(0 3px 2px #05142088)}
 :is(.playing,.paused) .velocity:not(.motorcycle-speed) b{font-size:clamp(32px,9vw,54px);font-weight:900;-webkit-text-stroke:1px #142431;letter-spacing:-2px}
 :is(.playing,.paused) .velocity small{font-size:clamp(8px,2.5vw,13px)}
@@ -78,20 +78,20 @@ input[type=range]{direction:ltr;touch-action:none;min-height:36px}
 :is(.playing,.paused) .pursuit-meter{height:9px;border:2px solid #203346;background:#233140;max-width:125px}
 :is(.playing,.paused) .pursuit-meter i{background:#42df81}
 :is(.playing,.paused) .pursuit-label{font-size:9px;text-shadow:0 1px 3px #000}
-:is(.playing,.paused) header{left:62px!important;right:auto!important;top:calc(env(safe-area-inset-top,0px) + 14px)!important;z-index:20!important}
+:is(.playing,.paused) header{left:62px!important;right:auto!important;top:calc(env(safe-area-inset-top,0px) + 26px)!important;z-index:20!important}
 :is(.playing,.paused) .topactions{flex-direction:row!important;gap:6px}
 :is(.playing,.paused) .topactions button{width:36px;height:36px;border:2px solid #bbc9d7;border-radius:50%;background:radial-gradient(circle at 35% 25%,#536478,#1a2636);box-shadow:0 3px 8px #0006;color:white;font-size:14px;padding:0}
-:is(.playing,.paused) .current-region{position:fixed;top:calc(env(safe-area-inset-top,0px) + 16px);right:12px;bottom:auto;width:44vw;max-width:300px;box-sizing:border-box;padding:10px;border:3px solid white;outline:1px solid #66849e;border-radius:12px;background:linear-gradient(#105bb6,#073474);gap:7px;overflow:hidden;pointer-events:none!important}
+:is(.playing,.paused) .current-region{position:fixed;top:calc(env(safe-area-inset-top,0px) + 26px);right:12px;bottom:auto;width:44vw;max-width:300px;box-sizing:border-box;padding:10px;border:3px solid white;outline:1px solid #66849e;border-radius:12px;background:linear-gradient(#105bb6,#073474);gap:7px;overflow:hidden;pointer-events:none!important}
 :is(.playing,.paused) .region-caption{font-size:clamp(9px,2.5vw,15px);font-weight:800;color:#deefff}
 :is(.playing,.paused) .region-ar{font-size:clamp(14px,4vw,25px);line-height:1.45;white-space:normal}
 /* Reset inherited map-badge rules on the sign's nested span. */
 .current-region .region-en,.current-region .region-distance span{position:static;transform:none;border-radius:0;background:none;white-space:normal;display:block;color:#fff;left:auto;bottom:auto;padding:0}
 .current-region .region-en{border:0;border-top:1px solid #ffffff60;padding-top:6px;font-size:clamp(9px,2.3vw,14px);font-weight:800}
 .current-region .region-distance{display:none}
-:is(.playing,.paused) .mini-route{top:calc(env(safe-area-inset-top,0px) + 175px)!important;right:14px!important;width:clamp(72px,20vw,110px);height:clamp(72px,20vw,110px);background:#142134;border:3px solid #ffe45a;box-shadow:0 0 0 2px #edf4ec,0 4px 10px #0006;pointer-events:none!important}
+:is(.playing,.paused) .mini-route{top:calc(env(safe-area-inset-top,0px) + 185px)!important;right:14px!important;width:clamp(72px,20vw,110px);height:clamp(72px,20vw,110px);background:#142134;border:3px solid #ffe45a;box-shadow:0 0 0 2px #edf4ec,0 4px 10px #0006;pointer-events:none!important}
 .mini-route>span{background:#182335;border:2px solid #dbe4ed;color:white;font-size:12px;font-weight:900;border-radius:16px}
-.toast{top:calc(env(safe-area-inset-top,0px) + 250px)!important;left:12px!important;right:auto!important;width:max-content;max-width:min(46vw,210px)!important;padding:3px 8px!important;font-size:8.5px!important;line-height:1.3;border-radius:6px!important;background:#0f2d24cc!important;border:1px solid #ffffff24;text-align:right;pointer-events:none!important;z-index:4}
-.boost-status{top:calc(env(safe-area-inset-top,0px) + 274px)!important;left:12px!important;right:auto!important;padding:2px 7px!important;font-size:8.5px!important;border-radius:6px!important;pointer-events:none!important;z-index:4}
+.toast{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 22px)!important;left:50%!important;right:auto!important;transform:translateX(-50%)!important;width:max-content;max-width:calc(100vw - 120px)!important;padding:2px 9px!important;font-size:8.5px!important;line-height:1.25;border-radius:999px!important;background:#0f2d24e6!important;border:1px solid #ffffff2e;text-align:center;pointer-events:none!important;z-index:41}
+.boost-status{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 41px)!important;left:50%!important;right:auto!important;transform:translateX(-50%)!important;padding:2px 8px!important;font-size:8.5px!important;border-radius:999px!important;pointer-events:none!important;z-index:41}
 :is(.playing,.paused) .touch{bottom:calc(env(safe-area-inset-bottom,0px) + 20px);left:16px;right:16px;gap:10px}
 :is(.playing,.paused) .touch button{width:clamp(52px,16vw,76px);height:clamp(52px,16vw,76px);flex-shrink:0;border:2px solid #f1f5ff;background:radial-gradient(circle at 35% 25%,#c7d4e48c,#536580aa);box-shadow:inset 0 0 12px #ffffff55,0 4px 10px #0004;color:#fff;font-size:28px}
 :is(.playing,.paused) .touch button small{font-size:10px;white-space:nowrap}
