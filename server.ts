@@ -1117,7 +1117,7 @@ OUTPUT: Return ONLY the transformed image.`;
     try {
       const { createServer: createViteServer } = await import('vite');
       const vite = await createViteServer({
-        server: { middlewareMode: true, allowedHosts: true },
+        server: { middlewareMode: true, allowedHosts: true, hmr: false },
         appType: 'spa',
       });
       app.use(vite.middlewares);
@@ -1202,6 +1202,10 @@ OUTPUT: Return ONLY the transformed image.`;
 
   process.on('unhandledRejection', (reason) => {
     console.error('Unhandled Promise Rejection:', reason);
+  });
+
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
   });
 }
 

@@ -132,10 +132,10 @@ export default function GameLeaderboard() {
           </span>
           <div>
             <h2 id="game-ranking-title" className="text-lg font-black text-slate-900 dark:text-white">
-              لوحة الأبطال
+              لوحة الأبطال — اللعبة الأصلية
             </h2>
             <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-              أعلى سكور في جولة واحدة. مكانك بينهم مستنيك.
+              أعلى سكور في الوضع الكلاسيكي الأصلي. مكانك بينهم مستنيك.
             </p>
           </div>
         </div>

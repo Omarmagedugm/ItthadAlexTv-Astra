@@ -9,6 +9,7 @@ import { doc, runTransaction } from 'firebase/firestore';
 import { improvedGameStats, validGameResult } from '../lib/gameScores';
 import SEOHead from '../components/SEOHead';
 import GameLeaderboard from '../components/game/GameLeaderboard';
+import ZombieLeaderboard from '../components/game/ZombieLeaderboard';
 import { auth, db } from '../lib/firebase';
 
 const SHARE_REWARD_COINS = 3000;
@@ -21,7 +22,7 @@ export default function Game() {
   const [shareFeedback, setShareFeedback] = useState('');
   const [loginRequired, setLoginRequired] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const latestResultRef = useRef<{ score: number; distance: number; character: string; coins?: number; runId?: string } | null>(null);
+  const latestResultRef = useRef<{ score: number; distance: number; character: string; coins?: number; runId?: string; mode?: 'runner' | 'zombie'; kills?: number } | null>(null);
 
   useEffect(() => auth.onAuthStateChanged((user) => {
     if (!user) setIsPlaying(false);
@@ -157,7 +158,7 @@ export default function Game() {
     }
   };
 
-  const saveScoreForUser = async (result: { score: number; distance?: number; character?: string }, requestId?: string) => {
+  const saveScoreForUser = async (result: { score: number; distance?: number; character?: string; mode?: 'runner' | 'zombie'; kills?: number }, requestId?: string) => {
     if (!validGameResult(result) || result.score < 1) return false;
 
     let user = auth.currentUser;
@@ -341,9 +342,10 @@ export default function Game() {
             <div className="game-hero-stats"><span><strong>٥</strong> شخصيات</span><span><strong>٢٥ ألف</strong> لكل مرحلة</span><span><Trophy size={15}/> صدارة الأعضاء</span></div>
           </div>
         </section>
-        <div className="game-section-heading"><span>الجولة بتبدأ بيك</span><a href="#game-ranking-title">شوف المتصدرين <Trophy size={15}/></a></div>
+        <div className="game-section-heading"><span>الجولة بتبدأ بيك</span><a href="#zombie-ranking-title">شوف المتصدرين <Trophy size={15}/></a></div>
         <div className="grid items-start gap-6 lg:grid-cols-[1fr_300px]">
           <div className="space-y-6">
+            <ZombieLeaderboard />
             <GameLeaderboard />
             <section aria-labelledby="characters-title">
               <div className="mb-3 flex items-center justify-between"><h2 id="characters-title" className="text-base font-bold text-slate-900 dark:text-white">نجوم اتحاداوي</h2><span className="text-xs text-slate-500">تحدي النقاط: افتح نجم جديد كل ٢٥,٠٠٠ نقطة</span></div>

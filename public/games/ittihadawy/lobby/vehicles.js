@@ -248,3 +248,53 @@ export function createReferenceMicrobus(api){
  van.userData.wheels=wheels;van.userData.referenceVehicle='white-passenger-microbus';
  return batchVehicle(van,wheels,api);
 }
+
+export function createReferenceDog(api){
+ const dog=new api.Group;dog.name='AlexandriaBaladiDog';
+ const {box,ball,cyl,group}=tools(api);
+ const coat=0xc98b52,saddle=0x7a4926,cream=0xe8caa5,dark=0x1f1916,collar=0x0b7a43,gold=0xf2c94c,tongue=0xd95b66;
+ const body=group(dog,'DogBody',0,0,0);
+ // Deep chest, lean waist, hindquarters and dark saddle coat
+ ball(body,0,.56,.20,.25,.23,.28,coat);
+ ball(body,0,.57,-.08,.22,.20,.30,coat);
+ ball(body,0,.58,-.32,.23,.22,.24,coat);
+ ball(body,0,.69,-.04,.19,.11,.42,saddle);
+ ball(body,0,.46,.08,.18,.12,.38,cream);
+ // Neck and Ittihad green collar with gold tag
+ const neck=ball(body,0,.69,.34,.16,.18,.16,coat);neck.rotation.x=.35;
+ const ring=cyl(body,0,.67,.36,.165,.06,collar,.2);ring.rotation.x=Math.PI/2+.35;
+ ball(body,0,.55,.45,.045,.045,.025,gold,.75);
+ // Sculpted Baladi head, pointed ears, snout, nose and eyes
+ const head=group(dog,'DogHead',0,.78,.46);
+ ball(head,0,.04,0,.19,.17,.19,coat);
+ ball(head,0,.11,-.02,.15,.10,.15,saddle);
+ box(head,0,-.01,.20,.15,.11,.24,coat);
+ ball(head,0,-.02,.22,.085,.065,.14,cream);
+ box(head,0,-.08,.17,.12,.045,.18,dark);
+ box(head,0,-.065,.23,.065,.022,.09,tongue);
+ ball(head,0,.03,.33,.048,.04,.045,dark);
+ for(const side of [-1,1]){
+  ball(head,side*.095,.07,.13,.034,.036,.03,0xffffff);
+  ball(head,side*.098,.07,.152,.02,.022,.018,dark);
+  const ear=group(head,'DogEar',side*.12,.16,-.03);
+  ear.rotation.z=-side*.22;ear.rotation.x=.18;
+  box(ear,0,.10,0,.085,.20,.055,saddle);
+  box(ear,0,.09,.018,.05,.14,.025,0xc47d6e);
+ }
+ // Articulated four legs with thighs, shins and paws
+ const legs=[];
+ for(const [x,z,isFront] of [[-.17,.24,true],[.17,.24,true],[-.18,-.30,false],[.18,-.30,false]]){
+  const leg=group(dog,'DogLeg',x,.48,z);
+  ball(leg,0,-.08,0,.075,.14,isFront?.075:.095,coat);
+  box(leg,0,-.26,isFront?.01:-.01,.065,.24,.065,coat);
+  box(leg,0,-.41,.02,.075,.065,.11,cream);
+  legs.push(leg);
+ }
+ // Upward-curved wagging Baladi tail
+ const tail=group(dog,'DogTail',0,.66,-.50);
+ const t1=box(tail,0,.10,-.08,.055,.22,.055,saddle);t1.rotation.x=-.65;
+ const t2=box(tail,0,.24,-.16,.045,.16,.045,cream);t2.rotation.x=-.25;
+ dog.userData={dogBody:body,dogHead:head,dogLegs:legs,dogTail:tail,referenceVehicle:'alexandria-baladi-dog'};
+ return dog;
+}
+

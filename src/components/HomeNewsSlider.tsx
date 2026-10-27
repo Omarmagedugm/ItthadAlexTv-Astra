@@ -4,15 +4,19 @@ import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
 import { useAppStore } from '../store';
 import { SafeImage } from './SafeImage';
 
-const normalize = (text: string) => text.normalize('NFKC').replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/\s+/g, ' ').trim();
+const newsTimestamp = (item: { date?: string; createdAt?: string }) => {
+ const primary = item.date ? new Date(item.date).getTime() : NaN;
+ if (Number.isFinite(primary)) return primary;
+ const fallback = item.createdAt ? new Date(item.createdAt).getTime() : NaN;
+ return Number.isFinite(fallback) ? fallback : 0;
+};
 const newsDate = (date: string) => {
  const parsed = new Date(date);
  return Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleDateString('ar-EG', {day:'numeric',month:'long'});
 };
 export default function HomeNewsSlider() {
  const news = useAppStore(s => s.news);
- const priority = news.find(item => normalize(item.title).includes('محمد طه'));
- const slides = (priority ? [priority, ...news.filter(item => item.id !== priority.id)] : news).slice(0,8);
+ const slides = [...news].sort((a, b) => newsTimestamp(b) - newsTimestamp(a)).slice(0, 8);
  const [selected,setSelected]=useState(0);
  const [paused,setPaused]=useState(false);
  const [interacting,setInteracting]=useState(false);
@@ -21,6 +25,7 @@ export default function HomeNewsSlider() {
  const active=useRef(0);
  const dragStart=useRef<number|null>(null);
  const swiped=useRef(false);
+ const newestId=slides[0]?.id;
  const index=Math.min(selected,Math.max(0,slides.length-1));
  const select=(target:number)=>{
   const track=viewport.current;if(!track||!slides.length)return;
@@ -33,7 +38,7 @@ export default function HomeNewsSlider() {
  const move=(step:number)=>{setPaused(true);select(index+step);};
  useEffect(()=>{const query=window.matchMedia('(prefers-reduced-motion: reduce)');const update=()=>setReducedMotion(query.matches);update();query.addEventListener('change',update);return()=>query.removeEventListener('change',update);},[]);
  useEffect(()=>{if(paused||interacting||reducedMotion||slides.length<2)return;const timer=window.setInterval(()=>{if(!document.hidden)select(active.current+1);},6000);return()=>window.clearInterval(timer);},[paused,interacting,reducedMotion,slides.length]);
- useEffect(()=>{if(active.current>=slides.length){active.current=0;setSelected(0);if(viewport.current)viewport.current.scrollLeft=0;}},[slides.length]);
+ useEffect(()=>{active.current=0;setSelected(0);if(viewport.current)viewport.current.scrollLeft=0;},[newestId,slides.length]);
  if(!slides.length)return null;
  return <div className="home-news-slider home-news-carousel" role="region" aria-roledescription="كاروسيل" aria-label="أبرز أخبار الاتحاد" dir="rtl"
   onMouseEnter={()=>setInteracting(true)} onMouseLeave={()=>setInteracting(false)}

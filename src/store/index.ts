@@ -968,7 +968,15 @@ export const useAppStore = create<AppState>()(
       auditLogs: [],
       setNews: (news) => {
         const seen = new Set<string>();
-        const unique = news.filter(n => n?.id && !seen.has(n.id) && seen.add(n.id));
+        const getTs = (n: NewsItem) => {
+          const t1 = n?.date ? new Date(n.date).getTime() : NaN;
+          if (Number.isFinite(t1)) return t1;
+          const t2 = n?.createdAt ? new Date(n.createdAt).getTime() : NaN;
+          return Number.isFinite(t2) ? t2 : 0;
+        };
+        const unique = news
+          .filter(n => n?.id && !seen.has(n.id) && seen.add(n.id))
+          .sort((a, b) => getTs(b) - getTs(a));
         set({ news: unique });
       },
       addNews: (item) => set((state) => ({ news: [item, ...state.news.filter(n => n.id !== item.id)] })),

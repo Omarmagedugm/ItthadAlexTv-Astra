@@ -100,16 +100,22 @@ function getLiveGameStats() {
     }
   } catch (_) {}
 
-  // 4. Also check localStorage gamal-best if higher
-  try {
-    const best = JSON.parse(localStorage.getItem('gamal-best') || 'null');
-    if (best && typeof best.score === 'number' && Math.floor(best.score) > score) {
-      score = Math.floor(best.score);
-      distance = Math.max(distance, Math.floor(best.distance || 0));
-    }
-  } catch (_) {}
+  const sceneEl = document.querySelector('.scene');
+  const mode = sceneEl?.dataset?.gameMode === 'zombie' ? 'zombie' : 'runner';
+  const kills = Math.max(0, Math.floor(Number(sceneEl?.dataset?.zombieKills) || 0));
 
-  return { score: Math.floor(score), distance: Math.floor(distance), character, coins: Math.floor(coins) };
+  // 4. Also check localStorage gamal-best if higher (runner mode only so zombie runs stay separate)
+  if (mode === 'runner') {
+    try {
+      const best = JSON.parse(localStorage.getItem('gamal-best') || 'null');
+      if (best && typeof best.score === 'number' && Math.floor(best.score) > score) {
+        score = Math.floor(best.score);
+        distance = Math.max(distance, Math.floor(best.distance || 0));
+      }
+    } catch (_) {}
+  }
+
+  return { score: Math.floor(score), distance: Math.floor(distance), character, coins: Math.floor(coins), mode, kills };
 }
 
 // Intercept back button clicks inside iframe to save live score and exit cleanly

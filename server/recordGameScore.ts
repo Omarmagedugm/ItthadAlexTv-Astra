@@ -16,6 +16,25 @@ export async function recordGameScore(token: string, result: unknown, config: Co
     if (!response.ok) return { status: response.status === 403 ? 403 : 503, body: { error: 'profile-unavailable' } };
     const profile = await response.json();
     const stats = profile.fields?.stats?.mapValue?.fields || {};
+    if (result.mode === 'zombie') {
+      const previous = Number(stats.ittihadawyZombieScore?.integerValue ?? stats.ittihadawyZombieScore?.doubleValue ?? -1);
+      const prevKills = Number(stats.ittihadawyZombieKills?.integerValue ?? stats.ittihadawyZombieKills?.doubleValue ?? 0);
+      const nextKills = typeof result.kills === 'number' ? Math.max(prevKills, result.kills) : prevKills;
+      if (result.score <= previous) return { status: 200, body: { success: true, updated: false, currentScore: previous } };
+      const query = new URLSearchParams({ 'currentDocument.updateTime': profile.updateTime });
+      for (const field of ['ittihadawyZombieScore', 'ittihadawyZombieDistance', 'ittihadawyZombieCharacter', 'ittihadawyZombieKills']) query.append('updateMask.fieldPaths', `stats.${field}`);
+      const saved = await request(`${url}?${query}`, {
+        method: 'PATCH', headers, body: JSON.stringify({ fields: { stats: { mapValue: { fields: {
+          ittihadawyZombieScore: { integerValue: String(result.score) },
+          ittihadawyZombieDistance: { integerValue: String(result.distance) },
+          ittihadawyZombieCharacter: { stringValue: result.character },
+          ittihadawyZombieKills: { integerValue: String(nextKills) }
+        } } } } })
+      });
+      if (saved.ok) return { status: 200, body: { success: true, updated: true, currentScore: result.score } };
+      if (![409, 412].includes(saved.status)) return { status: saved.status === 403 ? 403 : 503, body: { error: 'save-failed' } };
+      continue;
+    }
     const previous = Number(stats.ittihadawyScore?.integerValue ?? stats.ittihadawyScore?.doubleValue ?? -1);
     if (result.score <= previous) return { status: 200, body: { success: true, updated: false, currentScore: previous } };
     // A precondition prevents simultaneous rounds or retries from lowering the record.
