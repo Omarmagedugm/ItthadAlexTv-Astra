@@ -1,3 +1,4 @@
+import { calculateMatchStatistics } from '../lib/matchStatistics';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store';
 import { ar } from 'date-fns/locale';
@@ -223,47 +224,13 @@ export default function Matches() {
     }
   } as const;
 
-  const isIttihadTeam = (name?: string) => {
-    const normalized = String(name || '')
-      .normalize('NFKC')
-      .replace(/[أإآ]/g, 'ا')
-      .trim()
-      .toLocaleLowerCase('ar');
-    return normalized === 'الاتحاد'
-      || normalized.includes('الاتحاد السكندري')
-      || normalized.includes('الاتحاد الاسكندري')
-      || normalized === 'ittihad'
-      || normalized.includes('ittihad alex');
-  };
-
-  const seasonStats = matches
-    .filter(match => match.status === 'finished')
-    .reduce((acc, match) => {
-      const homeIsIttihad = isIttihadTeam(match.homeTeam);
-      const awayIsIttihad = isIttihadTeam(match.awayTeam);
-      if (homeIsIttihad === awayIsIttihad) return acc;
-
-      const homeScore = Number(match.homeScore);
-      const awayScore = Number(match.awayScore);
-      if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) return acc;
-
-      const ittihadScore = homeIsIttihad ? homeScore : awayScore;
-      const opponentScore = homeIsIttihad ? awayScore : homeScore;
-      if (ittihadScore > opponentScore) acc.wins += 1;
-      else if (ittihadScore < opponentScore) acc.losses += 1;
-      else acc.draws += 1;
-      return acc;
-    }, { wins: 0, draws: 0, losses: 0 });
-
-  const totalGames = (seasonStats.wins + seasonStats.draws + seasonStats.losses) || 1;
-  const winRate = (seasonStats.wins / totalGames) * 100;
-  const drawRate = (seasonStats.draws / totalGames) * 100;
-  const lossRate = (seasonStats.losses / totalGames) * 100;
+  const seasonStats = calculateMatchStatistics(matches, selectedSport);
+  const statsCaption = selectedSport === 'all' ? 'القدم والسلة معًا' : selectedSport === 'basketball' ? 'مباريات كرة السلة' : 'مباريات كرة القدم';
 
   return (
     <div className="ds-match-center">
-      <div className="ds-toolbar"><div className="ds-segmented">{[{id:'all',label:'كل الرياضات'},{id:'football',label:'كرة القدم'},{id:'basketball',label:'كرة السلة'}].map(s=><button key={s.id} className={selectedSport===s.id?'is-active':''} aria-pressed={selectedSport===s.id} onClick={()=>setSelectedSport(s.id as typeof selectedSport)}>{s.label}</button>)}</div><div className="ds-filter-chips ds-match-filter">{[{id:'all',label:'كل المباريات'},{id:'live',label:'مباشر'},{id:'upcoming',label:'القادمة'},{id:'finished',label:'النتائج'}].map(s=><button key={s.id} className={selectedStatus===s.id?'is-active':''} onClick={()=>setSelectedStatus(s.id)}>{s.label}</button>)}</div></div>
-      <div className="ds-match-overview"><div><span>فوز</span><strong>{seasonStats.wins}</strong><small>من المباريات المسجّلة</small></div><div><span>تعادل</span><strong>{seasonStats.draws}</strong><small>من المباريات المسجّلة</small></div><div><span>خسارة</span><strong>{seasonStats.losses}</strong><small>من المباريات المسجّلة</small></div><Link to="/fan-zone"><Trophy size={30}/><div><strong>توقّع.. وشجّع</strong><span>شارك في منطقة الجماهير</span></div><ChevronRight size={18} className="rotate-180"/></Link></div>
+      <div className="ds-toolbar"><div className="ds-segmented">{[{id:'all',label:'الكل معًا'},{id:'football',label:'كرة القدم'},{id:'basketball',label:'كرة السلة'}].map(s=><button key={s.id} className={selectedSport===s.id?'is-active':''} aria-pressed={selectedSport===s.id} onClick={()=>setSelectedSport(s.id as typeof selectedSport)}>{s.label}</button>)}</div><div className="ds-filter-chips ds-match-filter">{[{id:'all',label:'كل المباريات'},{id:'live',label:'مباشر'},{id:'upcoming',label:'القادمة'},{id:'finished',label:'النتائج'}].map(s=><button key={s.id} className={selectedStatus===s.id?'is-active':''} onClick={()=>setSelectedStatus(s.id)}>{s.label}</button>)}</div></div>
+      <div className="ds-match-overview" aria-live="polite"><div><span>فوز</span><strong>{seasonStats.wins}</strong><small>{statsCaption}</small></div><div><span>تعادل</span><strong>{seasonStats.draws}</strong><small>{statsCaption}</small></div><div><span>خسارة</span><strong>{seasonStats.losses}</strong><small>{statsCaption}</small></div><Link to="/fan-zone"><Trophy size={30}/><div><strong>توقّع.. وشجّع</strong><span>شارك في منطقة الجماهير</span></div><ChevronRight size={18} className="rotate-180"/></Link></div>
       {sportSections.map(section=>{const shown=section.matches.filter(m=>selectedStatus==='all'||m.status===selectedStatus);return <section className="ds-match-sport" key={section.id}><div className="ds-section-bar"><h2>{section.icon}{section.id==='football'?'كرة القدم':'كرة السلة'}</h2><span>{shown.length} مباراة</span></div>{shown.length?<div className="ds-fixture-grid">{shown.slice(0,visibleCount[section.id]||6).map(match=><article className={`ds-fixture ${match.status==='live'?'is-live':''}`} key={match.id}>
         <div className="ds-fixture-head"><span>{match.competition}</span><span className={`ds-match-status status-${match.status}`}>{match.status==='live'?'● مباشر':match.status==='finished'?'انتهت المباراة':'المباراة القادمة'}</span></div>
         <div className="ds-fixture-teams"><div><SafeImage teamName={match.homeTeam} src={match.homeLogo} width={100} className="ds-team-logo object-contain"/><strong>{match.homeTeam}</strong></div><div className="ds-fixture-score">{match.status==='upcoming'?<><strong className="ds-vs">VS</strong><small>{Number.isNaN(Date.parse(match.date))?'':format(new Date(match.date),'h:mm a',{locale:ar})}</small></>:<><strong><span>{match.homeScore}</span><i>:</i><span>{match.awayScore}</span></strong><small>{match.status==='live'?calculateCurrentTimeFormat(match):'النتيجة النهائية'}</small></>}</div><div><SafeImage teamName={match.awayTeam} src={match.awayLogo} width={100} className="ds-team-logo object-contain"/><strong>{match.awayTeam}</strong></div></div>

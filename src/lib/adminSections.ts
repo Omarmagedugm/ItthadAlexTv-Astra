@@ -39,6 +39,7 @@ const groups: [string, [string, string, string, AppRole[]][]][] = [
  ]],
  ['التصميم وتجربة التطبيق', [
  ['layout','الصفحة الرئيسية','ترتيب الويدجت والمحتوى',['layout_editor']],
+ ['bottom-nav','القائمة السفلية','العناصر والأسماء والترتيب والإظهار',['layout_editor']],
  ['sidebar-menu','القائمة الجانبية','الروابط وترتيب الأقسام',['layout_editor']],
  ['sections-control','إظهار أقسام التطبيق','تفعيل وإيقاف الأقسام',['layout_editor']],
  ['city','طقس الإسكندرية','معلومات المدينة والطقس',['layout_editor']],

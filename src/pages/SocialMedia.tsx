@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Share2, 
@@ -27,12 +27,7 @@ const FB_USERNAME = 'itthadalexchannel';
 export default function SocialMedia() {
   const { appSettings } = useAppStore();
   const [activeTab, setActiveTab] = useState<'timeline' | 'channels'>('timeline');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [previewVersion, setPreviewVersion] = useState(0);
   const [copied, setCopied] = useState(false);
-  const [containerWidth, setContainerWidth] = useState<number>(360);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const fbUrl = (appSettings as any)?.socialLinks?.facebook || (appSettings as any)?.facebookPageUrl || DEFAULT_FB_PAGE;
   const youtubeUrl = (appSettings as any)?.socialLinks?.youtube || 'https://youtube.com/@itthadalexchannel';
@@ -40,36 +35,6 @@ export default function SocialMedia() {
   const tiktokUrl = (appSettings as any)?.socialLinks?.tiktok || 'https://tiktok.com/@itthadalexchannel';
   const twitterUrl = (appSettings as any)?.socialLinks?.twitter || 'https://x.com/itthadalexchannel';
   const whatsappUrl = (appSettings as any)?.socialLinks?.whatsapp || 'https://wa.me/itthadalexchannel';
-
-  // Measure container width for responsive Facebook iframe
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        const width = Math.min(Math.max(containerRef.current.clientWidth - 18, 180), 500);
-        setContainerWidth(width);
-      }
-    };
-
-    updateWidth();
-    const ro = new ResizeObserver(updateWidth);
-    if (containerRef.current) {
-      ro.observe(containerRef.current);
-    }
-
-    return () => ro.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!isRefreshing) return;
-    const timer = window.setTimeout(() => setIsRefreshing(false), 12000);
-    return () => window.clearTimeout(timer);
-  }, [isRefreshing, previewVersion]);
-
-  const handleRefresh = () => {
-    setShowPreview(true);
-    setIsRefreshing(true);
-    setPreviewVersion(value => value + 1);
-  };
 
   const handleCopyLink = async () => {
     try {
@@ -92,10 +57,6 @@ export default function SocialMedia() {
       handleCopyLink();
     }
   };
-
-  const iframeSrc = `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(
-    fbUrl
-  )}&tabs=timeline&width=${containerWidth}&height=500&small_header=true&adapt_container_width=true&hide_cover=false&show_facepile=false`;
 
   // Official Channel Social Links - All customizable from Admin Dashboard
   const socialChannels = [
@@ -238,7 +199,7 @@ export default function SocialMedia() {
           </div>
 
           {/* Action Buttons Bar */}
-          <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-white/10">
+          <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-white/10">
             <a
               href={fbUrl}
               target="_blank"
@@ -257,13 +218,7 @@ export default function SocialMedia() {
               <span>مشاركة</span>
             </button>
 
-            <button
-              onClick={handleRefresh}
-              className="ds-control flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/10 active:scale-95"
-            >
-              <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
-              <span>تحديث</span>
-            </button>
+
           </div>
         </div>
       </div>
@@ -296,7 +251,7 @@ export default function SocialMedia() {
       </div>
 
       {/* Main Content Area */}
-      <div ref={containerRef} className="w-full">
+      <div className="w-full">
         {activeTab !== 'channels' ? (
           <div className="flex flex-col items-center">
             {/* Embed Container */}
@@ -322,18 +277,8 @@ export default function SocialMedia() {
                 <a href={fbUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white whitespace-nowrap">
                   <ExternalLink size={17} /> فتح منشورات فيسبوك
                 </a>
-                <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">لو المعاينة مش بتعرض المنشورات، افتح الصفحة مباشرة من الزر.</p>
-                <button type="button" onClick={() => { if (showPreview) { setShowPreview(false); setIsRefreshing(false); } else handleRefresh(); }} aria-expanded={showPreview} className="ds-control block mx-auto text-xs font-bold text-blue-600 dark:text-blue-400 py-2">
-                  {showPreview ? 'إخفاء المعاينة' : 'عرض المعاينة داخل التطبيق'}
-                </button>
+                <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">المنشورات بتفتح على صفحة القناة مباشرة في فيسبوك.</p>
               </div>
-              {showPreview && <div className="w-full mt-3 flex justify-center overflow-hidden rounded-lg relative" aria-busy={isRefreshing}>
-                {isRefreshing && <div role="status" className="absolute top-2 z-20 rounded-lg bg-white/90 dark:bg-slate-900/90 p-2 text-xs">جاري تحميل المعاينة…</div>}
-                <iframe key={`${containerWidth}-${previewVersion}`} title="معاينة صفحة فيسبوك" src={iframeSrc}
-                  width={containerWidth} height="500" style={{ border: 'none', width: '100%', maxWidth: containerWidth }}
-                  onLoad={() => setIsRefreshing(false)} onError={() => setIsRefreshing(false)}
-                  allowFullScreen allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" className="rounded-lg" />
-              </div>}
 
               {/* Bottom Helpful Callout */}
               <div className="w-full mt-3 p-3 bg-blue-50/70 dark:bg-blue-950/30 rounded-lg border border-blue-200/50 dark:border-blue-900/40 flex items-center justify-between gap-2">

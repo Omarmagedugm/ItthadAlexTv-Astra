@@ -1,3 +1,4 @@
+import { calculateMatchStatistics } from '../src/lib/matchStatistics';
 import { resolveBottomNavigation, DEFAULT_BOTTOM_NAV_ITEMS } from '../src/lib/bottomNavigation';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -38,3 +39,14 @@ assert.deepEqual(resolveBottomNavigation(savedNav).map(item=>item.path), ['/news
 assert.equal(resolveBottomNavigation(savedNav)[0].active, false);
 assert.notEqual(resolveBottomNavigation(savedNav)[0], savedNav[0]);
 assert.equal(resolveBottomNavigation([...savedNav,savedNav[0]]).length, 2);
+
+const results = [
+ {status:'finished',sport:'football',homeTeam:'الاتحاد السكندري',awayTeam:'الأهلي',homeScore:'2',awayScore:'0'},
+ {status:'finished',sport:'basketball',homeTeam:'الأهلي',awayTeam:'الاتحاد السكندري',homeScore:'80',awayScore:'70'},
+ {status:'finished',homeTeam:'الاتحاد السكندري',awayTeam:'سموحة',homeScore:'1',awayScore:'1'},
+ {status:'upcoming',sport:'football',homeTeam:'الاتحاد السكندري',awayTeam:'الأهلي',homeScore:'0',awayScore:'0'},
+ {status:'finished',sport:'football',homeTeam:'الاتحاد السكندري',awayTeam:'سموحة',homeScore:'',awayScore:''},
+];
+assert.deepEqual(calculateMatchStatistics(results,'football'),{wins:1,draws:1,losses:0});
+assert.deepEqual(calculateMatchStatistics(results,'basketball'),{wins:0,draws:0,losses:1});
+assert.deepEqual(calculateMatchStatistics(results,'all'),{wins:1,draws:1,losses:1});

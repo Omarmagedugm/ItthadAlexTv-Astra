@@ -1,5 +1,5 @@
-import { DEFAULT_BOTTOM_NAV_ITEMS, resolveBottomNavigation } from '../lib/bottomNavigation';
-import BottomNavigationEditor from '../components/admin/BottomNavigationEditor';
+import BottomNavigationManager from '../components/admin/BottomNavigationManager';
+import { DEFAULT_BOTTOM_NAV_ITEMS } from '../lib/bottomNavigation';
 import BulkMemberPromotion from '../components/admin/BulkMemberPromotion';
 import { ADMIN_SECTIONS, canOpenAdminSection } from '../lib/adminSections';
 import AdminStart from '../components/admin/AdminStart';
@@ -1243,11 +1243,6 @@ export default function Admin() {
           handleFirestoreError(err, OperationType.WRITE, 'city_info/alexandria');
         }
       } else if (activeTab === 'settings') {
-        const bottomNavItems = resolveBottomNavigation(formData.bottomNavItems ?? appSettings.bottomNavItems ?? DEFAULT_BOTTOM_NAV_ITEMS);
-        if (bottomNavItems.filter(item => item.active).length > 6 || bottomNavItems.some(item => item.active && !item.label)) {
-          toast.error('اكتب اسمًا لكل عنصر ظاهر، واختار حتى ٦ عناصر للقائمة السفلية');
-          return;
-        }
         const facebookUrl = formData.socialFacebook !== undefined ? formData.socialFacebook : (formData.facebookPageUrl !== undefined ? formData.facebookPageUrl : (appSettings.socialLinks?.facebook || appSettings.facebookPageUrl || 'https://www.facebook.com/Itthadalexchannel'));
         const payload = {
           appName: formData.appName || appSettings.appName || '',
@@ -1258,7 +1253,7 @@ export default function Admin() {
           headerLogoHeight: formData.headerLogoHeight !== undefined ? Number(formData.headerLogoHeight) : (appSettings.headerLogoHeight || 48),
           logoType: formData.logoType || appSettings.logoType || 'image',
           logoText: formData.logoText || appSettings.logoText || '',
-          bottomNavItems,
+          bottomNavItems: appSettings.bottomNavItems ?? DEFAULT_BOTTOM_NAV_ITEMS,
           bottomNavStyle: formData.bottomNavStyle !== undefined ? formData.bottomNavStyle : (appSettings.bottomNavStyle || 'modern'),
           defaultSport: formData.defaultSport || appSettings.defaultSport || 'auto',
           liveViewMode: formData.liveViewMode || appSettings.liveViewMode || 'both',
@@ -2711,6 +2706,8 @@ export default function Admin() {
               </div>
             </div>
           )}
+
+          {activeTab === 'bottom-nav' && <BottomNavigationManager />}
 
           {activeTab === 'sidebar-menu' && (
             <AdminSidebarManager />
@@ -4939,7 +4936,6 @@ export default function Admin() {
 
                <div className="pt-4 border-t border-border-light dark:border-border-dark mt-4 mb-4">
                  <h3 className="ds-content-heading text-sm font-bold mb-1">تصميم شريط التنقل السفلي (Bottom Nav)</h3>
-                 <BottomNavigationEditor value={formData.bottomNavItems ?? appSettings.bottomNavItems} onChange={items => setFormData(previous => ({...previous, bottomNavItems:items}))} />
                  <p className="text-[12px] text-slate-500 font-bold mb-4">اختر مظهر شريط التنقل على الهواتف والأجهزة المحمولة</p>
                  
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
