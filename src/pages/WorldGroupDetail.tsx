@@ -87,35 +87,29 @@ export const WorldGroupDetail: React.FC = () => {
     if (!group?.id) return;
 
     setLoadingMembers(true);
-    const membersQuery = query(
-      collection(db, 'world_group_members'),
-      where('groupId', '==', group.id)
-    );
-
-    const unsubscribe = onSnapshot(
-      membersQuery,
-      (snapshot) => {
-        const members = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...(docSnap.data() as Omit<WorldGroupMember, 'id'>)
-        }));
-        setJoinedMembers(members);
-        
+    let active = true;
+    let inFlight = false;
+    const controller = new AbortController();
+    const refresh = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const response = await fetch(`/api/group-members?groupId=${encodeURIComponent(group.id)}`, { signal: controller.signal });
+        if (!response.ok) throw new Error('Members unavailable');
+        const data = await response.json();
+        if (!active) return;
+        setJoinedMembers(data.members);
         if (currentUser?.uid) {
-          const isMember = members.some((m) => m.userId === currentUser.uid);
-          setHasJoined(isMember);
-        } else {
-          setHasJoined(false);
-        }
-        setLoadingMembers(false);
-      },
-      (error) => {
-        console.warn('Could not listen to group members:', error);
-        setLoadingMembers(false);
-      }
-    );
+          const own = await getDoc(doc(db, 'world_group_members', `${group.id}_${currentUser.uid}`));
+          if (active) setHasJoined(own.exists());
+        } else setHasJoined(false);
+      } catch { if (active) console.warn('Group members unavailable'); }
+      finally { inFlight = false; if (active) setLoadingMembers(false); }
+    };
+    void refresh();
+    const timer = window.setInterval(() => { if (!document.hidden) void refresh(); }, 30000);
+    return () => { active = false; controller.abort(); window.clearInterval(timer); };
 
-    return () => unsubscribe();
   }, [group?.id, currentUser?.uid]);
 
   if (!group) {
@@ -166,8 +160,7 @@ export const WorldGroupDetail: React.FC = () => {
           userId: currentUser.uid,
           userName: profile.name || currentUser.displayName || 'مشجع اتحادي',
           userAvatar: profile.avatar || currentUser.photoURL || '',
-          userEmail: profile.email || currentUser.email || '',
-          userRole: profile.role || 'member',
+          userRole: 'member',
           joinedAt: new Date().toISOString(),
         };
 

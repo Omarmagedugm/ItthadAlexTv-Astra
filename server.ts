@@ -1,3 +1,7 @@
+import groupMembersHandler from './api/group-members';
+import publicProfilesHandler from './api/public-profiles';
+import usernameLoginHandler from './api/auth/username-login';
+import { PUBLIC_PAGE_METADATA, injectPageMetadata } from './server/pageMetadata';
 import recordScoreHandler from './api/game/record-score.ts';
 import express from 'express';
 import compression from 'compression';
@@ -7,6 +11,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
 import dotenv from 'dotenv';
 import fs from 'fs';
+import crypto from 'crypto';
 import { GoogleGenAI } from '@google/genai';
 import { MIGRATED_IMAGES_MAP } from './src/lib/migratedImagesMap.ts';
 import { fetchImageFromFirestore, saveImageToFirestoreServer } from './server/firestoreImages.ts';
@@ -551,7 +556,7 @@ OUTPUT: Return ONLY the transformed image.`;
     try {
       const authHeader = req.headers.authorization;
       const authToken = authHeader ? authHeader.replace(/^Bearer\s+/i, '') : undefined;
-      const result = await runFirebaseStorageMigration(authToken);
+      const result = await runFirebaseStorageMigration(authToken, req.user?.uid);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -578,7 +583,9 @@ OUTPUT: Return ONLY the transformed image.`;
         downloadUrl,
         storagePath || `images/${filename}`,
         Number(size) || verify.bytes || 0,
-        contentType || 'image/jpeg'
+        contentType || 'image/jpeg',
+        req.user.uid,
+        String(req.headers.authorization || '').replace(/^Bearer\s+/i, '')
       );
 
       // Clean up chunk subcollections
@@ -684,6 +691,9 @@ OUTPUT: Return ONLY the transformed image.`;
 
   // Server-Authoritative Game Score Recording Endpoint
   app.post('/api/game/record-score', recordScoreHandler);
+  app.get('/api/public-profiles', publicProfilesHandler);
+  app.get('/api/group-members', groupMembersHandler);
+  app.post('/api/auth/username-login', usernameLoginHandler);
 
   // Server-Authoritative User Role Assignment Endpoint (Protected: Admins only)
   app.post('/api/admin/set-user-role', requireAdmin, async (req: any, res: any) => {
@@ -963,115 +973,28 @@ OUTPUT: Return ONLY the transformed image.`;
   app.all(['/api/iframe-proxy', '/api/webview-proxy'], handleIframeProxy);
 
   // Storage upload endpoint (Firebase Storage preferred with Firestore metadata retention - Protected: Authenticated users)
-  app.post('/api/storage/upload', authenticateUser, upload.single('image'), async (req: any, res: any) => {
+  const handleAuthenticatedImageUpload = async (req: any, res: any) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: 'لم يتم توفير ملف صورة' });
-      }
-
-      const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
-      if (!allowedMimes.includes(req.file.mimetype)) {
-        return res.status(400).json({ error: 'نوع الملف غير مدعوم. يسمح فقط بالصور (JPEG, PNG, WebP, GIF, SVG)' });
-      }
-
-      const ext = req.file.mimetype.includes('png') ? 'png' : req.file.mimetype.includes('webp') ? 'webp' : 'jpg';
-      const cleanName = (req.file.originalname || `upload_${Date.now()}`).split('.')[0].replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40);
-      const filename = `${Date.now()}_${cleanName}.${ext}`;
-      const destPath = path.join(migratedDir, filename);
-      fs.writeFileSync(destPath, req.file.buffer);
-
-      // Attempt upload to Firebase Storage if bucket is active
-      try {
-        const bucketCheck = await checkBucketStatus();
-        if (bucketCheck.ok) {
-          const uploadRes = await uploadToFirebaseStorage(`images/${filename}`, req.file.buffer, req.file.mimetype);
-          const verify = await verifyDownloadUrl(uploadRes.downloadUrl, req.file.buffer.length);
-          if (verify.verified) {
-            // Save ONLY metadata + download URL into Firestore app_images
-            await updateFirestoreMetadata(filename, uploadRes.downloadUrl, `images/${filename}`, req.file.buffer.length, req.file.mimetype);
-            return res.json({
-              url: uploadRes.downloadUrl,
-              secure_url: uploadRes.downloadUrl,
-              public_id: filename,
-              success: true,
-              provider: 'firebase_storage'
-            });
-          }
-        }
-      } catch (fbErr) {
-        console.warn('Firebase Storage upload failed, falling back to Firestore/disk:', fbErr);
-      }
-
-      // Safe Fallback: save to Firestore app_images & disk
-      await saveImageToFirestoreServer(filename, req.file.buffer, req.file.mimetype);
-
-      const url = `/storage/migrated/${filename}`;
-      res.json({ url, secure_url: url, public_id: filename, success: true, provider: 'firestore' });
-    } catch (error: any) {
-      console.error('Storage upload error:', error);
-      res.status(500).json({ error: error.message || 'Upload failed' });
+      if (!req.file) return res.status(400).json({ error: 'لم يتم توفير ملف صورة' });
+      const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/bmp'];
+      if (!allowedMimes.includes(req.file.mimetype)) return res.status(400).json({ error: 'نوع الملف غير مدعوم' });
+      const ownerId = req.user?.uid;
+      const authToken = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+      if (!ownerId || !authToken) return res.status(401).json({ error: 'جلسة تسجيل الدخول غير صالحة' });
+      const ext = req.file.mimetype.split('/')[1].replace(/[^a-zA-Z0-9]/g, '') || 'img';
+      const filename = `${Date.now()}_${crypto.randomUUID()}.${ext}`;
+      const storagePath = `uploads/${ownerId}/images/${filename}`;
+      const uploadRes = await uploadToFirebaseStorage(storagePath, req.file.buffer, req.file.mimetype, authToken);
+      const verified = await verifyDownloadUrl(uploadRes.downloadUrl, req.file.buffer.length);
+      if (!verified.verified) return res.status(502).json({ error: 'تعذر التحقق من الملف المرفوع' });
+      await updateFirestoreMetadata(filename, uploadRes.downloadUrl, storagePath, req.file.buffer.length, req.file.mimetype, ownerId, authToken);
+      return res.json({ url: uploadRes.downloadUrl, secure_url: uploadRes.downloadUrl, public_id: filename, success: true, provider: 'firebase_storage' });
+    } catch (err) {
+      console.warn('Authenticated Storage upload failed:', err);
+      return res.status(503).json({ error: 'تعذر حفظ الصورة بأمان، حاول مرة أخرى' });
     }
-  });
-
-  // Proxy image to bypass CORS in browser
-  app.get('/api/proxy-image', async (req: any, res: any) => {
-    try {
-      const targetUrl = req.query.url as string;
-      if (!targetUrl || !targetUrl.startsWith('http')) {
-        return res.status(400).json({ error: 'Invalid URL' });
-      }
-      const fetchRes = await fetch(targetUrl);
-      if (!fetchRes.ok) {
-        return res.status(fetchRes.status).send('Failed to fetch remote image');
-      }
-      const contentType = fetchRes.headers.get('content-type') || 'application/octet-stream';
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      const arrayBuffer = await fetchRes.arrayBuffer();
-      res.send(Buffer.from(arrayBuffer));
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  // Unified Upload Endpoint -> stores in Firestore app_images directly (Protected: Authenticated users)
-  app.post('/api/upload', authenticateUser, upload.single('image'), async (req: any, res: any) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: 'لم يتم توفير ملف صورة' });
-      }
-
-      const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
-      if (!allowedMimes.includes(req.file.mimetype)) {
-        return res.status(400).json({ error: 'نوع الملف غير مدعوم. يسمح فقط بالصور (JPEG, PNG, WebP, GIF, SVG)' });
-      }
-
-      const ext = req.file.mimetype.includes('png') ? 'png' : req.file.mimetype.includes('webp') ? 'webp' : 'jpg';
-      const cleanName = (req.file.originalname || `img_${Date.now()}`).split('.')[0].replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40);
-      const filename = `${Date.now()}_${cleanName}.${ext}`;
-      const destPath = path.join(migratedDir, filename);
-      fs.writeFileSync(destPath, req.file.buffer);
-
-      // Save to Firestore app_images
-      await saveImageToFirestoreServer(filename, req.file.buffer, req.file.mimetype);
-
-      const url = `/storage/migrated/${filename}`;
-      res.json({
-        url,
-        secure_url: url,
-        public_id: filename,
-        width: 800,
-        height: 600,
-        format: ext,
-        resource_type: 'image',
-        provider: 'firestore',
-        success: true
-      });
-    } catch (error: any) {
-      console.error('Upload error to Firestore:', error);
-      res.status(500).json({ error: error.message || 'Upload failed' });
-    }
-  });
+  };
+  app.post(['/api/storage/upload', '/api/upload'], authenticateUser, upload.single('image'), handleAuthenticatedImageUpload);
 
   // Dynamic Open Graph / Twitter preview handler & 301 canonical redirects for news links
   app.get(['/news/:id', '/news/:id/:slug'], async (req: any, res: any, next: any) => {
@@ -1133,6 +1056,9 @@ OUTPUT: Return ONLY the transformed image.`;
       : ((typeof __dirname !== 'undefined' && fs.existsSync(path.join(__dirname, 'index.html'))) ? __dirname : distPath);
 
     if (fs.existsSync(staticPath) && fs.existsSync(path.join(staticPath, 'index.html'))) {
+      app.get(Object.keys(PUBLIC_PAGE_METADATA), (req, res) => {
+        res.type('html').send(injectPageMetadata(fs.readFileSync(path.join(staticPath, 'index.html'), 'utf8'), req.path));
+      });
       app.use(express.static(staticPath));
       app.use((req, res) => {
         if (req.path.startsWith('/api/')) {

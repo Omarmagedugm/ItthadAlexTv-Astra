@@ -2,11 +2,17 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     match /{allPaths=**} {
-      // Allow public read for all media files
       allow read: if true;
-      // Allow writes for authenticated users and image/audio/video files under 50MB
-      allow write: if request.resource.size < 50 * 1024 * 1024
-        && (request.resource.contentType.matches('image/.*') || request.resource.contentType.matches('video/.*') || request.resource.contentType.matches('audio/.*'));
+    }
+    match /uploads/{ownerId}/{allPaths=**} {
+      function ownsPath() { return request.auth != null && request.auth.uid == ownerId; }
+      function validMedia() {
+        return request.resource != null && request.resource.size > 0 && request.resource.size < 50 * 1024 * 1024 &&
+          (request.resource.contentType.matches('image/(jpeg|png|webp|gif|avif|bmp)') ||
+           request.resource.contentType.matches('video/.*') || request.resource.contentType.matches('audio/.*'));
+      }
+      allow create, update: if ownsPath() && validMedia();
+      allow delete: if ownsPath();
     }
   }
 }

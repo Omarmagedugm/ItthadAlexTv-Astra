@@ -13,7 +13,8 @@ const navItems = [
 export default function BottomNav() {
   const location = useLocation();
   const path = location.pathname;
-  const { appSettings, theme } = useAppStore();
+  const { appSettings, theme, sectionFlags, sidebarMenuItems } = useAppStore();
+  const visibleNavItems = navItems.filter(item => !(item.path === '/game' && sectionFlags.game === false) && !sidebarMenuItems.some(saved => saved.path === item.path && saved.active === false));
   const inverseBackground = theme === 'dark' ? '#f7faf8' : '#111a17';
   const inverseForeground = theme === 'dark' ? '#14201a' : '#f8fafc';
   const inverseBorder = theme === 'dark' ? 'rgba(255,255,255,.8)' : 'rgba(0,0,0,.3)';
@@ -28,9 +29,9 @@ export default function BottomNav() {
         className="fixed bottom-3 inset-x-3 sm:inset-x-6 z-50 max-w-md mx-auto glass-nav bottom-nav-inverse rounded-[28px] border border-white/35 dark:border-white/10 shadow-2xl px-2 py-1 md:hidden select-none"
       >
         <div className="flex items-center justify-around h-14 relative">
-          {navItems.map((item, idx) => {
+          {visibleNavItems.map((item) => {
             const isActive = path === item.path || (item.path !== '/' && path.startsWith(item.path));
-            const isCenter = idx === 2;
+            const isCenter = item.path === '/game';
 
             if (isCenter) {
               return (
@@ -111,7 +112,7 @@ export default function BottomNav() {
     >
       <div className="pointer-events-auto mx-auto max-w-md glass-nav rounded-full p-1.5 flex items-center justify-between gap-1 border shadow-[0_8px_24px_-8px_rgba(0,0,0,0.35)]"
         style={{ backgroundColor: inverseBackground, color: inverseForeground, borderColor: inverseBorder, backdropFilter: "blur(20px)" }}>
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = path === item.path || (item.path !== '/' && path.startsWith(item.path));
 
           return (

@@ -2138,13 +2138,6 @@ export default function Home() {
         className="club-home-main flex-1 overflow-x-hidden px-4 md:px-0 flex flex-col gap-0 pt-2 pb-6"
       >
         {renderHomeSections(activeSections)}
-        {!activeSections.some(s => s.type === 'game' || s.id === 'game') && sectionFlags?.game !== false && (
-          <div className="ds-home-section ds-home-section--game mb-6">
-            <Suspense fallback={<WidgetSkeletonFallback />}>
-              <GameAdWidget />
-            </Suspense>
-          </div>
-        )}
         {isEmpty && (
           <motion.div 
             variants={itemVariants}

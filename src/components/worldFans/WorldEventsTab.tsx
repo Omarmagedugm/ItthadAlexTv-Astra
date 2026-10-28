@@ -1,3 +1,5 @@
+import { toggleCommunityMembership } from '../../lib/communityWrites';
+import toast from 'react-hot-toast';
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { 
@@ -79,14 +81,9 @@ export const WorldEventsTab: React.FC<WorldEventsTabProps> = ({
     setWorldEvents(updated);
 
     try {
-      const target = worldEvents.find(e => e.id === eventId);
-      const isAttending = target?.participantUids?.includes(userId);
-      await updateDoc(doc(db, 'world_events', eventId), {
-        participantsCount: isAttending ? (target?.participantsCount || 1) - 1 : (target?.participantsCount || 0) + 1,
-        participantUids: isAttending ? arrayRemove(userId) : arrayUnion(userId),
-      });
+      await toggleCommunityMembership('world_events', eventId, 'participantUids', 'participantsCount');
     } catch (err) {
-      console.warn('RSVP updated locally:', err);
+      setWorldEvents(worldEvents); toast.error('تعذر تسجيل الحضور');
     }
   };
 
@@ -127,6 +124,7 @@ export const WorldEventsTab: React.FC<WorldEventsTabProps> = ({
     try {
       const targetGroup = groups.find(g => g.id === groupId);
       const newEvent: WorldEvent = {
+        authorId: currentUser?.uid,
         id: uuidv4(),
         groupId,
         groupName: targetGroup ? targetGroup.name : 'رابطة المشجعين',

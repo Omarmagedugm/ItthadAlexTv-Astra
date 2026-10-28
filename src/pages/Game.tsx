@@ -189,36 +189,13 @@ export default function Game() {
 
     let saved = false;
     try {
-      const userRef = doc(db, 'users', user.uid);
-      await runTransaction(db, async (transaction) => {
-        const snap = await transaction.get(userRef);
-        if (!snap.exists()) throw new Error('Member profile missing');
-        if (auth.currentUser?.uid !== user.uid) throw new Error('Account changed');
-        const update = improvedGameStats(snap.data().stats, result);
-        if (update) transaction.update(userRef, update);
+      const token = await user.getIdToken();
+      const response = await fetch('/api/game/record-score', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ result })
       });
-      saved = true;
-      console.info(`[GamePage] Recorded score ${result.score} for user ${user.uid}`);
-    } catch (directErr) {
-      console.warn('[GamePage] Direct update error, saving via server endpoint:', directErr);
-      try {
-        const token = await user.getIdToken();
-        const res = await fetch('/api/game/record-score', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ result })
-        });
-        if (res.ok && (await res.json()).success === true) {
-          saved = true;
-          console.info(`[GamePage] Server endpoint successfully saved score ${result.score}`);
-        }
-      } catch (serverErr) {
-        console.warn('[GamePage] Server record score also failed:', serverErr);
-      }
-    }
+      saved = response.ok && (await response.json()).success === true;
+    } catch { console.warn('[GamePage] Score save unavailable'); }
 
     if (requestId) {
       iframeRef.current?.contentWindow?.postMessage(

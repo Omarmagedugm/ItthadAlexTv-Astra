@@ -189,16 +189,19 @@ export function updateFirestoreMetadata(
   downloadUrl: string,
   storagePath: string,
   size: number,
-  contentType: string
+  contentType: string,
+  ownerId: string,
+  authToken: string
 ): Promise<boolean> {
   return new Promise((resolve, reject) => {
     const config = getConfig();
     const docId = encodeURIComponent(filename);
-    const url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/${config.firestoreDatabaseId}/documents/app_images/${docId}?updateMask.fieldPaths=name&updateMask.fieldPaths=url&updateMask.fieldPaths=storagePath&updateMask.fieldPaths=provider&updateMask.fieldPaths=size&updateMask.fieldPaths=contentType&updateMask.fieldPaths=updatedAt&key=${config.apiKey}`;
+    const url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/${config.firestoreDatabaseId}/documents/app_images/${docId}?updateMask.fieldPaths=name&updateMask.fieldPaths=url&updateMask.fieldPaths=storagePath&updateMask.fieldPaths=provider&updateMask.fieldPaths=size&updateMask.fieldPaths=contentType&updateMask.fieldPaths=updatedAt&updateMask.fieldPaths=ownerId&key=${config.apiKey}`;
 
     const docData = {
       fields: {
         name: { stringValue: filename },
+        ownerId: { stringValue: ownerId },
         url: { stringValue: downloadUrl },
         storagePath: { stringValue: storagePath },
         provider: { stringValue: 'firebase_storage' },
@@ -213,7 +216,8 @@ export function updateFirestoreMetadata(
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload)
+        'Content-Length': Buffer.byteLength(payload),
+        'Authorization': `Bearer ${authToken}`
       },
       timeout: 15000
     }, (res) => {
@@ -253,7 +257,7 @@ export async function cleanChunkSubcollections(filename: string): Promise<void> 
 /**
  * Runs the migration to Firebase Storage with strict verification and metadata retention
  */
-export async function runFirebaseStorageMigration(authToken?: string): Promise<any> {
+export async function runFirebaseStorageMigration(authToken?: string, ownerId?: string): Promise<any> {
   const config = getConfig();
   const bucketStatus = await checkBucketStatus(authToken);
   const reportPath = path.join(process.cwd(), 'public', 'firebase-storage-migration-report.json');
@@ -301,7 +305,7 @@ export async function runFirebaseStorageMigration(authToken?: string): Promise<a
     }
 
     const buffer = fs.readFileSync(localFile);
-    const destinationPath = `images/${filename}`;
+    const destinationPath = `uploads/${ownerId}/migrated_cloudinary/${filename}`;
 
     try {
       // 1. Upload to Firebase Storage
@@ -315,7 +319,7 @@ export async function runFirebaseStorageMigration(authToken?: string): Promise<a
       verifiedCount++;
 
       // 3. ONLY AFTER VERIFICATION: update Firestore to retain URL + metadata
-      await updateFirestoreMetadata(filename, uploadRes.downloadUrl, destinationPath, buffer.length, meta.contentType);
+      await updateFirestoreMetadata(filename, uploadRes.downloadUrl, destinationPath, buffer.length, meta.contentType, ownerId || '', authToken || '');
 
       // 4. Clean chunks in Firestore subcollections
       await cleanChunkSubcollections(filename);

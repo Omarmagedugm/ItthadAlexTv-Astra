@@ -1,9 +1,9 @@
+import { fetchPublicProfiles } from '../../lib/publicProfiles';
 import { useEffect, useState } from 'react';
-import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore';
 import { onIdTokenChanged } from 'firebase/auth';
 import { Link } from 'react-router-dom';
 import { Skull, RefreshCw, UserCheck, Flame, Crosshair } from 'lucide-react';
-import { auth, db } from '../../lib/firebase';
+import { auth } from '../../lib/firebase';
 
 type ZombieEntry = {
   id: string;
@@ -56,58 +56,29 @@ export default function ZombieLeaderboard() {
       setState('error');
     }, 15000);
 
-    const q = query(
-      collection(db, 'users'),
-      where('stats.ittihadawyZombieScore', '>=', 1),
-      orderBy('stats.ittihadawyZombieScore', 'desc'),
-      limit(visibleCount + 1)
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      { includeMetadataChanges: true },
-      snapshot => {
+    const controller = new AbortController();
+    let inFlight = false;
+    const refresh = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const profiles = await fetchPublicProfiles({ mode: 'zombie', count: visibleCount + 1 }, controller.signal);
         if (!active) return;
-        if (snapshot.empty && snapshot.metadata.fromCache) return;
         window.clearTimeout(timeout);
-
-        setHasMore(snapshot.docs.length > visibleCount);
-
-        const loaded = snapshot.docs.slice(0, visibleCount).map(item => {
-          const data = item.data();
-          const stats = data.stats || {};
-          const rawScore = Number(stats.ittihadawyZombieScore ?? data.ittihadawyZombieScore ?? 0);
-          const score = Math.floor(rawScore);
-          const rawKills = Number(stats.ittihadawyZombieKills ?? data.ittihadawyZombieKills ?? 0);
-          const kills = Math.max(0, Math.floor(rawKills));
-
-          if (uid && item.id === uid && typeof stats.ittihadawyZombieScore === 'number' && !Number.isInteger(stats.ittihadawyZombieScore)) {
-            updateDoc(doc(db, 'users', uid), {
-              'stats.ittihadawyZombieScore': score,
-              'stats.ittihadawyZombieDistance': Math.floor(Number(stats.ittihadawyZombieDistance || 0))
-            }).catch(() => {});
-          }
-
-          return {
-            id: item.id,
-            name: data.name || data.displayName || data.username || 'عضو الاتحاد',
-            score,
-            kills,
-            character: String(stats.ittihadawyZombieCharacter || stats.ittihadawyCharacter || '')
-          };
-        }).filter(item => !isNaN(item.score) && item.score >= 1);
-
-        setEntries(loaded);
+        setHasMore(profiles.length > visibleCount);
+        setEntries(profiles.slice(0, visibleCount).map(data => ({
+          id: data.uid, name: data.name, score: Math.floor(Number(data.stats?.ittihadawyZombieScore || 0)),
+          kills: Math.floor(Number(data.stats?.ittihadawyZombieKills || 0)),
+          character: String(data.stats?.ittihadawyZombieCharacter || '')
+        })).filter(item => Number.isSafeInteger(item.score) && item.score >= 1));
         setState('ready');
-      },
-      error => {
-        if (!active) return;
-        window.clearTimeout(timeout);
-        console.warn('[ZombieLeaderboard] Read failed:', error.code);
-        setErrorCode(error.code);
-        setState('error');
-      }
-    );
+      } catch {
+        if (active) { window.clearTimeout(timeout); setErrorCode('unavailable'); setState('error'); }
+      } finally { inFlight = false; }
+    };
+    void refresh();
+    const poll = window.setInterval(() => { if (!document.hidden) void refresh(); }, 30000);
+    const unsubscribe = () => { controller.abort(); window.clearInterval(poll); };
 
     return () => {
       active = false;

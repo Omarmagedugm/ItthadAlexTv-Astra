@@ -143,8 +143,7 @@ async function runTests() {
     assert(serverSource.includes("app.post('/api/admin/set-user-role', requireAdmin"), 'set-user-role route must use requireAdmin');
 
     // Authenticated upload routes
-    assert(serverSource.includes("app.post('/api/storage/upload', authenticateUser"), 'storage upload route must use authenticateUser');
-    assert(serverSource.includes("app.post('/api/upload', authenticateUser"), 'upload route must use authenticateUser');
+    assert(serverSource.includes("app.post(['/api/storage/upload', '/api/upload'], authenticateUser"), 'image upload routes must use authenticateUser');
     assert(serverSource.includes("['/api/jersey-try-on', '/api/ai/jersey-tryon'], authenticateUser"), 'jersey-try-on route must use authenticateUser');
 
     // OneSignal API key handling

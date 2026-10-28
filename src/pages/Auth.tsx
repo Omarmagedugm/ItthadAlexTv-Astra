@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { 
-  signInWithEmailAndPassword, 
+  signInWithEmailAndPassword,
+  signInWithCustomToken,
   createUserWithEmailAndPassword,
   updateProfile,
   GoogleAuthProvider,
@@ -133,35 +134,9 @@ export default function Auth() {
       let finalEmail = email.trim();
       let finalUsername = username.trim() || email.split('@')[0];
 
-      // Handle login mode transformation
-      if (mode === 'login') {
-        if (finalEmail.toLowerCase() === 'omarmagedugm') {
-          finalEmail = 'omarmagedugm@ittihad.club';
-        } else if (!finalEmail.includes('@')) {
-          // If it's a username, try to find the linked email in Firestore
-          try {
-            const q = query(collection(db, 'users'), where('username', '==', finalEmail.toLowerCase()));
-            const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty) {
-              const userData = querySnapshot.docs[0].data();
-              if (userData && userData.email) {
-                finalEmail = userData.email;
-              }
-            } else {
-              // If not found in DB, fallback to legacy auto-email or throw error later
-              finalEmail = `${finalEmail.toLowerCase()}@ittihad.club`;
-            }
-          } catch (err) {
-            console.warn("Username lookup failed, trying direct email", err);
-            finalEmail = `${finalEmail.toLowerCase()}@ittihad.club`;
-          }
-        }
-      } else {
-        // Signup mode: if email field didn't contain @, treat it as part of an auto-email
-        // This handles cases where user tries to put a username in the email field too
-        if (!finalEmail.includes('@')) {
-          finalEmail = `${finalUsername.toLowerCase() || finalEmail.toLowerCase()}@ittihad.club`;
-        }
+      const usernameLogin = mode === 'login' && !finalEmail.includes('@');
+      if (mode === 'signup' && !finalEmail.includes('@')) {
+        finalEmail = `${finalUsername.toLowerCase() || finalEmail.toLowerCase()}@ittihad.club`;
       }
 
       if (mode === 'signup') {
@@ -210,7 +185,13 @@ export default function Auth() {
         
         updateLocalProfile(userData);
       } else {
-        const userCredential = await signInWithEmailAndPassword(auth, finalEmail, password);
+        let userCredential;
+        if (usernameLogin) {
+          const response = await fetch('/api/auth/username-login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: finalEmail, password }) });
+          if (!response.ok) throw Object.assign(new Error('Login failed'), { code: response.status === 401 ? 'auth/invalid-credential' : 'auth/network-request-failed' });
+          const result = await response.json();
+          userCredential = await signInWithCustomToken(auth, result.token);
+        } else userCredential = await signInWithEmailAndPassword(auth, finalEmail, password);
         const user = userCredential.user;
         
         let userDoc;

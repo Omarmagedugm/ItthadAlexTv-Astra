@@ -1,3 +1,5 @@
+import { fetchPublicProfiles } from '../lib/publicProfiles';
+import { applyPollVote } from '../lib/pollVote';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useLocation } from 'react-router-dom';
@@ -62,7 +64,8 @@ import {
   where,
   setDoc,
   documentId,
-  getDocs
+  getDocs,
+  runTransaction
 } from 'firebase/firestore';
 
 export default function FanZone() {
@@ -78,13 +81,9 @@ export default function FanZone() {
     const loadAuthorProfiles = async () => {
       for (let index = 0; index < authorIds.length; index += 30) {
         const batch = authorIds.slice(index, index + 30);
-        const snapshot = await getDocs(
-          query(collection(db, 'users'), where(documentId(), 'in', batch)),
-        );
+        const loaded = await fetchPublicProfiles({ ids: batch });
         if (!active) return;
-        const profiles = Object.fromEntries(
-          snapshot.docs.map(userDoc => [userDoc.id, userDoc.data()]),
-        );
+        const profiles = Object.fromEntries(loaded.map(profile => [profile.uid, profile]));
         setPostAuthorProfiles(previous => ({ ...previous, ...profiles }));
       }
     };
@@ -142,7 +141,7 @@ export default function FanZone() {
   const [momentPost, setMomentPost] = useState({ content: '', image: '' });
   const [showMomentForm, setShowMomentForm] = useState(false);
   const [aiConfig, setAiConfig] = useState<any>({ 
-    enabled: true, 
+    enabled: false,
     bannerTitle: 'استوديو المشجع الاتحادي', 
     bannerDescription: 'حول صورتك بالذكاء الاصطناعي وارتدي تيشيرت نادي الاتحاد في معقل زعيم الثغر',
     bannerImage: ''
@@ -280,63 +279,23 @@ export default function FanZone() {
     }
   }, [activeTab]);
 
-  const handleVote = async (pollId: string, optionIndex: number) => {
-    if (!auth.currentUser) return;
-    const poll = polls.find(p => p.id === pollId);
-    if (!poll) return;
-    
-    const userId = auth.currentUser.uid;
-    const previousChoice = poll.voterChoices?.[userId];
-    
-    // If already voted for this option, do nothing
-    if (previousChoice === optionIndex) return;
-
+  const voteOnPoll = async (id: string, choice: number, embedded = false) => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
     try {
-      const pollRef = doc(db, 'polls', pollId);
-      const updates: any = {
-        [`votes.${optionIndex}`]: increment(1),
-        [`voterChoices.${userId}`]: optionIndex,
-        voters: arrayUnion(userId)
-      };
-
-      // If changing choice, decrement the old one
-      if (previousChoice !== undefined) {
-        updates[`votes.${previousChoice}`] = increment(-1);
-      }
-
-      await updateDoc(pollRef, updates);
-    } catch (error) {
-      console.error('Error voting:', error);
-    }
+      const reference = doc(db, embedded ? 'fan_posts' : 'polls', id);
+      await runTransaction(db, async transaction => {
+        const snapshot = await transaction.get(reference);
+        if (!snapshot.exists()) return;
+        const poll = embedded ? snapshot.data().poll : snapshot.data();
+        if (!poll) return;
+        const update = applyPollVote(poll, uid, choice);
+        if (update) transaction.update(reference, embedded ? { poll: { ...poll, ...update } } : update);
+      });
+    } catch (error) { console.error('Voting failed:', error); toast.error('تعذر تسجيل التصويت'); }
   };
-
-  const handleVotePost = async (postId: string, optionIndex: number) => {
-    if (!auth.currentUser) return;
-    const post = fanPosts.find(p => p.id === postId);
-    if (!post || !post.poll) return;
-    
-    const userId = auth.currentUser.uid;
-    const previousChoice = (post.poll as any).voterChoices?.[userId];
-    
-    if (previousChoice === optionIndex) return;
-
-    try {
-      const postRef = doc(db, 'fan_posts', postId);
-      const updates: any = {
-        [`poll.votes.${optionIndex}`]: increment(1),
-        [`poll.voterChoices.${userId}`]: optionIndex,
-        [`poll.voters`]: arrayUnion(userId)
-      };
-
-      if (previousChoice !== undefined) {
-        updates[`poll.votes.${previousChoice}`] = increment(-1);
-      }
-
-      await updateDoc(postRef, updates);
-    } catch (error) {
-      console.error('Error voting on post poll:', error);
-    }
-  };
+  const handleVote = (id: string, choice: number) => voteOnPoll(id, choice);
+  const handleVotePost = (id: string, choice: number) => voteOnPoll(id, choice, true);
 
   const handleDeletePost = async (postId: string) => {
     if (!confirm('هل أنت متأكد من رغبتك في حذف هذا المنشور؟')) return;
@@ -392,30 +351,19 @@ export default function FanZone() {
   };
 
   const handleLikeComment = async (postId: string, commentId: string) => {
-    if (!auth.currentUser) return;
-    const comment = postComments.find(c => c.id === commentId);
-    if (!comment) return;
-
-    const userId = auth.currentUser.uid;
-    const likedBy = comment.likedBy || [];
-    const isLiked = likedBy.includes(userId);
-
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
     try {
-      const commentRef = doc(db, 'fan_posts', postId, 'comments', commentId);
-      if (isLiked) {
-        await updateDoc(commentRef, {
-          likes: increment(-1),
-          likedBy: likedBy.filter((id: string) => id !== userId)
-        });
-      } else {
-        await updateDoc(commentRef, {
-          likes: increment(1),
-          likedBy: arrayUnion(userId)
-        });
-      }
-    } catch (error) {
-      console.error('Error liking comment:', error);
-    }
+      const reference = doc(db, 'fan_posts', postId, 'comments', commentId);
+      await runTransaction(db, async transaction => {
+        const snapshot = await transaction.get(reference);
+        if (!snapshot.exists()) return;
+        const before = Array.isArray(snapshot.data().likedBy) ? snapshot.data().likedBy : [];
+        const members = [...new Set<string>(before)];
+        const likedBy = members.includes(uid) ? members.filter(id => id !== uid) : [...members, uid];
+        transaction.update(reference, { likedBy, likes: likedBy.length });
+      });
+    } catch (error) { console.error('Like failed:', error); toast.error('تعذر حفظ الإعجاب'); }
   };
 
   const handleAddComment = async (postId: string) => {
@@ -562,34 +510,20 @@ export default function FanZone() {
 
   const handleLikePost = async (postId: string) => {
     if (!auth.currentUser) return;
-    const post = fanPosts.find(p => p.id === postId);
-    if (!post) return;
-    
-    const userId = auth.currentUser.uid;
-    const likedBy = (post as any).likedBy || [];
-    
-    if (likedBy.includes(userId)) {
-      // Unlike
-      try {
-        const postRef = doc(db, 'fan_posts', postId);
-        await updateDoc(postRef, {
-          likes: increment(-1),
-          likedBy: likedBy.filter((id: string) => id !== userId)
-        });
-      } catch (error) {
-        console.error('Error unliking post:', error);
-      }
-      return;
-    }
-
+    const uid = auth.currentUser.uid;
     try {
-      const postRef = doc(db, 'fan_posts', postId);
-      await updateDoc(postRef, {
-        likes: increment(1),
-        likedBy: arrayUnion(userId)
+      await runTransaction(db, async transaction => {
+        const reference = doc(db, 'fan_posts', postId);
+        const snapshot = await transaction.get(reference);
+        if (!snapshot.exists()) return;
+        const previous = Array.isArray(snapshot.data().likedBy) ? snapshot.data().likedBy : [];
+        const members = [...new Set<string>(previous)];
+        const next = members.includes(uid) ? members.filter(id => id !== uid) : [...members, uid];
+        transaction.update(reference, { likedBy: next, likes: next.length });
       });
     } catch (error) {
-      console.error('Error liking post:', error);
+      console.error('Error toggling post like:', error);
+      toast.error('تعذر حفظ الإعجاب، حاول مرة أخرى');
     }
   };
 
@@ -650,40 +584,26 @@ export default function FanZone() {
   };
 
   const handleVoteAttendance = async (choice: 'yes' | 'no' | 'maybe') => {
-    if (!auth.currentUser || !nextMatch) return;
-    const pollId = `attendance_${(nextMatch as any).id}`;
-    const userId = auth.currentUser.uid;
-    const previousChoice = attendancePoll?.voters?.[userId];
-    
-    if (previousChoice === choice) return;
-
+    const uid = auth.currentUser?.uid;
+    if (!uid || !nextMatch) return;
+    const matchId = (nextMatch as any).id;
     try {
-      const pollRef = doc(db, 'match_day_attendance', pollId);
-      const updates: any = {
-        [`votes.${choice}`]: increment(1),
-        [`voters.${userId}`]: choice,
-        matchId: (nextMatch as any).id
-      };
-
-      if (previousChoice) {
-        updates[`votes.${previousChoice}`] = increment(-1);
-      }
-
-      await updateDoc(pollRef, updates);
-    } catch (error: any) {
-      if (error.code === 'not-found') {
-        const pollRef = doc(db, 'match_day_attendance', pollId);
-        const initialVotes = { yes: 0, no: 0, maybe: 0 };
-        initialVotes[choice] = 1;
-        await setDoc(pollRef, {
-          matchId: (nextMatch as any).id,
-          votes: initialVotes,
-          voters: { [userId]: choice }
-        });
-      } else {
-        console.error('Error voting attendance:', error);
-      }
-    }
+      const reference = doc(db, 'match_day_attendance', `attendance_${matchId}`);
+      await runTransaction(db, async transaction => {
+        const snapshot = await transaction.get(reference);
+        const current = snapshot.exists() ? snapshot.data() : { matchId, votes: { yes: 0, no: 0, maybe: 0 }, voters: {} };
+        const previous = current.voters?.[uid];
+        if (previous === choice) return;
+        const votes = { ...current.votes };
+        if (!Number.isSafeInteger(votes[choice]) || votes[choice] < 0) throw new Error('Invalid count');
+        votes[choice] += 1;
+        if (previous !== undefined) {
+          if (!['yes', 'no', 'maybe'].includes(previous) || !Number.isSafeInteger(votes[previous]) || votes[previous] < 1) throw new Error('Invalid prior vote');
+          votes[previous] -= 1;
+        }
+        transaction.set(reference, { ...current, matchId, votes, voters: { ...current.voters, [uid]: choice } });
+      });
+    } catch (error) { console.error('Attendance vote failed:', error); toast.error('تعذر تسجيل الحضور'); }
   };
 
   const handleCreateMoment = async () => {
@@ -715,29 +635,19 @@ export default function FanZone() {
   };
 
   const handleLikeMoment = async (momentId: string) => {
-    if (!auth.currentUser) return;
-    const moment = matchDayMoments.find(m => m.id === momentId);
-    if (!moment) return;
-    
-    const userId = auth.currentUser.uid;
-    const likedBy = moment.likedBy || [];
-    
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
     try {
-      const momentRef = doc(db, 'match_day_moments', momentId);
-      if (likedBy.includes(userId)) {
-        await updateDoc(momentRef, {
-          likes: increment(-1),
-          likedBy: likedBy.filter((id: string) => id !== userId)
-        });
-      } else {
-        await updateDoc(momentRef, {
-          likes: increment(1),
-          likedBy: arrayUnion(userId)
-        });
-      }
-    } catch (error) {
-      console.error('Error liking moment:', error);
-    }
+      const reference = doc(db, 'match_day_moments', momentId);
+      await runTransaction(db, async transaction => {
+        const snapshot = await transaction.get(reference);
+        if (!snapshot.exists()) return;
+        const before = Array.isArray(snapshot.data().likedBy) ? snapshot.data().likedBy : [];
+        const members = [...new Set<string>(before)];
+        const likedBy = members.includes(uid) ? members.filter(id => id !== uid) : [...members, uid];
+        transaction.update(reference, { likedBy, likes: likedBy.length });
+      });
+    } catch (error) { console.error('Like failed:', error); toast.error('تعذر حفظ الإعجاب'); }
   };
 
   return (
@@ -1263,7 +1173,7 @@ export default function FanZone() {
                         className={`flex items-center justify-center gap-2 h-10 rounded-lg ds-surface transition-all ${post.likedBy?.includes(auth.currentUser?.uid) ? 'bg-red-500/10 text-red-500' : 'text-slate-500'}`}
                       >
                         <Heart size={18} fill={post.likedBy?.includes(auth.currentUser?.uid) ? 'currentColor' : 'none'} className="transition-transform group-active:scale-125" />
-                        <span className="text-[11px] font-bold tabular-nums">{post.likes || 0}</span>
+                        <span className="text-[11px] font-bold tabular-nums">{Math.max(0, Number(post.likes) || 0)}</span>
                       </motion.button>
                       
                       <motion.button 
@@ -1354,7 +1264,7 @@ export default function FanZone() {
                                     className={`ds-control flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 rounded-lg transition-all ${comment.likedBy?.includes(auth.currentUser?.uid) ? 'bg-red-500/10 text-red-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}
                                   >
                                     <Heart size={10} fill={comment.likedBy?.includes(auth.currentUser?.uid) ? 'currentColor' : 'none'} />
-                                    {comment.likes || 0}
+                                    {Math.max(0, Number(comment.likes) || 0)}
                                   </button>
                                   {(comment.userId === auth.currentUser?.uid || isAdmin) && (
                                     <div className="flex items-center gap-1 opacity-0 group-hover/comment:opacity-100 transition-opacity">
@@ -2204,7 +2114,7 @@ export default function FanZone() {
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${moment.likedBy?.includes(auth.currentUser?.uid) ? 'bg-red-500/10 text-red-500 shadow-sm' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}
                         >
                           <Heart size={14} fill={moment.likedBy?.includes(auth.currentUser?.uid) ? 'currentColor' : 'none'} />
-                          <span className="text-[12px] font-bold">{moment.likes || 0}</span>
+                          <span className="text-[12px] font-bold">{Math.max(0, Number(moment.likes) || 0)}</span>
                         </motion.button>
                       </div>
 

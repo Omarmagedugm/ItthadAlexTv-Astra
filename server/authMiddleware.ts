@@ -1,36 +1,8 @@
+import { getAdminApp, getAdminDatabase } from './firebaseAdmin';
 import { Request, Response, NextFunction } from 'express';
 import admin from 'firebase-admin';
-import https from 'https';
-import fs from 'fs';
-import path from 'path';
-
-// Load configuration safely
-function getFirebaseConfig() {
-  const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
-  if (fs.existsSync(configPath)) {
-    try {
-      return JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    } catch (_) {}
-  }
-  return {
-    projectId: process.env.VITE_FIREBASE_PROJECT_ID || 'gen-lang-client-0026252792',
-    apiKey: process.env.VITE_FIREBASE_API_KEY || '',
-    firestoreDatabaseId: process.env.VITE_FIREBASE_DATABASE_ID || 'ai-studio-6c80a8df-a84d-4bf3-9327-6de27bc8c8c6'
-  };
-}
-
-const fbConfig = getFirebaseConfig();
-
-// Initialize Firebase Admin SDK once
-if (admin.apps.length === 0) {
-  try {
-    admin.initializeApp({
-      projectId: fbConfig.projectId
-    });
-  } catch (err) {
-    console.error('[Firebase Admin] Initialization error:', err);
-  }
-}
+// Initialize without ever logging credential material.
+try { getAdminApp(); } catch { console.error('[Firebase Admin] Invalid server credential configuration.'); }
 
 // Known verified bootstrap administrator UIDs from database
 export const BOOTSTRAP_ADMIN_UIDS = new Set([
@@ -66,31 +38,15 @@ export async function getUserRoleFromFirestore(uid: string): Promise<{ role: str
     return { role: cached.role, roles: cached.roles };
   }
 
-  const config = getFirebaseConfig();
-  const docUrl = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/${config.firestoreDatabaseId}/documents/users/${encodeURIComponent(uid)}?key=${config.apiKey}`;
+  try {
+    const snapshot = await getAdminDatabase().doc(`users/${uid}`).get();
+    const data = snapshot.data() || {};
+    const role = typeof data.role === 'string' ? data.role : 'user';
+    const roles = Array.isArray(data.roles) ? data.roles.filter(value => typeof value === 'string') : [];
+    userRoleCache.set(uid, { role, roles, expiry: Date.now() + 60000 });
+    return { role, roles };
+  } catch { return { role: 'user', roles: [] }; }
 
-  return new Promise((resolve) => {
-    https.get(docUrl, { timeout: 5000 }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          if (res.statusCode === 200) {
-            const parsed = JSON.parse(data);
-            const fields = parsed.fields || {};
-            const role = fields.role?.stringValue || 'user';
-            const rolesList = (fields.roles?.arrayValue?.values || []).map((v: any) => v.stringValue).filter(Boolean);
-            
-            userRoleCache.set(uid, { role, roles: rolesList, expiry: Date.now() + 60000 });
-            return resolve({ role, roles: rolesList });
-          }
-        } catch (_) {}
-        resolve({ role: 'user', roles: [] });
-      });
-    }).on('error', () => {
-      resolve({ role: 'user', roles: [] });
-    });
-  });
 }
 
 /**
@@ -111,48 +67,13 @@ export async function setUserRoleInFirestore(
     return { success: false, error: `الدور '${role}' غير صالح` };
   }
 
-  const config = getFirebaseConfig();
-  const patchUrl = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/${config.firestoreDatabaseId}/documents/users/${encodeURIComponent(targetUid)}?updateMask.fieldPaths=role&updateMask.fieldPaths=roles&key=${config.apiKey}`;
+  if (!roles.every(value => allowedRoles.includes(value))) return { success: false, error: 'Invalid roles' };
+  try {
+    await getAdminDatabase().doc(`users/${targetUid}`).update({ role, roles });
+    userRoleCache.delete(targetUid);
+    return { success: true };
+  } catch { return { success: false, error: 'Role update unavailable' }; }
 
-  const requestBody = JSON.stringify({
-    fields: {
-      role: { stringValue: role },
-      roles: {
-        arrayValue: {
-          values: roles.map(r => ({ stringValue: r }))
-        }
-      }
-    }
-  });
-
-  return new Promise((resolve) => {
-    const req = https.request(patchUrl, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(requestBody)
-      },
-      timeout: 10000
-    }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-          userRoleCache.delete(targetUid);
-          resolve({ success: true });
-        } else {
-          resolve({ success: false, error: `Firestore returned status ${res.statusCode}: ${data}` });
-        }
-      });
-    });
-
-    req.on('error', (err) => {
-      resolve({ success: false, error: err.message });
-    });
-
-    req.write(requestBody);
-    req.end();
-  });
 }
 
 /**

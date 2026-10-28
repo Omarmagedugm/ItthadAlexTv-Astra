@@ -1,3 +1,5 @@
+import { toggleCommunityMembership, changeCommunityEntry } from '../../lib/communityWrites';
+import toast from 'react-hot-toast';
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { 
@@ -140,14 +142,9 @@ export const WorldFeedTab: React.FC<WorldFeedTabProps> = ({
     setWorldPosts(updated);
 
     try {
-      const targetPost = worldPosts.find(p => p.id === postId);
-      const alreadyLiked = targetPost?.likedBy?.includes(userId);
-      await updateDoc(doc(db, 'world_posts', postId), {
-        likes: alreadyLiked ? (targetPost?.likes || 1) - 1 : (targetPost?.likes || 0) + 1,
-        likedBy: alreadyLiked ? arrayRemove(userId) : arrayUnion(userId)
-      });
+      await toggleCommunityMembership('world_posts', postId, 'likedBy', 'likes');
     } catch (e) {
-      console.warn('Like updated locally:', e);
+      setWorldPosts(worldPosts); toast.error('تعذر حفظ الإعجاب');
     }
   };
 
@@ -222,12 +219,9 @@ export const WorldFeedTab: React.FC<WorldFeedTabProps> = ({
     setCommentText('');
 
     try {
-      await updateDoc(doc(db, 'world_posts', postId), {
-        commentsCount: (worldPosts.find(p => p.id === postId)?.commentsCount || 0) + 1,
-        comments: arrayUnion(newComment)
-      });
+      await changeCommunityEntry('world_posts', postId, 'comments', 'commentsCount', newComment);
     } catch (e) {
-      console.warn('Comment added locally:', e);
+      setWorldPosts(worldPosts); toast.error('تعذر حفظ التعليق');
     }
   };
 
@@ -252,12 +246,9 @@ export const WorldFeedTab: React.FC<WorldFeedTabProps> = ({
 
     if (targetComment) {
       try {
-        await updateDoc(doc(db, 'world_posts', postId), {
-          commentsCount: Math.max(0, (post.commentsCount || 1) - 1),
-          comments: arrayRemove(targetComment)
-        });
+        await changeCommunityEntry('world_posts', postId, 'comments', 'commentsCount', targetComment, true);
       } catch (e) {
-        console.warn('Comment removed locally:', e);
+        setWorldPosts(worldPosts); toast.error('تعذر حذف التعليق');
       }
     }
   };

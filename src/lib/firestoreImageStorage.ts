@@ -8,7 +8,7 @@ import {
   Firestore,
   writeBatch
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, auth } from './firebase';
 
 export interface StoredAppImage {
   name: string;
@@ -108,6 +108,8 @@ export async function saveImageToFirestore(
   contentType = 'image/jpeg',
   firestoreInstance: Firestore = db
 ): Promise<{ success: boolean; url: string; name: string }> {
+  const ownerId = auth.currentUser?.uid;
+  if (!ownerId) throw new Error('Authentication required');
   const cleanName = sanitizeImageName(name);
   const base64Data = base64OrDataUrl.includes(',') ? base64OrDataUrl.split(',')[1] : base64OrDataUrl;
   const size = Math.round((base64Data.length * 3) / 4);
@@ -117,6 +119,7 @@ export async function saveImageToFirestore(
     // Fits in a single document
     await setDoc(docRef, {
       name: cleanName,
+      ownerId,
       contentType,
       size,
       chunksCount: 1,
@@ -133,6 +136,7 @@ export async function saveImageToFirestore(
     // Save metadata
     await setDoc(docRef, {
       name: cleanName,
+      ownerId,
       contentType,
       size,
       chunksCount: chunks.length,

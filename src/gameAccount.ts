@@ -1,3 +1,4 @@
+import { fetchPublicProfiles } from './lib/publicProfiles';
 import {startCoinRun,recordRunCoins} from './lib/gameCoins';
 import { syncGameCosmetics } from './lib/gameCosmetics';
 import { auth, db } from './lib/firebase';
@@ -26,26 +27,14 @@ window.addEventListener('message', (event) => {
     queue = queue.then(async () => {
       await auth.authStateReady();
       try {
-        const { collection, getDocs, limit, orderBy, query, where } = await import('firebase/firestore');
-        const count = typeof data.count === 'number' && data.count > 0 ? Math.min(data.count, 200) : 10;
-        const q = query(
-          collection(db, 'users'),
-          where('stats.ittihadawyScore', '>=', 1),
-          orderBy('stats.ittihadawyScore', 'desc'),
-          limit(count + 1)
-        );
-        const snapshot = await getDocs(q);
-        const hasMore = snapshot.docs.length > count;
-        const items = snapshot.docs.slice(0, count).map((docItem, index) => {
-          const d = docItem.data();
-          return {
-            rank: index + 1,
-            id: docItem.id,
-            name: d.name || d.displayName || d.username || 'عضو الاتحاد',
-            score: Math.floor(Number(d.stats?.ittihadawyScore ?? d.ittihadawyScore ?? 0)),
-            character: d.stats?.ittihadawyCharacter || '',
-          };
-        }).filter(item => Number.isSafeInteger(item.score) && item.score >= 1);
+        const count = typeof data.count === 'number' && data.count > 0 ? Math.min(Math.floor(data.count), 200) : 10;
+        const profiles = await fetchPublicProfiles({ mode: 'runner', count: count + 1 });
+        const hasMore = profiles.length > count;
+        const items = profiles.slice(0, count).map((profile, index) => ({
+          rank: index + 1, id: profile.uid, name: profile.name,
+          score: Math.floor(Number(profile.stats?.ittihadawyScore || 0)),
+          character: profile.stats?.ittihadawyCharacter || ''
+        })).filter(item => Number.isSafeInteger(item.score) && item.score >= 1);
 
         parentWindow.postMessage({
           type: 'ittihadawy:leaderboard-data',
@@ -84,36 +73,14 @@ window.addEventListener('message', (event) => {
     }
     reply('saving', data.id);
     try {
-      const reference = doc(db, 'users', uid);
-      await runTransaction(db, async (transaction) => {
-        const profile = await transaction.get(reference);
-        if (!profile.exists()) throw new Error('Member profile missing');
-        if (auth.currentUser?.uid !== uid) throw new Error('Account changed');
-        const update = improvedGameStats(profile.data().stats, data.result);
-        if (update) transaction.update(reference, update);
+      const token = await auth.currentUser!.getIdToken();
+      const response = await fetch('/api/game/record-score', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ result: data.result })
       });
+      if (!response.ok || (await response.json()).success !== true) throw new Error('Score save failed');
       runs.delete(data.id); reply('saved', data.id);
-    } catch (primaryErr) {
-      try {
-        if (typeof fetch === 'function' && auth.currentUser?.getIdToken) {
-          const token = await auth.currentUser.getIdToken();
-          const response = await fetch('/api/game/record-score', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ result: data.result })
-          });
-          if (response.ok && (await response.json()).success === true) {
-            runs.delete(data.id);
-            reply('saved', data.id);
-            return;
-          }
-        }
-      } catch (fallbackErr) {
-        console.warn('Fallback server score save error:', fallbackErr);
-      }
+    } catch {
       reply('error', data.id);
     }
   }).catch(() => reply('error', data.id));

@@ -46,6 +46,30 @@ service cloud.firestore {
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
 
+    // Permit one member's like transition, without replacing other members' IDs.
+    function ownLikeList(before, after) {
+      return isSignedIn() && before is list && after is list &&
+        after.toSet().difference(before.toSet()).hasOnly([request.auth.uid]) &&
+        before.toSet().difference(after.toSet()).hasOnly([request.auth.uid]) &&
+        after.size() == after.toSet().size();
+    }
+    function validLikeUpdate() {
+      let before = existing().get('likedBy', []);
+      let after = incoming().get('likedBy', []);
+      return incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'likedBy']) &&
+        ownLikeList(before, after) && incoming().likes is int && incoming().likes >= 0 &&
+        incoming().likes == after.size();
+    }
+    function validPublicEngagement() {
+      let changed = incoming().diff(existing()).affectedKeys();
+      return (changed.hasOnly(['views']) && incoming().views is int && incoming().views >= 0 &&
+              incoming().views == (existing().get('views', 0) is int ? existing().get('views', 0) : 0) + 1) ||
+        (isSignedIn() && changed.hasOnly(['shares']) && incoming().shares is int &&
+              incoming().shares == existing().get('shares', 0) + 1) ||
+        validLikeUpdate() ||
+        (changed.hasOnly(['likes']) && ownLikeList(existing().get('likes', []), incoming().likes));
+    }
+
     // User Profile Validation
     function isValidUser(data) {
       return (data.get('name', '') is string) && (data.get('name', '').size() <= 100) &&
@@ -149,24 +173,42 @@ service cloud.firestore {
       allow delete: if true;
     }
 
+    function unchangedGameRecords() {
+      return incoming().get('stats', {}).diff(existing().get('stats', {})).affectedKeys().hasAny([
+        'ittihadawyScore', 'ittihadawyDistance', 'ittihadawyCharacter',
+        'ittihadawyZombieScore', 'ittihadawyZombieDistance', 'ittihadawyZombieCharacter', 'ittihadawyZombieKills'
+      ]) == false;
+    }
+    function noInitialGameRecords() {
+      return !incoming().get('stats', {}).keys().hasAny([
+        'ittihadawyScore', 'ittihadawyDistance', 'ittihadawyCharacter',
+        'ittihadawyZombieScore', 'ittihadawyZombieDistance', 'ittihadawyZombieCharacter', 'ittihadawyZombieKills'
+      ]);
+    }
+
     match /users/{userId} {
-      allow read: if true;
+      allow read: if isOwner(userId) || isAdmin() || isUserManager();
       // Newly created user profile MUST be standard 'user' role with no privileged claims:
       allow create: if isOwner(userId) && 
-                      incoming().keys().hasAll(['name', 'email']) &&
+                      incoming().keys().hasAll(['name', 'email']) && noInitialGameRecords() &&
                       isValidUser(incoming()) &&
                       incoming().get('role', 'user') == 'user' &&
+                      incoming().get('uid', userId) == userId &&
+                      incoming().get('tier', 'new') == 'new' &&
+                      incoming().get('isVerified', false) == false &&
+                      incoming().get('isVerifiedMember', false) == false &&
                       (!('roles' in incoming()) || (incoming().roles is list && incoming().roles.size() == 0)) &&
                       (!('isAdmin' in incoming()) || incoming().isAdmin == false);
       // Profile updates: fast-path for stats/lastActive (safe for all members and roles), or validated non-privileged profile update:
       allow update: if (
-        isOwner(userId) && (
-          // Fast-path: updating game score/stats or activity only - 100% safe, cannot touch any role or profile field
+        isOwner(userId) && unchangedGameRecords() && (
+          // Legacy client-owned stats: requires server scoring migration before restricting writes
           incoming().diff(existing()).affectedKeys().hasOnly(['stats', 'lastActive']) ||
           // Standard profile update (cannot modify privileged role/roles/isAdmin)
           (
             isValidUser(incoming()) &&
-            !incoming().diff(existing()).affectedKeys().hasAny(['role', 'roles', 'isAdmin']) &&
+            incoming().get('uid', userId) == userId &&
+            !incoming().diff(existing()).affectedKeys().hasAny(['role', 'roles', 'isAdmin', 'tier', 'isVerified', 'isVerifiedMember']) &&
             (!('isAdmin' in incoming()) || incoming().isAdmin == false) &&
             incoming().diff(existing()).affectedKeys().hasOnly([
               'name', 'username', 'bio', 'location', 'avatar', 'tier', 
@@ -213,7 +255,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if (isMediaEditor() || isAdmin()) && isValidMedia(incoming());
       allow update: if ((isMediaEditor() || isAdmin()) && isValidMedia(incoming())) ||
-                       (incoming().diff(existing()).affectedKeys().hasOnly(['views', 'likes', 'likedBy', 'shares']));
+                       validPublicEngagement();
       allow delete: if isMediaEditor() || isAdmin();
     }
 
@@ -232,7 +274,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if (isAdmin() || isWriter()) && isValidNews(incoming());
       allow update: if ((isAdmin() || isWriter()) && isValidNews(incoming())) ||
-                       (incoming().diff(existing()).affectedKeys().hasOnly(['views', 'shares', 'reactions', 'likes', 'likedBy']));
+                       validPublicEngagement();
       allow delete: if isAdmin() || isWriter();
     }
 
@@ -248,12 +290,31 @@ service cloud.firestore {
       allow write: if isAdmin() || isMatchesEditor() || isLayoutEditor();
     }
 
+    function validPollVote(before, after) {
+      let uid = request.auth.uid;
+      let oldChoices = before.get('voterChoices', {});
+      let choices = after.get('voterChoices', {});
+      let previous = oldChoices.get(uid, -1);
+      let choice = choices.get(uid, -1);
+      let oldVotes = before.get('votes', {});
+      let votes = after.get('votes', {});
+      return isSignedIn() && after.diff(before).affectedKeys().hasOnly(['votes', 'voters', 'voterChoices']) &&
+        choice is int && choice >= 0 && choice < before.options.size() && choice != previous &&
+        choices.diff(oldChoices).affectedKeys().hasOnly([uid]) &&
+        ownLikeList(before.get('voters', []), after.voters) && uid in after.voters &&
+        votes.diff(oldVotes).affectedKeys().hasOnly([string(choice), string(previous)]) &&
+        votes[string(choice)] is int && votes[string(choice)] >= 1 && votes[string(choice)] == oldVotes.get(string(choice), 0) + 1 &&
+        (previous == -1 ? !votes.diff(oldVotes).affectedKeys().hasAny(['-1']) :
+          (previous is int && previous >= 0 && previous < before.options.size() &&
+           votes[string(previous)] is int && votes[string(previous)] >= 0 && votes[string(previous)] == oldVotes.get(string(previous), 0) - 1));
+    }
+
     // Polls
     match /polls/{pollId} {
       allow read: if true;
       allow create, delete: if isAdmin() || isLayoutEditor() || isUserManager();
       allow update: if (isAdmin() || isLayoutEditor() || isUserManager()) ||
-                       (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['votes', 'voters', 'voterChoices']));
+                       (isSignedIn() && validPollVote(existing(), incoming()));
     }
 
     // Predictions
@@ -280,15 +341,17 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isSignedIn() && incoming().userId == request.auth.uid;
       allow update: if isSignedIn() && (
-        (resource.data.userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'image', 'location', 'poll'])) ||
-        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'likedBy', 'poll', 'commentsCount']))
+        (resource.data.userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'image', 'location'])) ||
+        validLikeUpdate() ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['poll']) && validPollVote(existing().poll, incoming().poll)) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['commentsCount']) && incoming().commentsCount is int && incoming().commentsCount >= 0 && (incoming().commentsCount == existing().get('commentsCount', 0) + 1 || incoming().commentsCount == existing().get('commentsCount', 0) - 1))
       );
       allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
 
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if isSignedIn();
-        allow update: if isSignedIn() && resource.data.userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['text']);
+        allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+        allow update: if isSignedIn() && ((resource.data.userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['text'])) || validLikeUpdate());
         allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
       }
     }
@@ -312,7 +375,7 @@ service cloud.firestore {
 
     // Orders
     match /orders/{orderId} {
-      allow create: if isSignedIn();
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
       allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isStoreEditor());
       allow update: if isAdmin() || isStoreEditor();
       allow delete: if isAdmin() || isStoreEditor();
@@ -411,15 +474,30 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidMoment(incoming());
       allow update: if isSignedIn() && (
         (resource.data.userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'image'])) ||
-        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'likedBy']))
+        validLikeUpdate()
       );
       allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
 
-    // Match Day Attendance Polls
+    function validAttendance(before, after) {
+      let uid = request.auth.uid;
+      let oldVoters = before.get('voters', {});
+      let choice = after.voters.get(uid, '');
+      let previous = oldVoters.get(uid, '');
+      let oldVotes = before.get('votes', {'yes': 0, 'no': 0, 'maybe': 0});
+      return after.keys().hasOnly(['matchId', 'votes', 'voters']) &&
+        choice in ['yes', 'no', 'maybe'] && choice != previous &&
+        after.voters.diff(oldVoters).affectedKeys().hasOnly([uid]) &&
+        after.votes.keys().hasOnly(['yes', 'no', 'maybe']) &&
+        after.votes.diff(oldVotes).affectedKeys().hasOnly([choice, previous]) &&
+        after.votes[choice] is int && after.votes[choice] >= 1 && after.votes[choice] == oldVotes.get(choice, 0) + 1 &&
+        (previous == '' || (previous in ['yes', 'no', 'maybe'] && after.votes[previous] is int &&
+          after.votes[previous] >= 0 && after.votes[previous] == oldVotes.get(previous, 0) - 1));
+    }
     match /match_day_attendance/{pollId} {
       allow read: if true;
-      allow create, update: if isSignedIn();
+      allow create: if isSignedIn() && incoming().matchId is string && pollId == 'attendance_' + incoming().matchId && validAttendance({}, incoming());
+      allow update: if isSignedIn() && incoming().matchId == existing().matchId && validAttendance(existing(), incoming());
     }
 
     // Fan Comments (General/Standalone)
@@ -502,6 +580,27 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    function boundedCounter(field) {
+      return incoming().diff(existing()).affectedKeys().hasOnly([field]) && incoming()[field] is int && incoming()[field] >= 0 &&
+        (incoming()[field] == existing().get(field, 0) + 1 || incoming()[field] == existing().get(field, 0) - 1);
+    }
+    function ownEmbeddedEntry(listField, countField) {
+      let before = existing().get(listField, []);
+      let after = incoming().get(listField, []);
+      let added = after.removeAll(before);
+      let removed = before.removeAll(after);
+      return incoming().diff(existing()).affectedKeys().hasOnly([listField, countField]) &&
+        after.size() <= 500 && incoming()[countField] == after.size() &&
+        ((added.size() == 1 && removed.size() == 0 && after.size() == before.size() + 1 &&
+          added[0].userId == request.auth.uid && added[0].content is string && added[0].content.size() <= 5000) ||
+         (removed.size() == 1 && added.size() == 0 && after.size() == before.size() - 1 && removed[0].userId == request.auth.uid));
+    }
+    function validEventAttendance() {
+      return incoming().diff(existing()).affectedKeys().hasOnly(['participantUids', 'participantsCount']) &&
+        ownLikeList(existing().get('participantUids', []), incoming().participantUids) &&
+        incoming().participantsCount == incoming().participantUids.size();
+    }
+
     // World Fans Association (رابطة اتحاداوية العالم)
     match /world_countries/{countryId} {
       allow read: if true;
@@ -510,40 +609,54 @@ service cloud.firestore {
 
     match /world_groups/{groupId} {
       allow read: if true;
-      allow create: if isSignedIn();
-      allow update: if isAdmin() || isUserManager() || isLayoutEditor() || (isSignedIn() && (resource.data.get('adminUid', '') == request.auth.uid || incoming().diff(existing()).affectedKeys().hasOnly(['memberCount', 'eventsCount', 'postsCount', 'galleryCount'])));
+      allow create: if isAdmin() || isUserManager() || isLayoutEditor();
+      allow update: if isAdmin() || isUserManager() || isLayoutEditor() || (isSignedIn() && ((resource.data.get('adminUid', '') == request.auth.uid && !incoming().diff(existing()).affectedKeys().hasAny(['adminUid', 'verified', 'featured', 'status', 'adminEmail', 'adminPhone'])) || boundedCounter('memberCount') || boundedCounter('eventsCount') || boundedCounter('postsCount') || boundedCounter('galleryCount')));
       allow delete: if isAdmin() || isUserManager() || isLayoutEditor() || (isSignedIn() && resource.data.get('adminUid', '') == request.auth.uid);
     }
 
     match /world_posts/{postId} {
       allow read: if true;
-      allow create: if isSignedIn();
-      allow update: if isAdmin() || isUserManager() || (isSignedIn() && (resource.data.authorId == request.auth.uid || incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'likedBy', 'commentsCount', 'comments', 'pinned'])));
+      allow create: if isSignedIn() && incoming().authorId == request.auth.uid && incoming().get('pinned', false) == false &&
+        incoming().get('likes', 0) == 0 && incoming().get('likedBy', []).size() == 0 && incoming().get('comments', []).size() == 0 &&
+        incoming().get('commentsCount', 0) == 0 && incoming().content is string && incoming().content.size() <= 5000;
+      allow update: if isAdmin() || isUserManager() || (isSignedIn() && (
+        (existing().authorId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'images', 'category'])) ||
+        validLikeUpdate() || ownEmbeddedEntry('comments', 'commentsCount')));
       allow delete: if isAdmin() || isUserManager() || (isSignedIn() && resource.data.authorId == request.auth.uid);
     }
 
     match /world_events/{eventId} {
       allow read: if true;
-      allow create: if isSignedIn();
-      allow update: if isAdmin() || isUserManager() || isSignedIn();
+      allow create: if isSignedIn() && incoming().authorId == request.auth.uid && incoming().participantUids == [request.auth.uid] && incoming().participantsCount == 1;
+      allow update: if isAdmin() || isUserManager() || (isSignedIn() && (
+        (existing().get('authorId', '') == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'date', 'time', 'location', 'mapsUrl', 'image', 'status', 'type'])) || validEventAttendance()));
       allow delete: if isAdmin() || isUserManager() || (isSignedIn() && resource.data.get('authorId', '') == request.auth.uid);
     }
 
     match /world_group_members/{memberId} {
-      allow read: if true;
-      allow write: if isSignedIn();
+      allow read: if isAdmin() || isUserManager() || (isSignedIn() && existing().userId == request.auth.uid);
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid &&
+        incoming().groupId is string && memberId == incoming().groupId + '_' + request.auth.uid &&
+        incoming().userName is string && incoming().userName.size() <= 100 &&
+        incoming().get('userAvatar', '') is string && incoming().get('userAvatar', '').size() <= 5000 &&
+        incoming().get('role', 'member') == 'member' && incoming().get('userRole', 'member') in ['member', 'user'] && !incoming().keys().hasAny(['userEmail']);
+      allow update: if isAdmin() || isUserManager() || (isSignedIn() && existing().userId == request.auth.uid &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['userName', 'userAvatar']));
+      allow delete: if isAdmin() || isUserManager() || (isSignedIn() && existing().userId == request.auth.uid);
     }
 
     match /world_group_gallery/{itemId} {
       allow read: if true;
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin() || isUserManager() || (isSignedIn() && resource.data.get('uploadedBy', '') == request.auth.uid);
+      allow create: if isSignedIn() && incoming().uploadedBy == request.auth.uid;
+      allow update: if isAdmin() || isUserManager() || (isSignedIn() && existing().get('uploadedBy', '') == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['imageUrl', 'caption', 'category']));
+      allow delete: if isAdmin() || isUserManager() || (isSignedIn() && existing().get('uploadedBy', '') == request.auth.uid);
     }
 
     match /world_help_requests/{requestId} {
       allow read: if true;
-      allow create: if isSignedIn();
-      allow update: if isAdmin() || isUserManager() || (isSignedIn() && (resource.data.userId == request.auth.uid || incoming().diff(existing()).affectedKeys().hasOnly(['repliesCount', 'replies', 'status'])));
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && incoming().get('replies', []).size() == 0;
+      allow update: if isAdmin() || isUserManager() || (isSignedIn() && (
+        (existing().userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'category', 'status', 'city'])) || ownEmbeddedEntry('replies', 'repliesCount')));
       allow delete: if isAdmin() || isUserManager() || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
 
@@ -572,16 +685,30 @@ service cloud.firestore {
       allow update, delete: if isAdmin() || isLayoutEditor();
     }
 
-    // Direct Firestore Image Storage & Subcollections
-    match /app_images/{imageId}/{document=**} {
-      allow read: if true;
-      allow create, update: if isSignedIn() || isAdmin();
-      allow delete: if isAdmin();
+    function validImageMetadata(data) {
+      return data.keys().hasOnly(['name', 'ownerId', 'contentType', 'size', 'chunksCount', 'data', 'updatedAt', 'url', 'storagePath', 'provider']) &&
+        data.ownerId == request.auth.uid && data.name is string && data.name.size() <= 180 &&
+        data.contentType is string && data.contentType.matches('image/(jpeg|png|webp|gif|avif|bmp)') &&
+        data.size is number && data.size >= 0 && data.size < 50 * 1024 * 1024 &&
+        data.get('chunksCount', 1) is int && data.get('chunksCount', 1) >= 1 && data.get('chunksCount', 1) <= 108 &&
+        data.get('data', '') is string && data.get('data', '').size() <= 650000 &&
+        data.get('url', '') is string && data.get('url', '').size() <= 10000 &&
+        data.get('storagePath', '') is string && data.get('storagePath', '').size() <= 1000 &&
+        data.get('updatedAt', '') is string && data.get('updatedAt', '').size() <= 100;
     }
     match /app_images/{imageId} {
       allow read: if true;
-      allow create, update: if isSignedIn() || isAdmin();
-      allow delete: if isAdmin();
+      allow create: if isSignedIn() && validImageMetadata(incoming());
+      allow update: if isSignedIn() && existing().ownerId == request.auth.uid && validImageMetadata(incoming());
+      allow delete: if isAdmin() || (isSignedIn() && existing().ownerId == request.auth.uid);
+      match /chunks/{chunkId} {
+        function ownsImage() { return isSignedIn() && get(/databases/$(database)/documents/app_images/$(imageId)).data.ownerId == request.auth.uid; }
+        allow read: if true;
+        allow create, update: if ownsImage() && incoming().keys().hasOnly(['index', 'data']) &&
+          incoming().index is int && incoming().index >= 0 && incoming().index < 108 && chunkId == string(incoming().index) &&
+          incoming().data is string && incoming().data.size() <= 650000;
+        allow delete: if ownsImage();
+      }
     }
 
     // Global Admin Override
