@@ -111,7 +111,7 @@ export const SafeImage: React.FC<SafeImageProps> = ({
     setIsLoaded(true);
   };
 
-  const isContain = className.includes('object-contain');
+  const isContain = className.includes('object-contain') || (!!teamName && !className.includes('object-cover'));
   const fitClass = isContain ? 'object-contain' : 'object-cover';
 
   return (

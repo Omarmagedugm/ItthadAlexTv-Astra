@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, X, PartyPopper } from 'lucide-react';
 import confetti from '../lib/confetti';
@@ -55,21 +56,23 @@ export default function WinCelebration({ show, onComplete, match }: WinCelebrati
     }
   }, [show, onComplete]);
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {show && isVisible && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-auto"
+          role="dialog" aria-modal="true" aria-labelledby="win-celebration-title" dir="rtl"
+          className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto overflow-x-hidden p-3 sm:p-6 pointer-events-auto"
         >
           <div className="absolute inset-0 bg-green-950/60 backdrop-blur-md" />
           
           <button 
             onClick={() => { setIsVisible(false); onComplete(); }}
-            className="ds-control absolute top-8 right-8 z-50 p-3 bg-white/20 hover:bg-white/40 backdrop-blur-xl rounded-full text-white border border-white/20 transition-all pointer-events-auto"
-            title="إغلاق"
+            style={{ top: 'max(12px, env(safe-area-inset-top))', right: 'max(12px, env(safe-area-inset-right))' }}
+            className="ds-control fixed z-50 p-3 bg-white/20 hover:bg-white/40 backdrop-blur-xl rounded-full text-white border border-white/20 transition-all pointer-events-auto"
+            title="إغلاق" aria-label="إغلاق رسالة الفوز"
           >
             <X size={24} />
           </button>
@@ -79,7 +82,7 @@ export default function WinCelebration({ show, onComplete, match }: WinCelebrati
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 1.2, opacity: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="relative flex flex-col items-center max-w-md w-full px-4"
+            className="relative flex flex-col items-center max-w-md w-full min-w-0 max-h-[calc(100dvh-24px)] overflow-y-auto py-12 sm:py-16"
           >
             <div className="relative mb-6">
               <motion.div
@@ -96,43 +99,43 @@ export default function WinCelebration({ show, onComplete, match }: WinCelebrati
               />
             </div>
 
-            <div className="text-center">
-              <h2 className="ds-content-heading text-4xl font-bold text-white uppercase drop-shadow-sm mb-2">
-                سيد البلد فـــــــــاز!
+            <div className="text-center w-full min-w-0">
+              <h2 id="win-celebration-title" style={{ fontSize: 'clamp(1.5rem, 7vw, 2.25rem)' }} className="ds-content-heading font-bold text-white uppercase drop-shadow-sm mb-2">
+                سيد البلد فاز!
               </h2>
-              <div className="text-yellow-400 font-bold text-xl flex items-center justify-center gap-2 mb-8">
-                <PartyPopper size={20} />
+              <div className="text-yellow-400 font-bold text-sm sm:text-lg flex items-center justify-center gap-1.5 mb-5">
+                <PartyPopper size={18} className="shrink-0" />
                 <span>مبروك لنادي الاتحاد السكندري</span>
-                <PartyPopper size={20} />
+                <PartyPopper size={18} className="shrink-0" />
               </div>
               
-              <div className="mt-8 flex justify-center">
-                <div className="inline-flex flex-col items-center bg-black/80 backdrop-blur-3xl px-8 py-6 rounded-xl border border-white/30 shadow-[0_30px_60px_rgba(0,0,0,0.6)] ring-1 ring-white/10 group relative overflow-hidden">
+              <div className="mt-5 w-full">
+                <div className="flex w-full min-w-0 flex-col items-center bg-black/80 backdrop-blur-3xl px-3 py-5 sm:px-6 rounded-xl border border-white/30 shadow-[0_30px_60px_rgba(0,0,0,0.6)] ring-1 ring-white/10 group relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-50" />
                   
-                  <div className="relative flex items-center justify-center gap-8">
-                    <div className="flex flex-col items-center gap-2 min-w-[80px]">
-                      <div className="ds-content-card w-16 h-16 bg-white/5 rounded-lg p-2 border border-white/10 shadow-inner">
+                  <div className="relative grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-4">
+                    <div className="flex min-w-0 flex-col items-center gap-2">
+                      <div className="ds-content-card w-12 h-12 sm:w-16 sm:h-16 bg-white/5 rounded-lg p-2 border border-white/10 shadow-inner">
                         <SafeImage teamName={match.homeTeam} src={match.homeLogo} className="w-full h-full object-contain drop-shadow-md" alt={match.homeTeam} />
                       </div>
-                      <span className="text-white font-bold text-[12px] truncate max-w-[80px]">{match.homeTeam}</span>
+                      <span className="text-white font-bold text-[11px] sm:text-xs w-full break-words">{match.homeTeam}</span>
                     </div>
                     
-                    <div className="flex items-center gap-4">
-                      <span className="text-6xl font-bold text-white tabular-nums drop-shadow-sm">
+                    <div className="flex min-w-0 items-center justify-center gap-1.5 sm:gap-3">
+                      <span style={{ fontSize: 'clamp(1.5rem, 6.5vw, 2.5rem)' }} className="font-bold text-white tabular-nums leading-none drop-shadow-sm">
                         {match.homeScore}
                       </span>
-                      <span className="text-3xl font-bold text-white/30">:</span>
-                      <span className="text-6xl font-bold text-white tabular-nums drop-shadow-sm">
+                      <span className="text-xl sm:text-2xl font-bold text-white/30">:</span>
+                      <span style={{ fontSize: 'clamp(1.5rem, 6.5vw, 2.5rem)' }} className="font-bold text-white tabular-nums leading-none drop-shadow-sm">
                         {match.awayScore}
                       </span>
                     </div>
 
-                    <div className="flex flex-col items-center gap-2 min-w-[80px]">
-                      <div className="ds-content-card w-16 h-16 bg-white/5 rounded-lg p-2 border border-white/10 shadow-inner">
+                    <div className="flex min-w-0 flex-col items-center gap-2">
+                      <div className="ds-content-card w-12 h-12 sm:w-16 sm:h-16 bg-white/5 rounded-lg p-2 border border-white/10 shadow-inner">
                         <SafeImage teamName={match.awayTeam} src={match.awayLogo} className="w-full h-full object-contain drop-shadow-md" alt={match.awayTeam} />
                       </div>
-                      <span className="text-white font-bold text-[12px] truncate max-w-[80px]">{match.awayTeam}</span>
+                      <span className="text-white font-bold text-[11px] sm:text-xs w-full break-words">{match.awayTeam}</span>
                     </div>
                   </div>
 
@@ -147,6 +150,6 @@ export default function WinCelebration({ show, onComplete, match }: WinCelebrati
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>, document.body
   );
 }

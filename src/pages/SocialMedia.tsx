@@ -28,6 +28,8 @@ export default function SocialMedia() {
   const { appSettings } = useAppStore();
   const [activeTab, setActiveTab] = useState<'timeline' | 'channels'>('timeline');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewVersion, setPreviewVersion] = useState(0);
   const [copied, setCopied] = useState(false);
   const [containerWidth, setContainerWidth] = useState<number>(360);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,7 +45,7 @@ export default function SocialMedia() {
   useEffect(() => {
     const updateWidth = () => {
       if (containerRef.current) {
-        const width = Math.min(Math.max(containerRef.current.offsetWidth, 300), 500);
+        const width = Math.min(Math.max(containerRef.current.clientWidth - 18, 180), 500);
         setContainerWidth(width);
       }
     };
@@ -57,23 +59,24 @@ export default function SocialMedia() {
     return () => ro.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (!isRefreshing) return;
+    const timer = window.setTimeout(() => setIsRefreshing(false), 12000);
+    return () => window.clearTimeout(timer);
+  }, [isRefreshing, previewVersion]);
+
   const handleRefresh = () => {
+    setShowPreview(true);
     setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      toast.success('تم تحديث منشورات الصفحة');
-    }, 800);
+    setPreviewVersion(value => value + 1);
   };
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     try {
-      navigator.clipboard.writeText(fbUrl);
+      await navigator.clipboard.writeText(fbUrl);
       setCopied(true);
-      toast.success('تم نسخ رابط صفحة الفيسبوك بنجاح');
-      setTimeout(() => setCopied(false), 2500);
-    } catch (err) {
-      toast.error('تعذر نسخ الرابط');
-    }
+      toast.success('تم نسخ رابط صفحة الفيسبوك');
+    } catch { toast.error('تعذر نسخ الرابط'); }
   };
 
   const handleShare = async () => {
@@ -92,7 +95,7 @@ export default function SocialMedia() {
 
   const iframeSrc = `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(
     fbUrl
-  )}&tabs=timeline&width=${containerWidth}&height=750&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId`;
+  )}&tabs=timeline&width=${containerWidth}&height=500&small_header=true&adapt_container_width=true&hide_cover=false&show_facepile=false`;
 
   // Official Channel Social Links - All customizable from Admin Dashboard
   const socialChannels = [
@@ -276,7 +279,7 @@ export default function SocialMedia() {
           }`}
         >
           <Flame size={16} />
-          <span>منشورات فيسبوك الحية</span>
+          <span>منشورات فيسبوك</span>
         </button>
 
         <button
@@ -297,13 +300,13 @@ export default function SocialMedia() {
         {activeTab !== 'channels' ? (
           <div className="flex flex-col items-center">
             {/* Embed Container */}
-            <div className="ds-content-card w-full bg-white dark:bg-card-dark rounded-xl overflow-hidden shadow-lg border border-slate-200/80 dark:border-border-dark p-2 flex flex-col items-center min-h-[580px]">
+            <div className="ds-content-card w-full bg-white dark:bg-card-dark rounded-xl overflow-hidden shadow-lg border border-slate-200/80 dark:border-border-dark p-2 flex flex-col items-center min-w-0">
               
               {/* Quick Bar Above Frame */}
               <div className="w-full flex items-center justify-between px-2 py-1.5 mb-2 border-b border-slate-100 dark:border-border-dark/60 text-xs">
                 <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-bold">
                   <ThumbsUp size={13} className="text-blue-600 dark:text-blue-400" />
-                  <span>تحديثات حية من فيسبوك</span>
+                  <span>منشورات الصفحة الرسمية</span>
                 </div>
                 <button
                   onClick={handleCopyLink}
@@ -314,29 +317,23 @@ export default function SocialMedia() {
                 </button>
               </div>
 
-              {/* Responsive Facebook Page Plugin Iframe */}
-              <div className="ds-content-card w-full flex justify-center overflow-hidden rounded-lg bg-slate-50 dark:bg-surface-dark relative min-h-[520px]">
-                {isRefreshing ? (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-card-dark/80 backdrop-blur-sm z-20">
-                    <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin mb-2" />
-                    <span className="text-xs font-bold text-slate-500">جاري التحديث...</span>
-                  </div>
-                ) : null}
-
-                <iframe
-                  key={`${activeTab}-${containerWidth}-${isRefreshing}`}
-                  title="Facebook Page Feed"
-                  src={iframeSrc}
-                  width={containerWidth}
-                  height="750"
-                  style={{ border: 'none', overflow: 'hidden', width: '100%', maxWidth: `${containerWidth}px` }}
-                  scrolling="yes"
-                  frameBorder="0"
-                  allowFullScreen={true}
-                  allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                  className="w-full rounded-lg shadow-inner transition-opacity duration-300"
-                />
+              <div className="w-full rounded-lg bg-blue-50 dark:bg-blue-950/30 p-4 text-center space-y-3">
+                <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">تابع أحدث الأخبار والتغطيات على صفحة القناة الرسمية.</p>
+                <a href={fbUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white whitespace-nowrap">
+                  <ExternalLink size={17} /> فتح منشورات فيسبوك
+                </a>
+                <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">لو المعاينة مش بتعرض المنشورات، افتح الصفحة مباشرة من الزر.</p>
+                <button type="button" onClick={() => { if (showPreview) { setShowPreview(false); setIsRefreshing(false); } else handleRefresh(); }} aria-expanded={showPreview} className="ds-control block mx-auto text-xs font-bold text-blue-600 dark:text-blue-400 py-2">
+                  {showPreview ? 'إخفاء المعاينة' : 'عرض المعاينة داخل التطبيق'}
+                </button>
               </div>
+              {showPreview && <div className="w-full mt-3 flex justify-center overflow-hidden rounded-lg relative" aria-busy={isRefreshing}>
+                {isRefreshing && <div role="status" className="absolute top-2 z-20 rounded-lg bg-white/90 dark:bg-slate-900/90 p-2 text-xs">جاري تحميل المعاينة…</div>}
+                <iframe key={`${containerWidth}-${previewVersion}`} title="معاينة صفحة فيسبوك" src={iframeSrc}
+                  width={containerWidth} height="500" style={{ border: 'none', width: '100%', maxWidth: containerWidth }}
+                  onLoad={() => setIsRefreshing(false)} onError={() => setIsRefreshing(false)}
+                  allowFullScreen allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" className="rounded-lg" />
+              </div>}
 
               {/* Bottom Helpful Callout */}
               <div className="w-full mt-3 p-3 bg-blue-50/70 dark:bg-blue-950/30 rounded-lg border border-blue-200/50 dark:border-blue-900/40 flex items-center justify-between gap-2">
