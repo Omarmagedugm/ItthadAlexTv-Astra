@@ -29,32 +29,6 @@ export const WELCOME_SECTIONS: HomeSection[] = [
   { id: 'welcome_feed', type: 'welcome_feed', active: true, order: 4, title: 'نبض النادي — عنوان الأقسام', spacing: 20 },
  ];
 
-export function resolveHomeSections(saved: HomeSection[] = []): HomeSection[] {
-  const sections = saved.length ? saved.map(s => ({ ...s })) : DEFAULT_HOME_SECTIONS_LIST.map(s => ({ ...s }));
-
-  // Ensure game section is always present in homepage sections
-  if (!sections.some(s => s.type === 'game' || s.id === 'game')) {
-    const gameSection: HomeSection = {
-      id: 'game',
-      type: 'game',
-      active: true,
-      order: 1.05,
-      title: 'لعبة اتحاداوي 🎮',
-      spacing: 20
-    };
-    const heroOrMatchIndex = sections.findIndex(s => s.type === 'matches' || s.type === 'hero');
-    if (heroOrMatchIndex >= 0) {
-      sections.splice(heroOrMatchIndex + 1, 0, gameSection);
-    } else {
-      sections.unshift(gameSection);
-    }
-  }
-
-  // Migrate the formerly fixed welcome widgets once, preserving the visible legacy order.
-  if (sections.some(s => WELCOME_SECTIONS.some(w => w.type === s.type))) return sections;
-  const priority = (s: HomeSection) => s.type === 'hero' ? 0 : s.type === 'game' ? 0.5 : s.type === 'matches' ? 1 : s.type === 'city' || s.id === 'city' ? 2 : 3;
-  sections.sort((a, b) => priority(a) - priority(b) || Number(!!b.pinned) - Number(!!a.pinned) || a.order - b.order);
-  const at = sections.findIndex(s => priority(s) === 3);
-  sections.splice(at < 0 ? sections.length : at, 0, ...WELCOME_SECTIONS.map(s => ({ ...s })));
-  return sections.map((s, order) => ({ ...s, order }));
+export function resolveHomeSections(saved?: HomeSection[]): HomeSection[] {
+  return (saved ?? [...DEFAULT_HOME_SECTIONS_LIST, ...WELCOME_SECTIONS]).map(section => ({ ...section }));
 }

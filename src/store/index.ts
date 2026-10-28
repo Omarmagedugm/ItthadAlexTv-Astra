@@ -1162,6 +1162,8 @@ export const useAppStore = create<AppState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
+          // Active ad visibility is revalidated from Firestore before use.
+          state.ads = [];
           state.dataLoaded = true;
           // Filter out legacy default items cached from older sessions so only user-added data remains
           if (Array.isArray(state.songs)) {
@@ -1193,9 +1195,6 @@ export const useAppStore = create<AppState>()(
           }
           if (state.sectionFlags && state.sectionFlags.game === undefined) {
             state.sectionFlags.game = true;
-          }
-          if (Array.isArray(state.homeSections) && !state.homeSections.some((s: any) => s.type === 'game' || s.id === 'game')) {
-            state.homeSections.splice(1, 0, { id: 'game', type: 'game', active: true, order: 0.9, title: 'لعبة اتحاداوي 🎮' });
           }
           if (Array.isArray(state.clubTrips)) {
             state.clubTrips = state.clubTrips.filter((t: any) => !t.id?.startsWith('trip-'));

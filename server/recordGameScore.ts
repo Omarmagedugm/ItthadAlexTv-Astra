@@ -1,54 +1,20 @@
-import { validGameResult } from '../src/lib/gameScores';
+import { improvedGameStats, validGameResult } from '../src/lib/gameScores';
+import { getAdminApp, getAdminDatabase } from './firebaseAdmin';
 
-type Config = { apiKey: string; projectId: string; firestoreDatabaseId?: string };
-export async function recordGameScore(token: string, result: unknown, config: Config, request: typeof fetch = fetch) {
+// Authentication and persistence are server-owned. Client telemetry is still
+// untrusted: this bounds and validates it, not an authoritative game replay.
+export async function recordGameScore(token: string, result: unknown, services = { verifyToken: (value: string) => getAdminApp().auth().verifyIdToken(value, true), getDatabase: getAdminDatabase }): Promise<{ status: number; body: { error?: string; success?: boolean; updated?: boolean } }> {
   if (!validGameResult(result)) return { status: 400, body: { error: 'invalid-result' } };
-  const identity = await request(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${config.apiKey}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: token })
+  let uid: string;
+  try { uid = (await services.verifyToken(token)).uid; }
+  catch { return { status: 401, body: { error: 'invalid-session' } }; }
+  const db = services.getDatabase();
+  const reference = db.doc(`users/${uid}`);
+  return db.runTransaction(async transaction => {
+    const profile = await transaction.get(reference);
+    if (!profile.exists) return { status: 404, body: { error: 'profile-unavailable' } };
+    const update = improvedGameStats(profile.data()?.stats, result);
+    if (update) transaction.update(reference, update);
+    return { status: 200, body: { success: true, updated: !!update } };
   });
-  if (!identity.ok) return { status: 401, body: { error: 'invalid-session' } };
-  const uid = (await identity.json()).users?.[0]?.localId;
-  if (!uid) return { status: 401, body: { error: 'invalid-session' } };
-  const url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/${encodeURIComponent(config.firestoreDatabaseId || '(default)')}/documents/users/${encodeURIComponent(uid)}`;
-  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const response = await request(url, { headers });
-    if (!response.ok) return { status: response.status === 403 ? 403 : 503, body: { error: 'profile-unavailable' } };
-    const profile = await response.json();
-    const stats = profile.fields?.stats?.mapValue?.fields || {};
-    if (result.mode === 'zombie') {
-      const previous = Number(stats.ittihadawyZombieScore?.integerValue ?? stats.ittihadawyZombieScore?.doubleValue ?? -1);
-      const prevKills = Number(stats.ittihadawyZombieKills?.integerValue ?? stats.ittihadawyZombieKills?.doubleValue ?? 0);
-      const nextKills = typeof result.kills === 'number' ? Math.max(prevKills, result.kills) : prevKills;
-      if (result.score <= previous) return { status: 200, body: { success: true, updated: false, currentScore: previous } };
-      const query = new URLSearchParams({ 'currentDocument.updateTime': profile.updateTime });
-      for (const field of ['ittihadawyZombieScore', 'ittihadawyZombieDistance', 'ittihadawyZombieCharacter', 'ittihadawyZombieKills']) query.append('updateMask.fieldPaths', `stats.${field}`);
-      const saved = await request(`${url}?${query}`, {
-        method: 'PATCH', headers, body: JSON.stringify({ fields: { stats: { mapValue: { fields: {
-          ittihadawyZombieScore: { integerValue: String(result.score) },
-          ittihadawyZombieDistance: { integerValue: String(result.distance) },
-          ittihadawyZombieCharacter: { stringValue: result.character },
-          ittihadawyZombieKills: { integerValue: String(nextKills) }
-        } } } } })
-      });
-      if (saved.ok) return { status: 200, body: { success: true, updated: true, currentScore: result.score } };
-      if (![409, 412].includes(saved.status)) return { status: saved.status === 403 ? 403 : 503, body: { error: 'save-failed' } };
-      continue;
-    }
-    const previous = Number(stats.ittihadawyScore?.integerValue ?? stats.ittihadawyScore?.doubleValue ?? -1);
-    if (result.score <= previous) return { status: 200, body: { success: true, updated: false, currentScore: previous } };
-    // A precondition prevents simultaneous rounds or retries from lowering the record.
-    const query = new URLSearchParams({ 'currentDocument.updateTime': profile.updateTime });
-    for (const field of ['ittihadawyScore', 'ittihadawyDistance', 'ittihadawyCharacter']) query.append('updateMask.fieldPaths', `stats.${field}`);
-    const saved = await request(`${url}?${query}`, {
-      method: 'PATCH', headers, body: JSON.stringify({ fields: { stats: { mapValue: { fields: {
-        ittihadawyScore: { integerValue: String(result.score) },
-        ittihadawyDistance: { integerValue: String(result.distance) },
-        ittihadawyCharacter: { stringValue: result.character }
-      } } } } })
-    });
-    if (saved.ok) return { status: 200, body: { success: true, updated: true, currentScore: result.score } };
-    if (![409, 412].includes(saved.status)) return { status: saved.status === 403 ? 403 : 503, body: { error: 'save-failed' } };
-  }
-  return { status: 503, body: { error: 'retry-save' } };
 }

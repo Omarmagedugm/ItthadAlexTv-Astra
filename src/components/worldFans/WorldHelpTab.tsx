@@ -1,3 +1,4 @@
+import { changeCommunityEntry } from '../../lib/communityWrites';
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { 
@@ -136,10 +137,7 @@ export const WorldHelpTab: React.FC<WorldHelpTabProps> = ({
     setReplyText('');
 
     try {
-      await updateDoc(doc(db, 'world_help_requests', requestId), {
-        repliesCount: (worldHelpRequests.find(r => r.id === requestId)?.repliesCount || 0) + 1,
-        replies: arrayUnion(newReply)
-      });
+      await changeCommunityEntry('world_help_requests', requestId, 'replies', 'repliesCount', newReply);
     } catch (e) {
       console.warn('Reply added locally:', e);
     }
@@ -194,10 +192,7 @@ export const WorldHelpTab: React.FC<WorldHelpTabProps> = ({
 
     if (targetReply) {
       try {
-        await updateDoc(doc(db, 'world_help_requests', requestId), {
-          repliesCount: Math.max(0, (req.repliesCount || 1) - 1),
-          replies: arrayRemove(targetReply)
-        });
+        await changeCommunityEntry('world_help_requests', requestId, 'replies', 'repliesCount', targetReply, true);
       } catch (e) {
         console.warn('Reply remove sync:', e);
       }

@@ -1,3 +1,5 @@
+import { memberUploadPath } from '../../lib/uploadPath';
+import storageRules from '../../../storage.rules?raw';
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Cloud, 
@@ -163,7 +165,7 @@ export const CloudinaryMigrationManager: React.FC = () => {
           const blob = await blobRes.blob();
 
           // B. Upload directly to Firebase Storage via client SDK
-          const fileRef = ref(storage, `images/${filename}`);
+          const fileRef = ref(storage, memberUploadPath(auth.currentUser?.uid, 'images', filename));
           const uploadSnapshot = await uploadBytes(fileRef, blob, {
             contentType: meta.contentType || blob.type || 'image/jpeg'
           });
@@ -178,7 +180,7 @@ export const CloudinaryMigrationManager: React.FC = () => {
             body: JSON.stringify({
               filename,
               downloadUrl,
-              storagePath: `images/${filename}`,
+              storagePath: memberUploadPath(auth.currentUser?.uid, 'images', filename),
               size: blob.size,
               contentType: meta.contentType || blob.type
             })
@@ -441,7 +443,7 @@ export const CloudinaryMigrationManager: React.FC = () => {
           const blob = await resp.blob();
           const ext = blob.type.includes('png') ? 'png' : blob.type.includes('webp') ? 'webp' : 'jpg';
           const cleanName = currentItem.originalUrl.split('/').pop()?.split('?')[0].replace(/[^a-zA-Z0-9._-]/g, '_') || `migrated_${Date.now()}`;
-          const storagePath = `migrated_cloudinary/${Date.now()}_${cleanName}.${ext}`;
+          const storagePath = memberUploadPath(auth.currentUser?.uid, 'migrated_cloudinary', `${Date.now()}_${cleanName}.${ext}`);
 
           try {
             // Attempt Upload to Firebase Storage
@@ -793,8 +795,7 @@ export const CloudinaryMigrationManager: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
-                    const code = `rules_version = '2';\nservice firebase.storage {\n  match /b/{bucket}/o {\n    match /{allPaths=**} {\n      allow read, write: if true;\n    }\n  }\n}`;
-                    navigator.clipboard.writeText(code);
+                    navigator.clipboard.writeText(storageRules);
                     toast.success('تم نسخ قواعد التخزين بنجاح!');
                   }}
                   className="ds-control px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all"
@@ -814,17 +815,10 @@ export const CloudinaryMigrationManager: React.FC = () => {
               </div>
             </div>
             <pre className="p-2.5 bg-slate-900 text-emerald-400 font-mono text-[11px] rounded-xl overflow-x-auto text-left ltr direction-ltr">
-{`rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if true;
-    }
-  }
-}`}
+{storageRules}
             </pre>
             <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80">
-              انسخ الكود أعلاه، ثم اضغط على "فتح صفحة Rules"، والصق الكود واضغط <strong>Publish</strong>، ثم اضغط على <strong>"بدء النقل والتحقق"</strong>.
+              انشر القواعد مع نسخة التطبيق المتوافقة بعد اكتمال اختبارات الرفع والصلاحيات.
             </p>
           </div>
         )}

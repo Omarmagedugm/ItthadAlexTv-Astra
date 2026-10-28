@@ -135,6 +135,34 @@
   ],
   "rewrites": [
     {
+      "source": "/news",
+      "destination": "/seo/news.html"
+    },
+    {
+      "source": "/matches",
+      "destination": "/seo/matches.html"
+    },
+    {
+      "source": "/media",
+      "destination": "/seo/media.html"
+    },
+    {
+      "source": "/history",
+      "destination": "/seo/history.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/seo/privacy-policy.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/seo/terms.html"
+    },
+    {
+      "source": "/privacy-policy",
+      "destination": "/seo/privacy-policy.html"
+    },
+    {
       "source": "/sitemap.xml",
       "destination": "/api/sitemap"
     },
@@ -155,7 +183,7 @@
       "destination": "/api/news-meta"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]

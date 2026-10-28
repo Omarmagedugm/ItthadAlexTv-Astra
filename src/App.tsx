@@ -242,16 +242,16 @@ export default function App() {
 }
 
 function AppContent() {
-  const { startupReady } = useFirestoreSync();
+  const { startupReady, startupFailed } = useFirestoreSync();
   const [startupComplete, setStartupComplete] = useState(() => {
     try { return startupReady || sessionStorage.getItem('ittihad-startup-complete') === '1'; } catch { return startupReady; }
   });
   useEffect(() => {
-    if (startupReady) {
+    if (startupReady || startupFailed) {
       setStartupComplete(true);
       try { sessionStorage.setItem('ittihad-startup-complete', '1'); } catch {}
     }
-  }, [startupReady]);
+  }, [startupReady, startupFailed]);
   const matches = useAppStore(state => state.matches);
   const [showGoal, setShowGoal] = useState(false);
   const [showWin, setShowWin] = useState(false);
@@ -543,7 +543,10 @@ function GlobalSEOSynchronizer() {
 }
 
   // Keep all navigation and page chrome unmounted during startup.
-  if (!startupReady && !startupComplete) return <AppPreloader />;
+  if (!startupReady) {
+    if (!startupComplete && !startupFailed) return <AppPreloader />;
+    return <div role="status" dir="rtl" className="min-h-screen flex items-center justify-center p-6">{startupFailed ? 'تعذر تحميل الإعدادات. تحقق من الاتصال.' : 'جاري تحميل إعدادات التطبيق…'}</div>;
+  }
 
   // Auth Redirection Logic
   return (

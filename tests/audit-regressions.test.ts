@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { applyPollVote } from '../src/lib/pollVote';
+import { memberUploadPath } from '../src/lib/uploadPath';
+import { resolveHomeSections } from '../src/lib/homeSections';
+import { injectPageMetadata, PUBLIC_PAGE_METADATA } from '../server/pageMetadata';
+assert.deepEqual(resolveHomeSections([]), []);
+const sections = [{ id: 'news', type: 'news', enabled: false, order: 1 }] as any;
+assert.deepEqual(resolveHomeSections(sections), sections);
+assert.notEqual(resolveHomeSections(sections)[0], sections[0]);
+const poll = { options: ['a', 'b'], votes: { 0: 1, 1: 0 }, voters: ['alice'], voterChoices: { alice: 0 } };
+assert.equal(applyPollVote(poll, 'alice', 0), null);
+assert.deepEqual(applyPollVote(poll, 'alice', 1)?.votes, { 0: 0, 1: 1 });
+assert.deepEqual(applyPollVote(poll, 'bob', 0)?.votes, { 0: 2, 1: 0 });
+assert.throws(() => applyPollVote(poll, 'alice', 3));
+assert.equal(poll.votes[0], 1);
+assert.equal(memberUploadPath('alice', 'images', 'x.png'), 'uploads/alice/images/x.png');
+assert.throws(() => memberUploadPath(undefined, 'images', 'x.png'));
+assert.throws(() => memberUploadPath('../bob', 'images', 'x.png'));
+assert.ok(!memberUploadPath('alice', '../images', '../x.png').includes('/../'));
+const html = readFileSync('index.html', 'utf8');
+for (const pathname of Object.keys(PUBLIC_PAGE_METADATA)) {
+ const result = injectPageMetadata(html, pathname);
+ assert.equal((result.match(/rel="canonical"/g) || []).length, 1);
+ const canonicalPath = pathname === '/privacy' ? '/privacy-policy' : pathname;
+ assert.ok(result.includes(`href="https://itthadalextv.com${canonicalPath}"`));
+ assert.equal((result.match(/<title>/g) || []).length, 1);
+ assert.ok(result.includes('name="apple-mobile-web-app-title" content="قناة الاتحاد"'));
+}
+assert.equal(injectPageMetadata(html, '/unknown'), html);
+console.log('Audit regressions passed');

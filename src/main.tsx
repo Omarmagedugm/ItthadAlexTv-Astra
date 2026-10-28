@@ -32,15 +32,8 @@ window.addEventListener('appinstalled', () => {
   rememberAppInstalled();
 });
 
-// Activate published updates automatically, without a notification or confirmation.
-// Workbox only requests a reload after a new worker activates.
-let updateReloadStarted = false;
+// Updates must not reload an active session.
 registerSW({
-  onNeedReload() {
-    if (updateReloadStarted) return;
-    updateReloadStarted = true;
-    window.location.reload();
-  },
   onOfflineReady() {
     console.log('[PWA] App is ready for offline use');
   },

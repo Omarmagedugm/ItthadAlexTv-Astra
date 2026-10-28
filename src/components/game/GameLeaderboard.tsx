@@ -1,9 +1,9 @@
+import { fetchPublicProfiles } from '../../lib/publicProfiles';
 import { useEffect, useState } from 'react';
-import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore';
 import { onIdTokenChanged } from 'firebase/auth';
 import { Link } from 'react-router-dom';
 import { Trophy, RefreshCw, UserCheck, Flame } from 'lucide-react';
-import { auth, db } from '../../lib/firebase';
+import { auth } from '../../lib/firebase';
 
 type Entry = {
   id: string;
@@ -58,56 +58,29 @@ export default function GameLeaderboard() {
       setState('error');
     }, 15000);
 
-    const q = query(
-      collection(db, 'users'),
-      where('stats.ittihadawyScore', '>=', 1),
-      orderBy('stats.ittihadawyScore', 'desc'),
-      limit(visibleCount + 1)
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      { includeMetadataChanges: true },
-      snapshot => {
+    const controller = new AbortController();
+    let inFlight = false;
+    const refresh = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const profiles = await fetchPublicProfiles({ mode: 'runner', count: visibleCount + 1 }, controller.signal);
         if (!active) return;
-        if (snapshot.empty && snapshot.metadata.fromCache) return;
         window.clearTimeout(timeout);
-
-        setHasMore(snapshot.docs.length > visibleCount);
-
-        const loaded = snapshot.docs.slice(0, visibleCount).map(item => {
-          const data = item.data();
-          const stats = data.stats || {};
-          const rawScore = Number(stats.ittihadawyScore ?? data.ittihadawyScore ?? 0);
-          const score = Math.floor(rawScore);
-
-          // Auto-heal decimal scores for currently logged-in user in Firestore
-          if (uid && item.id === uid && typeof stats.ittihadawyScore === 'number' && !Number.isInteger(stats.ittihadawyScore)) {
-            updateDoc(doc(db, 'users', uid), {
-              'stats.ittihadawyScore': score,
-              'stats.ittihadawyDistance': Math.floor(Number(stats.ittihadawyDistance || 0))
-            }).catch(() => {});
-          }
-
-          return {
-            id: item.id,
-            name: data.name || data.displayName || data.username || 'عضو الاتحاد',
-            score,
-            character: String(stats.ittihadawyCharacter || data.ittihadawyCharacter || '')
-          };
-        }).filter(item => !isNaN(item.score) && item.score >= 1);
-
-        setEntries(loaded);
+        setHasMore(profiles.length > visibleCount);
+        setEntries(profiles.slice(0, visibleCount).map(data => ({
+          id: data.uid, name: data.name, score: Math.floor(Number(data.stats?.ittihadawyScore || 0)),
+          kills: Math.floor(Number(data.stats?.ittihadawyZombieKills || 0)),
+          character: String(data.stats?.ittihadawyCharacter || '')
+        })).filter(item => Number.isSafeInteger(item.score) && item.score >= 1));
         setState('ready');
-      },
-      error => {
-        if (!active) return;
-        window.clearTimeout(timeout);
-        console.warn('[GameLeaderboard] Read failed:', error.code);
-        setErrorCode(error.code);
-        setState('error');
-      }
-    );
+      } catch {
+        if (active) { window.clearTimeout(timeout); setErrorCode('unavailable'); setState('error'); }
+      } finally { inFlight = false; }
+    };
+    void refresh();
+    const poll = window.setInterval(() => { if (!document.hidden) void refresh(); }, 30000);
+    const unsubscribe = () => { controller.abort(); window.clearInterval(poll); };
 
     return () => {
       active = false;

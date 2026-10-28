@@ -1,3 +1,4 @@
+import { memberUploadPath } from './uploadPath';
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { initializeFirestore, doc, getDoc, getDocFromServer, setDoc, serverTimestamp, persistentLocalCache, persistentMultipleTabManager, setLogLevel } from 'firebase/firestore';
@@ -148,6 +149,8 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
 };
 
 export const uploadImage = async (file: File | Blob, folder: string, customName?: string): Promise<string> => {
+  const uploadOwner = auth.currentUser?.uid;
+  if (!uploadOwner) throw new Error('Authentication required');
   let fileToUpload: File | Blob = file;
   const originalName = customName || (file instanceof File ? file.name : `img_${Date.now()}.jpg`);
   let contentType = file.type || 'image/jpeg';
@@ -171,15 +174,15 @@ export const uploadImage = async (file: File | Blob, folder: string, customName?
   }
 
   const cleanName = (fileToUpload instanceof File ? fileToUpload.name : originalName).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 60);
-  const finalFilename = `${Date.now()}_${cleanName}`;
-  const storagePath = `${folder}/${finalFilename}`;
+  const finalFilename = `${Date.now()}_${crypto.randomUUID()}_${cleanName}`;
+  const storagePath = memberUploadPath(uploadOwner, folder, finalFilename);
 
   // 1. Primary: Direct Firebase Storage Upload (Stores URL + metadata in Firestore only)
   try {
     const storageRef = ref(storage, storagePath);
     const snapshot = await uploadBytes(storageRef, fileToUpload, { 
       contentType,
-      customMetadata: { originalName }
+      customMetadata: { originalName, ownerId: uploadOwner }
     });
     const downloadUrl = await getDownloadURL(snapshot.ref);
 
@@ -187,6 +190,7 @@ export const uploadImage = async (file: File | Blob, folder: string, customName?
     try {
       await setDoc(doc(db, 'app_images', finalFilename), {
         name: finalFilename,
+        ownerId: uploadOwner,
         url: downloadUrl,
         storagePath,
         provider: 'firebase_storage',

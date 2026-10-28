@@ -30,7 +30,7 @@ const JerseyTryOn: React.FC = () => {
   const [selectedBackground, setSelectedBackground] = useState<string>('room');
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
-  const [aiConfig, setAiConfig] = useState<any>({ enabled: true, clubLogo: '' });
+  const [aiConfig, setAiConfig] = useState<any>({ enabled: false, clubLogo: '' });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -139,6 +139,7 @@ export interface WorldEventParticipant {
 
 export interface WorldEvent {
   id: string;
+  authorId?: string;
   groupId: string;
   groupName: string;
   groupFlag: string;
