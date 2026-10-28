@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Share2, 
@@ -28,6 +28,26 @@ export default function SocialMedia() {
   const { appSettings } = useAppStore();
   const [activeTab, setActiveTab] = useState<'timeline' | 'channels'>('timeline');
   const [copied, setCopied] = useState(false);
+  const [feedWidth, setFeedWidth] = useState(300);
+  const [feedVersion, setFeedVersion] = useState(0);
+  const [feedLoading, setFeedLoading] = useState(true);
+  const feedContainer = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = feedContainer.current;
+    if (!container) return;
+    const measure = () => setFeedWidth(Math.min(500, Math.max(180, Math.floor(container.clientWidth - 18))));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    setFeedLoading(true);
+    const timeout = window.setTimeout(() => setFeedLoading(false), 12000);
+    return () => window.clearTimeout(timeout);
+  }, [feedWidth, feedVersion, activeTab]);
 
   const fbUrl = (appSettings as any)?.socialLinks?.facebook || (appSettings as any)?.facebookPageUrl || DEFAULT_FB_PAGE;
   const youtubeUrl = (appSettings as any)?.socialLinks?.youtube || 'https://youtube.com/@itthadalexchannel';
@@ -57,6 +77,13 @@ export default function SocialMedia() {
       handleCopyLink();
     }
   };
+
+  const feedParams = new URLSearchParams({
+    href: fbUrl, tabs: 'timeline', width: String(feedWidth), height: '650',
+    small_header: 'true', adapt_container_width: 'true', hide_cover: 'false',
+    show_facepile: 'false', show_posts: 'true'
+  });
+  const feedSrc = `https://www.facebook.com/plugins/page.php?${feedParams}`;
 
   // Official Channel Social Links - All customizable from Admin Dashboard
   const socialChannels = [
@@ -251,7 +278,7 @@ export default function SocialMedia() {
       </div>
 
       {/* Main Content Area */}
-      <div className="w-full">
+      <div ref={feedContainer} className="w-full">
         {activeTab !== 'channels' ? (
           <div className="flex flex-col items-center">
             {/* Embed Container */}
@@ -272,13 +299,18 @@ export default function SocialMedia() {
                 </button>
               </div>
 
-              <div className="w-full rounded-lg bg-blue-50 dark:bg-blue-950/30 p-4 text-center space-y-3">
-                <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">تابع أحدث الأخبار والتغطيات على صفحة القناة الرسمية.</p>
-                <a href={fbUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white whitespace-nowrap">
-                  <ExternalLink size={17} /> فتح منشورات فيسبوك
-                </a>
-                <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">المنشورات بتفتح على صفحة القناة مباشرة في فيسبوك.</p>
+              <div className="w-full flex items-center justify-between gap-2 mb-3 px-2">
+                <span className="text-xs text-slate-500" role="status">{feedLoading ? 'جاري تحميل منشورات فيسبوك…' : 'منشورات فيسبوك'}</span>
+                <button type="button" onClick={() => setFeedVersion(version => version + 1)} className="ds-control inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-bold whitespace-nowrap"><RefreshCw size={14} className={feedLoading ? 'animate-spin' : ''}/>إعادة تحميل</button>
               </div>
+              <div className="w-full flex justify-center overflow-hidden rounded-lg" aria-busy={feedLoading}>
+                <iframe key={`${feedWidth}-${feedVersion}`} title="منشورات صفحة قناة الاتحاد السكندري على فيسبوك"
+                  src={feedSrc} width={feedWidth} height="650"
+                  style={{ border: 0, width: '100%', maxWidth: feedWidth, height: 650 }}
+                  onLoad={() => setFeedLoading(false)} onError={() => setFeedLoading(false)}
+                  allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowFullScreen />
+              </div>
+              <p className="w-full px-2 pt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">لو فيسبوك لم يعرض المنشورات، جرّب إعادة التحميل أو افتح الصفحة الرسمية من الزر أسفل العرض.</p>
 
               {/* Bottom Helpful Callout */}
               <div className="w-full mt-3 p-3 bg-blue-50/70 dark:bg-blue-950/30 rounded-lg border border-blue-200/50 dark:border-blue-900/40 flex items-center justify-between gap-2">
