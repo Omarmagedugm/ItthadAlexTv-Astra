@@ -1,5 +1,5 @@
-import { improvedGameStats, validGameResult } from '../src/lib/gameScores';
-import { getAdminApp, getAdminDatabase } from './firebaseAdmin';
+import { improvedGameStats, validGameResult } from '../src/lib/gameScores.js';
+import { getAdminApp, getAdminDatabase } from './firebaseAdmin.js';
 
 // Authentication and persistence are server-owned. Client telemetry is still
 // untrusted: this bounds and validates it, not an authoritative game replay.

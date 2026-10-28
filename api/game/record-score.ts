@@ -1,4 +1,4 @@
-import { recordGameScore } from '../../server/recordGameScore';
+import { recordGameScore } from '../../server/recordGameScore.js';
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Cache-Control', 'no-store');

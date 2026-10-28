@@ -1,5 +1,5 @@
-import { escapeHtml, serializeJsonLd } from '../server/htmlSafety';
-export { escapeHtml, serializeJsonLd } from '../server/htmlSafety';
+import { escapeHtml, serializeJsonLd } from '../server/htmlSafety.js';
+export { escapeHtml, serializeJsonLd } from '../server/htmlSafety.js';
 import fs from 'fs';
 import path from 'path';
 import https from 'https';

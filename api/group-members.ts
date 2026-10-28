@@ -1,4 +1,4 @@
-import { getAdminDatabase } from '../server/firebaseAdmin';
+import { getAdminDatabase } from '../server/firebaseAdmin.js';
 export default async function handler(req: any, res: any) {
   res.setHeader('Cache-Control', 'public, max-age=10, s-maxage=15');
   if (req.method !== 'GET') return res.status(405).json({ error: 'method-not-allowed' });

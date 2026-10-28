@@ -1,5 +1,5 @@
-import { getAdminApp, getAdminDatabase } from '../../server/firebaseAdmin';
-import config from '../../firebase-applet-config.json';
+import { getAdminApp, getAdminDatabase } from '../../server/firebaseAdmin.js';
+import config from '../../firebase-applet-config.json' with { type: 'json' };
 export default async function handler(req: any, res: any) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'method-not-allowed' });

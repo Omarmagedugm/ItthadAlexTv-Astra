@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { generateSitemapXml } from '../server/sitemapHandler.ts';
+import { generateSitemapXml } from '../server/sitemapHandler.js';
 
 function getCurrentDir(): string {
   try {

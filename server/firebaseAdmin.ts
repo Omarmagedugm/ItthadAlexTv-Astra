@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
-import config from '../firebase-applet-config.json';
+import config from '../firebase-applet-config.json' with { type: 'json' };
 
 export function getAdminApp() {
   if (admin.apps.length) return admin.app();
