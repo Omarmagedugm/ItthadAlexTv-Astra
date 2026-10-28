@@ -1,3 +1,4 @@
+import type { BottomNavigationItem } from '../lib/bottomNavigation';
 import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
@@ -588,6 +589,7 @@ interface AppState {
     logoType?: 'image' | 'text';
     logoText?: string;
     bottomNavStyle?: 'modern' | 'classic';
+    bottomNavItems?: BottomNavigationItem[];
     defaultSport?: 'football' | 'basketball' | 'auto';
     liveViewMode?: 'both' | 'football' | 'basketball';
     liveBannerUrl?: string;

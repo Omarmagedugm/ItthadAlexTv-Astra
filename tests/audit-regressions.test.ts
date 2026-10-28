@@ -1,3 +1,4 @@
+import { resolveBottomNavigation, DEFAULT_BOTTOM_NAV_ITEMS } from '../src/lib/bottomNavigation';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { applyPollVote } from '../src/lib/pollVote';
@@ -29,3 +30,11 @@ for (const pathname of Object.keys(PUBLIC_PAGE_METADATA)) {
 }
 assert.equal(injectPageMetadata(html, '/unknown'), html);
 console.log('Audit regressions passed');
+
+assert.deepEqual(resolveBottomNavigation([]), []);
+assert.equal(resolveBottomNavigation()[0].path, '/');
+const savedNav = [{...DEFAULT_BOTTOM_NAV_ITEMS[1], label:'أخباري',active:false}, {...DEFAULT_BOTTOM_NAV_ITEMS[0]}];
+assert.deepEqual(resolveBottomNavigation(savedNav).map(item=>item.path), ['/news','/']);
+assert.equal(resolveBottomNavigation(savedNav)[0].active, false);
+assert.notEqual(resolveBottomNavigation(savedNav)[0], savedNav[0]);
+assert.equal(resolveBottomNavigation([...savedNav,savedNav[0]]).length, 2);

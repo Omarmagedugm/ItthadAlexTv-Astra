@@ -1,20 +1,20 @@
+import { resolveBottomNavigation } from '../lib/bottomNavigation';
+import { getSectionKeyForPath } from '../types/sections';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppStore } from '../store';
-
-const navItems = [
-  { path: '/', icon: 'home', label: 'الرئيسية' },
-  { path: '/news', icon: 'newspaper', label: 'الأخبار' },
-  { path: '/game', icon: 'sports_esports', label: 'اللعبة 🎮', isNew: true },
-  { path: '/fan-zone', icon: 'stadium', label: 'فان زون' },
-  { path: '/library', icon: 'perm_media', label: 'الوسائط' },
-  { path: '/profile', icon: 'person', label: 'حسابي' },
-];
 
 export default function BottomNav() {
   const location = useLocation();
   const path = location.pathname;
-  const { appSettings, theme, sectionFlags, sidebarMenuItems } = useAppStore();
-  const visibleNavItems = navItems.filter(item => !(item.path === '/game' && sectionFlags.game === false) && !sidebarMenuItems.some(saved => saved.path === item.path && saved.active === false));
+  const { appSettings, theme, sectionFlags, sidebarMenuItems, aiConfig } = useAppStore();
+  const visibleNavItems = resolveBottomNavigation(appSettings.bottomNavItems).filter(item => {
+    const section = getSectionKeyForPath(item.path);
+    return item.active && (!section || sectionFlags[section] !== false) &&
+      !(item.path === '/jersey-tryon' && aiConfig?.enabled === false) &&
+      !sidebarMenuItems.some(saved => saved.path === item.path && saved.active === false);
+  }).slice(0, 6);
+  if (visibleNavItems.length === 0) return null;
+
   const inverseBackground = theme === 'dark' ? '#f7faf8' : '#111a17';
   const inverseForeground = theme === 'dark' ? '#14201a' : '#f8fafc';
   const inverseBorder = theme === 'dark' ? 'rgba(255,255,255,.8)' : 'rgba(0,0,0,.3)';
@@ -38,7 +38,7 @@ export default function BottomNav() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className="relative -top-5 flex flex-col items-center group active:scale-95 transition-transform duration-150"
+                  className="relative -top-5 flex min-w-0 flex-1 flex-col items-center group active:scale-95 transition-transform duration-150"
                   aria-label={item.label}
                   aria-current={isActive ? 'page' : undefined}
                 >
@@ -56,7 +56,7 @@ export default function BottomNav() {
                       <span className="absolute top-0 right-0 w-3 h-3 rounded-full bg-amber-400 ring-2 ring-emerald-950 animate-ping" />
                     )}
                   </div>
-                  <span style={{ color: isActive ? '#b9df71' : inverseForeground }} className={`text-[10px] mt-1 font-black transition-colors duration-200 ${isActive ? 'text-accent' : 'text-slate-500 dark:text-slate-400'}`}>
+                  <span style={{ color: isActive ? '#b9df71' : inverseForeground }} className={`text-[10px] mt-1 w-full truncate text-center font-black transition-colors duration-200 ${isActive ? 'text-accent' : 'text-slate-500 dark:text-slate-400'}`}>
                     {item.label}
                   </span>
                   {isActive && (
@@ -72,7 +72,7 @@ export default function BottomNav() {
                 to={item.path}
                 aria-current={isActive ? 'page' : undefined}
                 style={{ color: isActive ? '#b9df71' : inverseForeground }}
-                className={`flex flex-col items-center justify-center flex-1 py-1 rounded-2xl transition-all duration-200 active:scale-90 ${
+                className={`flex min-w-0 flex-col items-center justify-center flex-1 py-1 rounded-2xl transition-all duration-200 active:scale-90 ${
                   isActive
                     ? 'text-accent font-black'
                     : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
@@ -86,7 +86,7 @@ export default function BottomNav() {
                     <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 ring-1 ring-slate-900 animate-pulse" />
                   )}
                 </div>
-                <span style={{ color: isActive ? '#b9df71' : inverseForeground }} className={`text-[10px] mt-0.5 transition-colors duration-200 ${isActive ? 'font-black text-accent' : 'font-medium'}`}>
+                <span style={{ color: isActive ? '#b9df71' : inverseForeground }} className={`text-[10px] mt-0.5 w-full truncate text-center transition-colors duration-200 ${isActive ? 'font-black text-accent' : 'font-medium'}`}>
                   {item.label}
                 </span>
                 {isActive ? (
@@ -139,7 +139,7 @@ export default function BottomNav() {
                   <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 ring-1 ring-slate-900 animate-pulse" />
                 )}
               </div>
-              {isActive && <span className="text-[12px] font-bold whitespace-nowrap">{item.label}</span>}
+              {isActive && <span className="text-[12px] max-w-[70px] truncate font-bold whitespace-nowrap">{item.label}</span>}
             </Link>
           );
         })}
