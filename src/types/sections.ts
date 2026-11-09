@@ -1,4 +1,4 @@
-export type ManagedSectionKey = 'fanServices' | 'worldFans' | 'fanStore' | 'itthadawyBusiness' | 'game' | 'footballCenter';
+export type ManagedSectionKey = 'fanServices' | 'worldFans' | 'fanStore' | 'itthadawyBusiness' | 'game';
 
 export interface SectionFlags {
   fanServices: boolean;
@@ -6,7 +6,6 @@ export interface SectionFlags {
   fanStore: boolean;
   itthadawyBusiness: boolean;
   game?: boolean;
-  footballCenter?: boolean;
   [key: string]: boolean | undefined;
 }
 
@@ -16,7 +15,6 @@ export const DEFAULT_SECTION_FLAGS: SectionFlags = {
   fanStore: true,
   itthadawyBusiness: true,
   game: true,
-  footballCenter: true,
 };
 
 export interface SectionConfig {
@@ -29,12 +27,6 @@ export interface SectionConfig {
 }
 
 export const MANAGED_SECTIONS: Record<ManagedSectionKey, SectionConfig> = {
-  footballCenter: {
-    key: 'footballCenter',
-    name: 'مركز المباريات الذكي',
-    description: 'قسم منفصل للتشكيلات والأحداث والإحصائيات من API-Football (/football-center)',
-    badge: 'كرة القدم', icon: 'Trophy', paths: ['/football-center']
-  },
   fanServices: {
     key: 'fanServices',
     name: 'خدمات الجماهير والتعليم',
@@ -92,8 +84,6 @@ export function isSectionEnabled(flags: SectionFlags | undefined, sectionKey: st
 export function getSectionKeyForPath(pathname: string): ManagedSectionKey | null {
   const normalized = pathname.toLowerCase();
   
-  if (normalized === '/football-center' || normalized.startsWith('/football-center/')) return 'footballCenter';
-
   if (
     normalized === '/game' ||
     normalized.startsWith('/game/')

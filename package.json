@@ -9,7 +9,7 @@
     "start": "node server.ts",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "test": "node --import tsx tests/security.test.ts && node --import tsx tests/audit-regressions.test.ts && node --import tsx tests/public-profile.test.ts && node --import tsx tests/game-score-api.test.ts && node --import tsx tests/football-api.test.ts"
+    "test": "node --import tsx tests/security.test.ts && node --import tsx tests/audit-regressions.test.ts && node --import tsx tests/public-profile.test.ts && node --import tsx tests/game-score-api.test.ts"
   },
   "dependencies": {
     "@google/genai": "^1.52.0",

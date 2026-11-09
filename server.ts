@@ -3,7 +3,6 @@ import publicProfilesHandler from './api/public-profiles';
 import usernameLoginHandler from './api/auth/username-login';
 import { PUBLIC_PAGE_METADATA, injectPageMetadata } from './server/pageMetadata';
 import recordScoreHandler from './api/game/record-score.ts';
-import footballHandler from './api/football.ts';
 import express from 'express';
 import compression from 'compression';
 import path from 'path';
@@ -98,8 +97,6 @@ async function startServer() {
   });
 
   app.use(express.json({ limit: '50mb' }));
-
-  app.get('/api/football', footballHandler as any);
 
   // API Routes & Health Checks
   app.get(['/api/health', '/health', '/healthz', '/_health', '/_ah/health'], (req, res) => {

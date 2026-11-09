@@ -46,7 +46,6 @@ const OfflineReads = safeLazy(() => import('./pages/OfflineReads'));
 const Media = safeLazy(() => import('./pages/Media'));
 const Live = safeLazy(() => import('./pages/Live'));
 const Matches = safeLazy(() => import('./pages/Matches'));
-const FootballCenter = safeLazy(() => import('./pages/FootballCenter'));
 const Profile = safeLazy(() => import('./pages/Profile'));
 const Admin = safeLazy(() => import('./pages/Admin'));
 const FanZone = safeLazy(() => import('./pages/FanZone'));
@@ -596,7 +595,6 @@ function GlobalSEOSynchronizer() {
             <Route path="/media" element={<Media />} />
             <Route path="/live" element={<OfflineLiveGate><Live /></OfflineLiveGate>} />
             <Route path="/matches" element={<Matches />} />
-            <Route path="/football-center" element={<FeatureGuardRoute sectionKey="footballCenter" component={FootballCenter} />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/fan-zone" element={<FanZone />} />

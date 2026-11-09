@@ -20,8 +20,7 @@ import {
   Sparkles,
   Layers,
   Database,
-  Gamepad2,
-  Trophy
+  Gamepad2
 } from 'lucide-react';
 
 export default function AdminSectionFlagsManager() {
@@ -86,8 +85,7 @@ export default function AdminSectionFlagsManager() {
       worldFans: targetState,
       fanStore: targetState,
       itthadawyBusiness: targetState,
-      game: targetState,
-      footballCenter: targetState
+      game: targetState
     };
 
     setSectionFlags(newFlags);
@@ -130,24 +128,6 @@ export default function AdminSectionFlagsManager() {
     paths: string[];
     detailsOnDisabled: string[];
   }[] = [
-    {
-      key: 'footballCenter', title: 'مركز المباريات الذكي (API-Football)',
-      englishKey: 'footballCenter',
-      description: 'قسم منفصل عن المباريات والتوقعات، يعرض التشكيل والبدلاء والأحداث والإحصائيات ويمكن تعطيله بضغطة واحدة.',
-      icon: <Trophy size={22} />,
-      colorTheme: {
-        activeBg:'bg-emerald-500/10 dark:bg-emerald-950/20',
-        activeBorder:'border-emerald-500/30',
-        activeText:'text-emerald-700 dark:text-emerald-400',
-        badgeBg:'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-        iconBg:'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-      },
-      paths: ['/football-center'],
-      detailsOnDisabled: [
-        'إخفاء المركز من القوائم', 'حظر الصفحة داخل التطبيق',
-        'منع تحميل المكوّن وإجراء اتصالات API-Football من الواجهة'
-      ]
-    },
     {
       key: 'fanServices',
       title: 'خدمات الجماهير والتعليم المجاني',

@@ -59,7 +59,7 @@ export default function AdminSidebarManager() {
     // Only synchronize from store if user has not made unsaved local modifications
     if (!isDirty) {
       if (sidebarMenuItems && sidebarMenuItems.length > 0) {
-        const sorted = [...sidebarMenuItems].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        const sorted = sidebarMenuItems.filter(item => item.path !== '/football-center').sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
         setItems(sorted);
       } else {
         setItems(DEFAULT_SIDEBAR_ITEMS);

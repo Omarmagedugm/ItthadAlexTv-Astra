@@ -9,7 +9,7 @@ export default function BottomNav() {
   const { appSettings, theme, sectionFlags, sidebarMenuItems, aiConfig } = useAppStore();
   const visibleNavItems = resolveBottomNavigation(appSettings.bottomNavItems).filter(item => {
     const section = getSectionKeyForPath(item.path);
-    return item.active && (!section || sectionFlags[section] !== false) &&
+    return item.active && item.path !== '/football-center' && (!section || sectionFlags[section] !== false) &&
       !(item.path === '/jersey-tryon' && aiConfig?.enabled === false) &&
       !sidebarMenuItems.some(saved => saved.path === item.path && saved.active === false);
   }).slice(0, 6);
