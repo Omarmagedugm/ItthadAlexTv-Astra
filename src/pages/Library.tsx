@@ -42,6 +42,8 @@ import { useAppStore } from '../store';
 import { collection, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { getOptimizedImage } from '../lib/cloudinary';
+import type { Song } from '../store';
+import { downloadOfflineSong, removeOfflineSong, listOfflineSongs, formatOfflineSongSize, type OfflineSongSummary } from '../lib/offlineSongs';
 
 type TabType = 'photos' | 'videos' | 'songs' | 'books';
 
@@ -190,6 +192,31 @@ export default function Library() {
 
   // Filters
   const [songFilterCategory, setSongFilterCategory] = useState<string>('all');
+  const [downloadedSongs, setDownloadedSongs] = useState<OfflineSongSummary[]>([]);
+  const [downloadingIds, setDownloadingIds] = useState<string[]>([]);
+  useEffect(() => {
+    let active = true;
+    const refresh = () => { void listOfflineSongs().then(items => { if (active) setDownloadedSongs(items); }).catch(() => {}); };
+    refresh();
+    window.addEventListener('ittihad-offline-songs-changed', refresh);
+    return () => { active = false; window.removeEventListener('ittihad-offline-songs-changed', refresh); };
+  }, []);
+  const saveSongToDevice = async (song: Song) => {
+    if (downloadingIds.includes(song.id)) return;
+    setDownloadingIds(ids => [...ids, song.id]);
+    try {
+      const saved = await downloadOfflineSong(song);
+      toast.success(`اتحفظت "${song.title}" على جهازك (${formatOfflineSongSize(saved.bytes)})`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذّر تحميل الأغنية');
+    } finally {
+      setDownloadingIds(ids => ids.filter(id => id !== song.id));
+    }
+  };
+  const deleteSongFromDevice = async (id: string) => {
+    try { await removeOfflineSong(id); toast.success('اتحذفت النسخة المحفوظة من الجهاز'); }
+    catch { toast.error('تعذّر حذف النسخة المحفوظة'); }
+  };
   const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
 
   // Scroll refs for horizontal scroll bars
@@ -279,7 +306,12 @@ export default function Library() {
   // Effective media items strictly from user data
   const effectiveMedia = media || [];
   const effectiveMediaPlaylists = mediaPlaylists || [];
-  const effectiveSongs = songs || [];
+  // Retain downloaded titles even when Firebase has no connection.
+  const effectiveSongs = [
+    ...(songs || []),
+    ...downloadedSongs.filter(item => !(songs || []).some(song => song.id === item.id)).map(item => item.song)
+  ];
+  const downloadedIds = new Set(downloadedSongs.map(item => item.id));
   const effectiveBooks = books || [];
   const effectiveAlbums = albums || [];
 
@@ -319,7 +351,7 @@ export default function Library() {
 
   const filteredSongs = effectiveSongs.filter(s => {
     const matchesSearch = (s.title?.toLowerCase().includes(searchQuery.toLowerCase()) || s.artist?.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCategory = songFilterCategory === 'all' || s.category === songFilterCategory;
+    const matchesCategory = songFilterCategory === 'all' || (songFilterCategory === 'downloaded' ? downloadedIds.has(s.id) : s.category === songFilterCategory);
     const matchesAlbum = !selectedAlbumId || s.albumId === selectedAlbumId || effectiveAlbums.find(a => a.id === selectedAlbumId)?.songIds?.includes(s.id);
     return matchesSearch && matchesCategory && matchesAlbum;
   });
@@ -1090,11 +1122,13 @@ export default function Library() {
                     <h2 className="ds-content-heading text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-white">
                       <Headphones className="text-primary" size={20} />
                       <span>قائمة الأغاني</span>
+                      {downloadedSongs.length > 0 && <span className="text-xs font-normal text-slate-500">({formatOfflineSongSize(downloadedSongs.reduce((sum, song) => sum + song.bytes, 0))} على الجهاز)</span>}
                     </h2>
 
                     <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
                       {[
                         { id: 'all', label: 'الكل' },
+                        { id: 'downloaded', label: `على الجهاز (${downloadedSongs.length})` },
                         { id: 'song', label: 'أغاني' },
                         { id: 'chant', label: 'تسجيلات صوتية' }
                       ].map(cat => (
@@ -1117,6 +1151,8 @@ export default function Library() {
                     {filteredSongs.map((song, index) => {
                       const isCurrentSong = currentSong?.id === song.id;
                       const isPlayingThis = isCurrentSong && isPlaying;
+                      const isDownloaded = downloadedIds.has(song.id);
+                      const isDownloading = downloadingIds.includes(song.id);
                       const songAlbum = effectiveAlbums.find(a => 
                         (song.albumId && String(a.id) === String(song.albumId)) || 
                         (Array.isArray(a.songIds) && a.songIds.map(String).includes(String(song.id))) ||
@@ -1175,6 +1211,17 @@ export default function Library() {
                           </div>
 
                           <div className="flex items-center gap-2 md:gap-4 px-2">
+                            <button
+                              type="button"
+                              onClick={() => isDownloaded ? void deleteSongFromDevice(song.id) : void saveSongToDevice(song)}
+                              disabled={isDownloading || (!isDownloaded && !navigator.onLine)}
+                              title={isDownloaded ? 'حذف النسخة المحفوظة' : 'تحميل الأغنية للاستماع بدون نت'}
+                              aria-label={isDownloaded ? `حذف ${song.title} من الجهاز` : `تحميل ${song.title} للاستماع أوفلاين`}
+                              className={`ds-control px-2.5 py-1.5 rounded-lg flex items-center gap-1 text-[11px] font-bold disabled:opacity-50 ${isDownloaded ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-100 text-slate-700 dark:bg-surface-dark dark:text-slate-300'}`}
+                            >
+                              <Download size={14}/>
+                              <span className="hidden sm:inline">{isDownloaded ? 'محفوظة • حذف' : isDownloading ? 'جارٍ التحميل…' : 'تحميل'}</span>
+                            </button>
                             {song.duration && (
                               <span className="hidden sm:flex items-center gap-1 text-[11px] text-slate-400 font-bold">
                                 <Clock size={12} />

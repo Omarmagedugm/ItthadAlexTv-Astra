@@ -16,6 +16,7 @@ import {
   Disc
 } from 'lucide-react';
 import { useAppStore } from '../store';
+import { getOfflineSong } from '../lib/offlineSongs';
 
 const formatTime = (time: number) => {
   if (isNaN(time)) return '0:00';
@@ -36,6 +37,44 @@ export default function MusicPlayer() {
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playbackUrl, setPlaybackUrl] = useState('');
+  const [sourceVersion, setSourceVersion] = useState(0);
+  useEffect(() => {
+    const refresh = () => setSourceVersion(version => version + 1);
+    window.addEventListener('online', refresh);
+    window.addEventListener('offline', refresh);
+    window.addEventListener('ittihad-offline-songs-changed', refresh);
+    return () => {
+      window.removeEventListener('online', refresh);
+      window.removeEventListener('offline', refresh);
+      window.removeEventListener('ittihad-offline-songs-changed', refresh);
+    };
+  }, []);
+  useEffect(() => {
+    let active = true;
+    let objectUrl: string | null = null;
+    setPlaybackUrl('');
+    if (!currentSong) return;
+    void getOfflineSong(currentSong.id).then(saved => {
+      if (!active) return;
+      if (saved?.blob?.size) {
+        objectUrl = URL.createObjectURL(saved.blob);
+        setError(null);
+        setPlaybackUrl(objectUrl);
+      } else if (navigator.onLine) {
+        setError(null);
+        setPlaybackUrl(currentSong.audioUrl || '');
+      } else {
+        setError('الأغنية مش محمّلة على الجهاز؛ نزّلها بالإنترنت الأول');
+        setIsPlaying(false);
+      }
+    }).catch(() => {
+      if (!active) return;
+      if (navigator.onLine) { setError(null); setPlaybackUrl(currentSong.audioUrl || ''); }
+      else { setError('التخزين المحلي مش متاح حاليًا'); setIsPlaying(false); }
+    });
+    return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [currentSong?.id, currentSong?.audioUrl, sourceVersion, setIsPlaying]);
 
   const handleNext = () => {
     if (!activePlaylist.length || !currentSong) return;
@@ -203,7 +242,7 @@ export default function MusicPlayer() {
   }, [setIsPlaying]);
 
   useEffect(() => {
-    if (audioRef.current && currentSong?.audioUrl) {
+    if (audioRef.current && playbackUrl) {
       if (isPlaying) {
         audioRef.current.play().catch(e => {
           console.warn("Playback prevented or failed:", e);
@@ -216,7 +255,7 @@ export default function MusicPlayer() {
         audioRef.current.pause();
       }
     }
-  }, [isPlaying, currentSong]);
+  }, [isPlaying, currentSong, playbackUrl]);
 
   useEffect(() => {
     setError(null);
@@ -281,7 +320,7 @@ export default function MusicPlayer() {
           preload="none"
           playsInline
           aria-label={`تشغيل ${currentSong.title || 'الأغنية الحالية'}`}
-          src={currentSong.audioUrl || undefined}
+          src={playbackUrl || undefined}
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
           onDurationChange={handleLoadedMetadata}
@@ -433,6 +472,7 @@ export default function MusicPlayer() {
             <div className="p-6 md:p-8 pb-10">
               <div className="text-center mb-6">
                 <h2 className="ds-content-heading text-xl md:text-2xl font-bold text-slate-800 dark:text-white truncate mb-1.5">{error || currentSong.title}</h2>
+                {!navigator.onLine && playbackUrl.startsWith('blob:') && <p className="text-xs text-emerald-600 dark:text-emerald-300">بتشتغل من الجهاز بدون إنترنت</p>}
                 <div className="flex items-center justify-center gap-2 flex-wrap">
                   <p className={`text-xs md:text-sm font-bold ${error ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>{currentSong.artist}</p>
                   {specificAlbumName && (
