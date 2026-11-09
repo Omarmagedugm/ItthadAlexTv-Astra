@@ -160,7 +160,7 @@ export default function FootballCenter() {
     {archiveOnly && <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-900">
       وضع تجريبي ببيانات أرشيفية حتى {newestFixtureYear} — دي مش مباريات الموسم الحالي. الاشتراك الحالي لا يتيح بيانات الموسم الحديث من المصدر.
       المباريات والتوقعات في التطبيق الأساسي مستقلة تمامًا.
-    </p>
+    </p>}
     {loading && <p role="status" className="p-8 text-center text-sm text-slate-500">جاري تحميل المباريات…</p>}
     {!loading && !fixtures.length && <div className="rounded-xl border border-slate-200 p-8 text-center dark:border-slate-700"><WifiOff size={30} className="mx-auto mb-2 text-slate-400"/><p>مفيش مباريات متاحة من المصدر حاليًا.</p></div>}
     {!!fixtures.length && <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
