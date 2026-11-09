@@ -144,7 +144,7 @@ export default function FootballCenter() {
     const candidate=new Date(f.fixture.date).getUTCFullYear();
     return Number.isFinite(candidate)?Math.max(year,candidate):year;
   },0);
-  const archiveOnly=newestFixtureYear>0 && newestFixtureYear<new Date().getUTCFullYear()-1;
+  const archiveOnly = newestFixtureYear > 0 && newestFixtureYear < (new Date().getUTCFullYear() - 1);
   const shown=useMemo(()=>fixtures.filter(f=>filter==='all'||matchState(f)===filter)
     .sort((a,b)=>Math.abs(Date.parse(a.fixture.date)-Date.now())-Math.abs(Date.parse(b.fixture.date)-Date.now())).slice(0,30),[fixtures,filter]);
   return <main dir="rtl" className="mx-auto min-h-[75vh] max-w-6xl space-y-5 px-3 py-6 pb-32 sm:px-5">
