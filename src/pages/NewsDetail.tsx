@@ -3,7 +3,8 @@ import { useAppStore } from '../store';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { motion } from 'motion/react';
-import { Share2, ArrowRight, Rss, Edit2, PenTool, Newspaper, Heart } from 'lucide-react';
+import { Share2, ArrowRight, Rss, Edit2, PenTool, Newspaper, Heart, BookmarkPlus, BookmarkCheck } from 'lucide-react';
+import { getOfflineArticle, saveOfflineArticle } from '../lib/offlineArticles';
 import { getOptimizedImage } from '../lib/cloudinary';
 import toast from 'react-hot-toast';
 import VideoEmbedWidget from '../components/widgets/VideoEmbedWidget';
@@ -28,6 +29,8 @@ export default function NewsDetail() {
   const [fetchedArticle, setFetchedArticle] = useState<NewsItem | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [hasSearchedFirestore, setHasSearchedFirestore] = useState<boolean>(false);
+  const [savedOffline, setSavedOffline] = useState(false);
+  const [savingOffline, setSavingOffline] = useState(false);
 
   // 1. Resolve article from store or fetchedArticle
   const article = useMemo(() => {
@@ -62,6 +65,15 @@ export default function NewsDetail() {
     return fetchedArticle;
   }, [id, slug, news, fetchedArticle]);
 
+  useEffect(() => {
+    let active = true;
+    const target = article?.id || id;
+    if (target) void getOfflineArticle(target).then(saved => {
+      if (active) setSavedOffline(Boolean(saved));
+    });
+    return () => { active = false; };
+  }, [article?.id, id]);
+
   // 2. Fetch directly from Firestore if not in store (e.g. direct landing from Google Search)
   useEffect(() => {
     if (article || !id || hasSearchedFirestore) return;
@@ -72,6 +84,11 @@ export default function NewsDetail() {
     async function loadFromFirestore() {
       try {
         const cleanId = (id || '').trim();
+        if (!navigator.onLine) {
+          const saved = await getOfflineArticle(cleanId);
+          if (saved && isMounted) setFetchedArticle(saved);
+          return;
+        }
         // A. Direct doc lookup
         const docRef = doc(db, 'news', cleanId);
         const docSnap = await getDoc(docRef);
@@ -146,6 +163,8 @@ export default function NewsDetail() {
         }
       } catch (err) {
         console.warn('[NewsDetail] Error fetching article from Firestore:', err);
+        const saved = await getOfflineArticle((id || '').trim());
+        if (saved && isMounted) setFetchedArticle(saved);
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -239,6 +258,19 @@ export default function NewsDetail() {
 
   const isArticleType = article.newsType === 'article';
 
+  const handleSaveOffline = async () => {
+    if (savingOffline || !article) return;
+    setSavingOffline(true);
+    try {
+      const imageSaved = await saveOfflineArticle(article, getOptimizedImage(article.image, 800));
+      setSavedOffline(true);
+      toast.success(imageSaved ? 'اتحفظ المقال بالصورة للقراءة بدون إنترنت' : 'اتحفظ النص بدون إنترنت، والصورة قد تحتاج اتصال');
+    } catch {
+      toast.error('تعذّر حفظ المقال على الجهاز');
+    } finally {
+      setSavingOffline(false);
+    }
+  };
   const handleShare = async () => {
     const canonicalUrl = getNewsCanonicalUrl(article.id);
     const shareTitle = article.title;
@@ -305,6 +337,16 @@ export default function NewsDetail() {
               <Edit2 size={16} />
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => void handleSaveOffline()}
+            disabled={savingOffline}
+            className="ds-control p-2.5 rounded-lg bg-white dark:bg-card-dark text-slate-700 dark:text-slate-200 hover:text-primary border border-border-light dark:border-border-dark shadow-sm disabled:opacity-50"
+            title={savedOffline ? 'تحديث النسخة المحفوظة' : 'حفظ بدون إنترنت'}
+            aria-label={savedOffline ? 'تحديث النسخة المحفوظة' : 'حفظ بدون إنترنت'}
+          >
+            {savedOffline ? <BookmarkCheck size={16} /> : <BookmarkPlus size={16} />}
+          </button>
           <button 
             onClick={handleShare}
             className="ds-control p-2.5 rounded-lg bg-white dark:bg-card-dark text-slate-700 dark:text-slate-200 hover:text-primary border border-border-light dark:border-border-dark shadow-sm transition-all pressable"

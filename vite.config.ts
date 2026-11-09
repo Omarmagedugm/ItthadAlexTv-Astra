@@ -23,7 +23,8 @@ export default defineConfig(({ mode }) => {
           skipWaiting: false,
           clientsClaim: false,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,json,woff2,webmanifest}'],
-          globIgnores: ['**/storage/**', '**/vendor-charts*', '**/Admin*'],
+          // Large game bundles and media are opt-in; keep the offline shell compact.
+          globIgnores: ['**/storage/**', '**/vendor-charts*', '**/Admin*', '**/games/ittihadawy/**', '**/assets/aistudio/**'],
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // Increase to 5MB
           navigateFallback: 'index.html',
           navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/(?:robots\.txt|(?:news-)?sitemap\.xml)$/, /\.[^/]+$/],

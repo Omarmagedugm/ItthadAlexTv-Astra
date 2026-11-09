@@ -21,10 +21,28 @@ export function useFirestoreSync() {
       if (isMounted && pendingCore.size === 0) { setStartupReady(true); setStartupFailed(false); }
     };
 
+    let cachedCoreReady = false;
     // STEP 0: Immediate Rehydration of previously saved real data from IndexedDB
     // This allows the app to open with real content in 0ms without waiting for network requests
     loadAllCachedCollections().then((cached) => {
       if (!isMounted) return;
+      // Never show admin-disabled sections from hardcoded defaults while offline.
+      cachedCoreReady = Array.isArray(cached.homeSections)
+        && Array.isArray(cached.sidebarMenuItems)
+        && !!cached.appSettings && typeof cached.appSettings === 'object'
+        && !!cached.sectionFlags && typeof cached.sectionFlags === 'object';
+      if (Array.isArray(cached.homeSections)) getStore().setHomeSections(cached.homeSections);
+      if (Array.isArray(cached.sidebarMenuItems)) getStore().setSidebarMenuItems(cached.sidebarMenuItems);
+      if (cached.appSettings && typeof cached.appSettings === 'object') getStore().setSettings(cached.appSettings);
+      if (cached.sectionFlags && typeof cached.sectionFlags === 'object') getStore().setSectionFlags(cached.sectionFlags);
+      if (cached.aiConfig && typeof cached.aiConfig === 'object') getStore().setAiConfig(cached.aiConfig);
+      if (cached.cityInfo) getStore().setCityInfo(cached.cityInfo as any);
+      if (Array.isArray(cached.ads)) getStore().setAds(cached.ads as any);
+      if (Array.isArray(cached.albums)) getStore().setAlbums(cached.albums as any);
+      if (Array.isArray(cached.playlists)) getStore().setPlaylists(cached.playlists as any);
+      if (Array.isArray(cached.memberDiscounts)) getStore().setMemberDiscounts(cached.memberDiscounts as any);
+      if (Array.isArray(cached.historyEvents)) getStore().setHistoryEvents(cached.historyEvents as any);
+      if (Array.isArray(cached.stadiums)) getStore().setStadiums(cached.stadiums as any);
       let hasRealContent = false;
 
       if (cached.news && Array.isArray(cached.news) && cached.news.length > 0) {
@@ -56,8 +74,11 @@ export function useFirestoreSync() {
         hasRealContent = true;
       }
       // If we restored previously cached real data, unlock UI immediately!
-      if (hasRealContent) {
-        getStore().setDataLoaded(true);
+      if (hasRealContent) getStore().setDataLoaded(true);
+      // A verified local public shell may boot without waiting on Firebase.
+      if (cachedCoreReady && !navigator.onLine) {
+        setStartupFailed(false);
+        setStartupReady(true);
       }
     }).catch(() => {});
 
@@ -77,7 +98,10 @@ export function useFirestoreSync() {
             try {
               onNext(snap);
               // An empty local cache is not a completed server response.
-              if (!snap.metadata.fromCache) settleCore(path);
+              if (!snap.metadata.fromCache) {
+                if (path === 'settings/global') void setIdbItem('lastPublicSync', Date.now());
+                settleCore(path);
+              }
             } catch (e) {
               console.warn(`Snapshot callback error for ${path}:`, e);
             }
@@ -103,7 +127,10 @@ export function useFirestoreSync() {
     const safetyTimer = setTimeout(() => {
       if (isMounted) {
         getStore().setDataLoaded(true);
-        if (pendingCore.size > 0) setStartupFailed(true);
+        if (pendingCore.size > 0) {
+          if (cachedCoreReady) { setStartupFailed(false); setStartupReady(true); }
+          else setStartupFailed(true);
+        }
       }
     }, 12000);
 
@@ -170,10 +197,14 @@ export function useFirestoreSync() {
     }, 'appSettings/sections', OperationType.GET);
 
     subscribeSnapshot(doc(db, 'settings', 'ai_config'), (snap) => {
-      getStore().setAiConfig(snap.exists() ? snap.data() : { enabled: false });
+      const value = snap.exists() ? snap.data() : { enabled: false };
+      getStore().setAiConfig(value);
+      if (!snap.metadata.fromCache) void setIdbItem('aiConfig', value);
     }, 'settings/ai_config', OperationType.GET);
     subscribeSnapshot(doc(db, 'city_info', 'alexandria'), (snap) => {
-      getStore().setCityInfo(snap.exists() ? snap.data() as any : null);
+      const value = snap.exists() ? snap.data() as any : null;
+      getStore().setCityInfo(value);
+      if (!snap.metadata.fromCache) void setIdbItem('cityInfo', value);
     }, 'city_info/alexandria', OperationType.GET);
 
     // 4. Live Stream Channels
