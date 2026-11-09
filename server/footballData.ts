@@ -81,11 +81,21 @@ export async function footballFixtures():Promise<any[]> {
     try { fixtures=await fromProvider('/fixtures',{team:String(team),season}); }
     catch(e) { if (!(e instanceof FootballSourceError && e.reason==='provider-coverage-or-plan-error')) throw e; }
     if (!fixtures.length) {
-      const [last,next]=await Promise.all([
-        fromProvider('/fixtures',{team:String(team),last:'10'}),
-        fromProvider('/fixtures',{team:String(team),next:'10'}),
-      ]);
-      fixtures=[...last,...next];
+      try {
+        const [last,next]=await Promise.all([
+          fromProvider('/fixtures',{team:String(team),last:'10'}),
+          fromProvider('/fixtures',{team:String(team),next:'10'}),
+        ]);
+        fixtures=[...last,...next];
+      } catch(e) {
+        if(!(e instanceof FootballSourceError && e.reason==='provider-coverage-or-plan-error')) throw e;
+      }
+    }
+    // Some free API plans restrict recent seasons; historical results are only for
+    // a clearly labelled trial (never presented as current live fixtures).
+    if (!fixtures.length) {
+      try { fixtures=await fromProvider('/fixtures',{team:String(team),season:'2024'}); }
+      catch(e) { if(!(e instanceof FootballSourceError && e.reason==='provider-coverage-or-plan-error')) throw e; }
     }
     const ids=new Set<number>();
     return fixtures.filter(item=>{

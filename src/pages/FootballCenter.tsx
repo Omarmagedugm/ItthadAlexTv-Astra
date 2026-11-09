@@ -140,6 +140,11 @@ export default function FootballCenter() {
     return ()=>{active=false;};
   },[selectedId,tab,refresh]);
   const selected=fixtures.find(f=>f.fixture.id===selectedId);
+  const newestFixtureYear=fixtures.reduce((year,f)=>{
+    const candidate=new Date(f.fixture.date).getUTCFullYear();
+    return Number.isFinite(candidate)?Math.max(year,candidate):year;
+  },0);
+  const archiveOnly=newestFixtureYear>0 && newestFixtureYear<new Date().getUTCFullYear()-1;
   const shown=useMemo(()=>fixtures.filter(f=>filter==='all'||matchState(f)===filter)
     .sort((a,b)=>Math.abs(Date.parse(a.fixture.date)-Date.now())-Math.abs(Date.parse(b.fixture.date)-Date.now())).slice(0,30),[fixtures,filter]);
   return <main dir="rtl" className="mx-auto min-h-[75vh] max-w-6xl space-y-5 px-3 py-6 pb-32 sm:px-5">
@@ -152,6 +157,10 @@ export default function FootballCenter() {
       {updatedAt && <p className="mt-3 flex items-center gap-2 text-xs text-emerald-100"><Clock3 size={14}/>آخر تحميل: {readableDate(updatedAt)} {cached?'• نسخة محفوظة':''}</p>}
     </header>
     {error && <p role="alert" className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><ShieldAlert size={20}/>{error}</p>}
+    {archiveOnly && <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+      وضع تجريبي ببيانات أرشيفية حتى {newestFixtureYear} — دي مش مباريات الموسم الحالي. الاشتراك الحالي لا يتيح بيانات الموسم الحديث من المصدر.
+      المباريات والتوقعات في التطبيق الأساسي مستقلة تمامًا.
+    </p>
     {loading && <p role="status" className="p-8 text-center text-sm text-slate-500">جاري تحميل المباريات…</p>}
     {!loading && !fixtures.length && <div className="rounded-xl border border-slate-200 p-8 text-center dark:border-slate-700"><WifiOff size={30} className="mx-auto mb-2 text-slate-400"/><p>مفيش مباريات متاحة من المصدر حاليًا.</p></div>}
     {!!fixtures.length && <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
