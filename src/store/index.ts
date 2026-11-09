@@ -63,6 +63,7 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarMenuItem[] = [
   { id: 'home', title: 'الرئيسية', path: '/', icon: 'home', iconType: 'material', active: true, order: 0, highlighted: false, group: 'main' },
   { id: 'news', title: 'الأخبار والتغطيات', path: '/news', icon: 'newspaper', iconType: 'material', active: true, order: 1, highlighted: false, group: 'main' },
   { id: 'matches', title: 'جدول المباريات', path: '/matches', icon: 'sports_soccer', iconType: 'material', active: true, order: 2, highlighted: false, group: 'main' },
+  { id: 'football-center', title: 'مركز المباريات الذكي', path: '/football-center', icon: 'sports_soccer', iconType: 'material', active: true, order: 2.5, badge: 'جديد', highlighted: false, group: 'main' },
   { id: 'live', title: 'البث المباشر', path: '/live', icon: 'live_tv', iconType: 'material', active: true, order: 3, highlighted: false, group: 'main' },
   { id: 'world-fans', title: 'رابطة اتحاداوية العالم', path: '/world-fans', icon: 'Globe', iconType: 'lucide', active: true, order: 3.5, highlighted: false, group: 'main' },
   { id: 'public-services', title: 'خدمات الجمهور', path: '/services', icon: 'volunteer_activism', iconType: 'material', active: true, order: 3.8, badge: 'جديد', badgeColor: '#10b981', highlighted: true, highlightColor: 'emerald', group: 'main' },

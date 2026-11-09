@@ -20,7 +20,8 @@ import {
   Sparkles,
   Layers,
   Database,
-  Gamepad2
+  Gamepad2,
+  Trophy
 } from 'lucide-react';
 
 export default function AdminSectionFlagsManager() {
@@ -85,7 +86,8 @@ export default function AdminSectionFlagsManager() {
       worldFans: targetState,
       fanStore: targetState,
       itthadawyBusiness: targetState,
-      game: targetState
+      game: targetState,
+      footballCenter: targetState
     };
 
     setSectionFlags(newFlags);
@@ -99,11 +101,11 @@ export default function AdminSectionFlagsManager() {
         collectionName: 'appSettings',
         collectionLabel: 'التحكم المركزي في الأقسام',
         itemId: 'sections_batch',
-        itemTitle: targetState ? 'تفعيل جميع الأقسام الأربعة' : 'تعطيل جميع الأقسام الأربعة',
+        itemTitle: targetState ? 'تفعيل جميع الأقسام المتاحة' : 'تعطيل جميع الأقسام المتاحة',
         details: `تم تبديل حالة كافة الأقسام إلى ${targetState ? 'ON' : 'OFF'}`
       });
 
-      toast.success(targetState ? 'تم تفعيل جميع الأقسام بنجاح 🟢' : 'تم تعطيل جميع الأقسام الأربعة 🔴');
+      toast.success(targetState ? 'تم تفعيل جميع الأقسام بنجاح 🟢' : 'تم تعطيل جميع الأقسام المتاحة 🔴');
     } catch (err) {
       console.error('Failed batch section flag update:', err);
       toast.error('حدث خطأ أثناء تطبيق الإعدادات المجمعة');
@@ -128,6 +130,24 @@ export default function AdminSectionFlagsManager() {
     paths: string[];
     detailsOnDisabled: string[];
   }[] = [
+    {
+      key: 'footballCenter', title: 'مركز المباريات الذكي (API-Football)',
+      englishKey: 'footballCenter',
+      description: 'قسم منفصل عن المباريات والتوقعات، يعرض التشكيل والبدلاء والأحداث والإحصائيات ويمكن تعطيله بضغطة واحدة.',
+      icon: <Trophy size={22} />,
+      colorTheme: {
+        activeBg:'bg-emerald-500/10 dark:bg-emerald-950/20',
+        activeBorder:'border-emerald-500/30',
+        activeText:'text-emerald-700 dark:text-emerald-400',
+        badgeBg:'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+        iconBg:'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+      },
+      paths: ['/football-center'],
+      detailsOnDisabled: [
+        'إخفاء المركز من القوائم', 'حظر الصفحة داخل التطبيق',
+        'منع تحميل المكوّن وإجراء اتصالات API-Football من الواجهة'
+      ]
+    },
     {
       key: 'fanServices',
       title: 'خدمات الجماهير والتعليم المجاني',
@@ -254,7 +274,7 @@ export default function AdminSectionFlagsManager() {
               التحكم في ظهور وتحميل الأقسام
             </h2>
             <p className="text-xs text-white/80 max-w-2xl leading-relaxed">
-              تحكم فوري من Firestore في تشغيل أو إيقاف أي من الأقسام الأربعة المحددة. عند الإيقاف يتم إخفاء القسم بالكامل من الرئيسية والقوائم، حظر مساراته، ومنع استعلامات وتحميل ملفاته.
+              تحكم فوري من Firestore في تشغيل أو إيقاف أي من الأقسام المتاحة المحددة. عند الإيقاف يتم إخفاء القسم بالكامل من الرئيسية والقوائم، حظر مساراته، ومنع استعلامات وتحميل ملفاته.
             </p>
           </div>
 
@@ -263,7 +283,7 @@ export default function AdminSectionFlagsManager() {
             <div className="ds-content-card bg-white/10 backdrop-blur-md border border-white/15 px-4 py-2.5 rounded-lg text-center">
               <span className="text-[12px] text-white/70 block font-bold">الأقسام النشطة</span>
               <span className="text-lg font-bold text-emerald-300">
-                {activeCount} <span className="text-xs text-white/60">من 4</span>
+                {activeCount} <span className="text-xs text-white/60">من {sectionsList.length}</span>
               </span>
             </div>
 

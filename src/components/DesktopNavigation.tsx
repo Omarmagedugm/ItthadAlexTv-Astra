@@ -3,7 +3,7 @@ import { NavigationIcon, useNavigation } from './design/navigation';
 import '../desktop-navigation.css';
 
 const groups=[
- {title:'المباريات',paths:['/matches','/live']},
+ {title:'المباريات',paths:['/matches','/football-center','/live']},
  {title:'الأخبار والنادي',paths:['/news','/history','/social']},
  {title:'الجماهير والألعاب',paths:['/game','/fan-zone','/world-fans','/club-members','/services','/jersey-tryon']},
  {title:'المكتبة والتسوق',paths:['/library','/business','/store']},
