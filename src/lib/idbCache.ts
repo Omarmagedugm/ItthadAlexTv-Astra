@@ -93,6 +93,8 @@ export async function loadAllCachedCollections(): Promise<{
   homeSections?: any[];
   appSettings?: any;
   sectionFlags?: any;
+  aiConfig?: any;
+  cityInfo?: any;
   liveStreams?: any;
   songs?: any[];
   books?: any[];
@@ -115,6 +117,8 @@ export async function loadAllCachedCollections(): Promise<{
       'homeSections',
       'appSettings',
       'sectionFlags',
+      'aiConfig',
+      'cityInfo',
       'liveStreams',
       'songs',
       'books',
