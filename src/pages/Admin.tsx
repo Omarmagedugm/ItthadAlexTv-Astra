@@ -1258,7 +1258,7 @@ export default function Admin() {
           defaultSport: formData.defaultSport || appSettings.defaultSport || 'auto',
           liveViewMode: formData.liveViewMode || appSettings.liveViewMode || 'both',
           libraryBanner: formData.libraryBanner !== undefined ? formData.libraryBanner : (appSettings.libraryBanner || ''),
-          disablePreloader: formData.disablePreloader !== undefined ? Boolean(formData.disablePreloader) : Boolean(appSettings.disablePreloader),
+          disablePreloader: formData.disablePreloader !== undefined ? Boolean(formData.disablePreloader) : (appSettings.disablePreloader !== false),
           maintenanceEnabled: formData.maintenanceEnabled !== undefined ? formData.maintenanceEnabled : (appSettings.maintenanceEnabled || false),
           maintenanceTitle: formData.maintenanceTitle !== undefined ? formData.maintenanceTitle : (appSettings.maintenanceTitle || 'سنعود بعد قليل انتظرونا'),
           maintenanceMessage: formData.maintenanceMessage !== undefined ? formData.maintenanceMessage : (appSettings.maintenanceMessage || 'نقوم حالياً بإجراء بعض التحديثات وأعمال الصيانة لتحسين تجربة استخدام قناة الاتحاد السكندري. سنعود بعد قليل، انتظرونا!'),
@@ -2366,7 +2366,7 @@ export default function Admin() {
     setShowModal(true);
   };
 
-  if (!isAuthReady || !profile.uid || (hasAdminAccess && !isTabAllowed(activeTab))) {
+  if (!isAuthReady || (Boolean(auth.currentUser) && !profile.uid) || (hasAdminAccess && !isTabAllowed(activeTab))) {
     return <AppPreloader />;
   }
 
@@ -2377,7 +2377,12 @@ export default function Admin() {
           <ShieldAlert size={64} className="mx-auto text-red-500 mb-4" />
           <h2 className="ds-content-heading text-2xl font-bold text-slate-800 dark:text-white mb-2">دخول غير مصرح</h2>
           <p className="text-slate-500 dark:text-slate-400 font-bold mb-6">لا تمتلك الصلاحيات الكافية للوصول إلى لوحة التحكم.</p>
-          <Link to="/" className="inline-block bg-primary hover:bg-primary-light text-white px-8 py-3 rounded-lg font-bold transition-all shadow-md shadow-primary/20 cursor-pointer">العودة للرئيسية</Link>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {!profile.uid && (
+              <Link to="/auth" className="inline-block bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-bold transition-all shadow-md cursor-pointer">تسجيل الدخول</Link>
+            )}
+            <Link to="/" className="inline-block bg-primary hover:bg-primary-light text-white px-8 py-3 rounded-lg font-bold transition-all shadow-md shadow-primary/20 cursor-pointer">العودة للرئيسية</Link>
+          </div>
         </div>
       </div>
     );
@@ -4631,7 +4636,7 @@ export default function Admin() {
                     <div>
                       <h3 className="ds-content-heading text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
                         <span>إلغاء شاشة التحميل المبدئية (Preloader)</span>
-                        {(formData.disablePreloader !== undefined ? Boolean(formData.disablePreloader) : Boolean(appSettings.disablePreloader)) ? (
+                        {(formData.disablePreloader !== undefined ? Boolean(formData.disablePreloader) : (appSettings.disablePreloader !== false)) ? (
                           <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[12px] font-bold">
                             ملغى (يفتح التطبيق مباشرة)
                           </span>
@@ -4650,7 +4655,7 @@ export default function Admin() {
                   <label className="relative inline-flex items-center cursor-pointer flex-shrink-0" aria-label="إلغاء شاشة التحميل المبدئية Preloader">
                     <input
                       type="checkbox"
-                      checked={formData.disablePreloader !== undefined ? Boolean(formData.disablePreloader) : Boolean(appSettings.disablePreloader)}
+                      checked={formData.disablePreloader !== undefined ? Boolean(formData.disablePreloader) : (appSettings.disablePreloader !== false)}
                       onChange={async (e) => {
                         const nextDisabled = e.target.checked;
                         setFormData({ ...formData, disablePreloader: nextDisabled });

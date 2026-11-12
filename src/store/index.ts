@@ -606,6 +606,8 @@ interface AppState {
     facebookPageUrl?: string;
     onesignalRestApiKey?: string;
     onesignalAppId?: string;
+    disablePreloader?: boolean;
+    preloaderEnabled?: boolean;
     maintenanceEnabled?: boolean;
     maintenanceTitle?: string;
     maintenanceMessage?: string;
@@ -888,7 +890,7 @@ export const useAppStore = create<AppState>()(
           enabled: true
         },
         facebookPageUrl: 'https://www.facebook.com/Itthadalexchannel',
-        disablePreloader: false,
+        disablePreloader: true,
         maintenanceEnabled: false,
         maintenanceTitle: 'سنعود بعد قليل انتظرونا',
         maintenanceMessage: 'نقوم حالياً بإجراء بعض التحديثات وأعمال الصيانة لتحسين تجربة استخدام قناة الاتحاد السكندري. سنعود بعد قليل، انتظرونا!',

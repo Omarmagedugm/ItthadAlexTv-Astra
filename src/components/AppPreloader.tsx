@@ -7,15 +7,15 @@ interface AppPreloaderProps {
 }
 
 export function isPreloaderDisabled(appSettings?: any): boolean {
-  if (appSettings?.disablePreloader === true || appSettings?.preloaderEnabled === false) {
-    return true;
+  if (appSettings?.disablePreloader === false || appSettings?.preloaderEnabled === true) {
+    return false;
   }
   try {
-    if (typeof window !== 'undefined' && localStorage.getItem('ittihad-disable-preloader') === '1') {
-      return true;
+    if (typeof window !== 'undefined' && localStorage.getItem('ittihad-disable-preloader') === '0') {
+      return false;
     }
   } catch {}
-  return false;
+  return true;
 }
 
 export default function AppPreloader({ fullScreen = true }: AppPreloaderProps) {

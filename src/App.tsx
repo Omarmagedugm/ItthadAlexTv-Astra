@@ -586,7 +586,6 @@ function GlobalSEOSynchronizer() {
             <Route path="/matches" element={<Matches />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin" element={<Admin />} />
-            <Route path="/fan-zone" element={<FanZone />} />
             <Route path="/game" element={<FeatureGuardRoute sectionKey="game" component={Game} />} />
             <Route path="/games/ittihadawy" element={<FeatureGuardRoute sectionKey="game" component={Game} />} />
             <Route path="/jersey-tryon" element={<JerseyTryOn />} />

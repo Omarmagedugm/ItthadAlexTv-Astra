@@ -6,7 +6,13 @@ import { loadAllCachedCollections, setIdbItem } from '../lib/idbCache';
 
 export function useFirestoreSync() {
   const isInitialFetchDoneRef = useRef(false);
-  const [startupReady, setStartupReady] = useState(false);
+  const [startupReady, setStartupReady] = useState(() => {
+    try {
+      return typeof window === 'undefined' || localStorage.getItem('ittihad-disable-preloader') !== '0';
+    } catch {
+      return true;
+    }
+  });
 
   // 1. Ultra-fast Tiered Public / Global Data Sync with Offline First & IndexedDB
   useEffect(() => {
@@ -79,7 +85,7 @@ export function useFirestoreSync() {
       // If we restored previously cached real data, unlock UI immediately!
       if (hasRealContent) {
         getStore().setDataLoaded(true);
-        if (Array.isArray(cached.news) && Array.isArray(cached.matches) && cached.homeSections && cached.appSettings && cached.sectionFlags) setStartupReady(true);
+        setStartupReady(true);
       }
     }).catch(() => {});
 
@@ -128,7 +134,7 @@ export function useFirestoreSync() {
         getStore().setDataLoaded(true);
         setStartupReady(true);
       }
-    }, 12000);
+    }, 2500);
 
     // ==========================================
     // TIER 1: CRITICAL CORE (Runs Immediately)
@@ -168,10 +174,10 @@ export function useFirestoreSync() {
       if (snap.exists()) {
         const data = snap.data();
         if (data) {
-          const s = { id: snap.id, ...data };
+          const s = { id: snap.id, disablePreloader: true, ...data };
           getStore().setSettings(s);
           setIdbItem('appSettings', s);
-          if (data.disablePreloader || data.preloaderEnabled === false) {
+          if (s.disablePreloader !== false && s.preloaderEnabled !== true) {
             setStartupReady(true);
           }
         }

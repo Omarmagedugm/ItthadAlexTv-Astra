@@ -8,7 +8,7 @@ import { useAppStore } from '../../store';
 export default function AdminStart({onNavigate}:{onNavigate:(tab:string)=>void}){
  const {profile,news,matches,orders,users,appSettings,setSettings} = useAppStore();const [search,setSearch]=useState('');
  const allowed=ADMIN_SECTIONS.filter(s=>canOpenAdminSection(profile,s.id));
- const preloaderDisabled = Boolean(appSettings?.disablePreloader);
+ const preloaderDisabled = appSettings?.disablePreloader !== false;
  const togglePreloader = async () => {
   const next = !preloaderDisabled;
   setSettings({ disablePreloader: next });
