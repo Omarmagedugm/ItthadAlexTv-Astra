@@ -7,7 +7,6 @@ import { loadAllCachedCollections, setIdbItem } from '../lib/idbCache';
 export function useFirestoreSync() {
   const isInitialFetchDoneRef = useRef(false);
   const [startupReady, setStartupReady] = useState(false);
-  const [startupFailed, setStartupFailed] = useState(false);
 
   // 1. Ultra-fast Tiered Public / Global Data Sync with Offline First & IndexedDB
   useEffect(() => {
@@ -15,34 +14,16 @@ export function useFirestoreSync() {
     const unsubs: (() => void)[] = [];
     const getStore = () => useAppStore.getState();
     // Wait for each essential collection, rather than the first arriving snapshot.
-    const pendingCore = new Set(['settings/homeLayout', 'settings/global', 'appSettings/sections', 'settings/sidebar_layout', 'settings/ai_config', 'city_info/alexandria']);
+    const pendingCore = new Set(['settings/homeLayout', 'settings/global', 'appSettings/sections', 'matches', 'news']);
     const settleCore = (path: string) => {
       pendingCore.delete(path);
-      if (isMounted && pendingCore.size === 0) { setStartupReady(true); setStartupFailed(false); }
+      if (isMounted && pendingCore.size === 0) setStartupReady(true);
     };
 
-    let cachedCoreReady = false;
     // STEP 0: Immediate Rehydration of previously saved real data from IndexedDB
     // This allows the app to open with real content in 0ms without waiting for network requests
     loadAllCachedCollections().then((cached) => {
       if (!isMounted) return;
-      // Never show admin-disabled sections from hardcoded defaults while offline.
-      cachedCoreReady = Array.isArray(cached.homeSections)
-        && Array.isArray(cached.sidebarMenuItems)
-        && !!cached.appSettings && typeof cached.appSettings === 'object'
-        && !!cached.sectionFlags && typeof cached.sectionFlags === 'object';
-      if (Array.isArray(cached.homeSections)) getStore().setHomeSections(cached.homeSections);
-      if (Array.isArray(cached.sidebarMenuItems)) getStore().setSidebarMenuItems(cached.sidebarMenuItems);
-      if (cached.appSettings && typeof cached.appSettings === 'object') getStore().setSettings(cached.appSettings);
-      if (cached.sectionFlags && typeof cached.sectionFlags === 'object') getStore().setSectionFlags(cached.sectionFlags);
-      if (cached.aiConfig && typeof cached.aiConfig === 'object') getStore().setAiConfig(cached.aiConfig);
-      if (cached.cityInfo) getStore().setCityInfo(cached.cityInfo as any);
-      if (Array.isArray(cached.ads)) getStore().setAds(cached.ads as any);
-      if (Array.isArray(cached.albums)) getStore().setAlbums(cached.albums as any);
-      if (Array.isArray(cached.playlists)) getStore().setPlaylists(cached.playlists as any);
-      if (Array.isArray(cached.memberDiscounts)) getStore().setMemberDiscounts(cached.memberDiscounts as any);
-      if (Array.isArray(cached.historyEvents)) getStore().setHistoryEvents(cached.historyEvents as any);
-      if (Array.isArray(cached.stadiums)) getStore().setStadiums(cached.stadiums as any);
       let hasRealContent = false;
 
       if (cached.news && Array.isArray(cached.news) && cached.news.length > 0) {
@@ -56,6 +37,24 @@ export function useFirestoreSync() {
       if (cached.media && Array.isArray(cached.media) && cached.media.length > 0) {
         getStore().setMedia(cached.media);
         hasRealContent = true;
+      }
+      if (cached.ads && Array.isArray(cached.ads) && cached.ads.length > 0) {
+        getStore().setAds(cached.ads);
+      }
+      if (cached.homeSections && Array.isArray(cached.homeSections) && cached.homeSections.length > 0) {
+        getStore().setHomeSections(cached.homeSections);
+      }
+      if (cached.appSettings) {
+        getStore().setSettings(cached.appSettings);
+        if (cached.appSettings.disablePreloader || cached.appSettings.preloaderEnabled === false) {
+          setStartupReady(true);
+        }
+      }
+      if (cached.sectionFlags) {
+        getStore().setSectionFlags(cached.sectionFlags);
+      }
+      if (cached.liveStreams) {
+        getStore().updateLiveStreams(cached.liveStreams);
       }
       if (cached.songs && Array.isArray(cached.songs) && cached.songs.length > 0) {
         getStore().setSongs(cached.songs);
@@ -73,12 +72,14 @@ export function useFirestoreSync() {
         getStore().setFanPosts(cached.fanPosts);
         hasRealContent = true;
       }
+      if (cached.sidebarMenuItems && Array.isArray(cached.sidebarMenuItems) && cached.sidebarMenuItems.length > 0) {
+        getStore().setSidebarMenuItems(cached.sidebarMenuItems);
+      }
+
       // If we restored previously cached real data, unlock UI immediately!
-      if (hasRealContent) getStore().setDataLoaded(true);
-      // A verified local public shell may boot without waiting on Firebase.
-      if (cachedCoreReady && !navigator.onLine) {
-        setStartupFailed(false);
-        setStartupReady(true);
+      if (hasRealContent) {
+        getStore().setDataLoaded(true);
+        if (Array.isArray(cached.news) && Array.isArray(cached.matches) && cached.homeSections && cached.appSettings && cached.sectionFlags) setStartupReady(true);
       }
     }).catch(() => {});
 
@@ -98,10 +99,8 @@ export function useFirestoreSync() {
             try {
               onNext(snap);
               // An empty local cache is not a completed server response.
-              if (!snap.metadata.fromCache) {
-                if (path === 'settings/global') void setIdbItem('lastPublicSync', Date.now());
-                settleCore(path);
-              }
+              const hasCachedResult = typeof snap.exists === 'function' ? snap.exists() : !snap.empty;
+              if (!snap.metadata.fromCache || hasCachedResult) settleCore(path);
             } catch (e) {
               console.warn(`Snapshot callback error for ${path}:`, e);
             }
@@ -111,14 +110,14 @@ export function useFirestoreSync() {
               handleFirestoreError(err, op, path);
             }
             // Do NOT wipe data on network error
-            if (isMounted && pendingCore.has(path)) setStartupFailed(true);
+            if (isMounted) { getStore().setDataLoaded(true); settleCore(path); }
           }
         );
         unsubs.push(unsub);
         return unsub;
       } catch (err) {
         handleFirestoreError(err, op, path);
-        if (isMounted && pendingCore.has(path)) setStartupFailed(true);
+        if (isMounted) { getStore().setDataLoaded(true); settleCore(path); }
         return () => {};
       }
     };
@@ -127,10 +126,7 @@ export function useFirestoreSync() {
     const safetyTimer = setTimeout(() => {
       if (isMounted) {
         getStore().setDataLoaded(true);
-        if (pendingCore.size > 0) {
-          if (cachedCoreReady) { setStartupFailed(false); setStartupReady(true); }
-          else setStartupFailed(true);
-        }
+        setStartupReady(true);
       }
     }, 12000);
 
@@ -159,7 +155,7 @@ export function useFirestoreSync() {
     subscribeSnapshot(doc(db, 'settings', 'sidebar_layout'), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
-        if (data && Array.isArray(data.items)) {
+        if (data && Array.isArray(data.items) && data.items.length > 0) {
           const sortedItems = [...data.items].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
           getStore().setSidebarMenuItems(sortedItems);
           setIdbItem('sidebarMenuItems', sortedItems);
@@ -175,6 +171,9 @@ export function useFirestoreSync() {
           const s = { id: snap.id, ...data };
           getStore().setSettings(s);
           setIdbItem('appSettings', s);
+          if (data.disablePreloader || data.preloaderEnabled === false) {
+            setStartupReady(true);
+          }
         }
       }
     }, 'settings/global', OperationType.GET);
@@ -195,17 +194,6 @@ export function useFirestoreSync() {
         setIdbItem('sectionFlags', flags);
       }
     }, 'appSettings/sections', OperationType.GET);
-
-    subscribeSnapshot(doc(db, 'settings', 'ai_config'), (snap) => {
-      const value = snap.exists() ? snap.data() : { enabled: false };
-      getStore().setAiConfig(value);
-      if (!snap.metadata.fromCache) void setIdbItem('aiConfig', value);
-    }, 'settings/ai_config', OperationType.GET);
-    subscribeSnapshot(doc(db, 'city_info', 'alexandria'), (snap) => {
-      const value = snap.exists() ? snap.data() as any : null;
-      getStore().setCityInfo(value);
-      if (!snap.metadata.fromCache) void setIdbItem('cityInfo', value);
-    }, 'city_info/alexandria', OperationType.GET);
 
     // 4. Live Stream Channels
     subscribeSnapshot(doc(db, 'settings', 'liveStream'), (snap) => {
@@ -280,7 +268,7 @@ export function useFirestoreSync() {
       query(collection(db, 'ads'), where('active', '==', true), orderBy('order', 'asc'), limit(20)),
       (snap) => {
         const items = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-        if (items.length > 0 || !snap.metadata.fromCache) {
+        if (items.length > 0) {
           getStore().setAds(items as any);
           setIdbItem('ads', items);
         }
@@ -570,5 +558,5 @@ export function useFirestoreSync() {
       userUnsubs = [];
     };
   }, []);
-  return { startupReady, startupFailed };
+  return { startupReady };
 }

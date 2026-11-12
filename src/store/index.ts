@@ -888,6 +888,7 @@ export const useAppStore = create<AppState>()(
           enabled: true
         },
         facebookPageUrl: 'https://www.facebook.com/Itthadalexchannel',
+        disablePreloader: false,
         maintenanceEnabled: false,
         maintenanceTitle: 'سنعود بعد قليل انتظرونا',
         maintenanceMessage: 'نقوم حالياً بإجراء بعض التحديثات وأعمال الصيانة لتحسين تجربة استخدام قناة الاتحاد السكندري. سنعود بعد قليل، انتظرونا!',
@@ -1020,7 +1021,16 @@ export const useAppStore = create<AppState>()(
       setSectionFlags: (flags) => set((state) => ({ 
         sectionFlags: { ...state.sectionFlags, ...flags } 
       })),
-      setSettings: (settings) => set((state) => ({ appSettings: { ...state.appSettings, ...settings } })),
+      setSettings: (settings) => set((state) => {
+        const merged = { ...state.appSettings, ...settings };
+        try {
+          if (typeof window !== 'undefined' && (settings?.disablePreloader !== undefined || settings?.preloaderEnabled !== undefined)) {
+            const isDisabled = Boolean(merged.disablePreloader || merged.preloaderEnabled === false);
+            localStorage.setItem('ittihad-disable-preloader', isDisabled ? '1' : '0');
+          }
+        } catch {}
+        return { appSettings: merged };
+      }),
       setAiConfig: (config) => set((state) => ({ aiConfig: { ...state.aiConfig, ...config } })),
       updateLiveStream: (stream) => set((state) => ({ liveStream: { ...state.liveStream, ...stream } })),
       updateLiveStreams: (streams) => set((state) => ({

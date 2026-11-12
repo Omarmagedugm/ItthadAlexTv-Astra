@@ -1258,6 +1258,7 @@ export default function Admin() {
           defaultSport: formData.defaultSport || appSettings.defaultSport || 'auto',
           liveViewMode: formData.liveViewMode || appSettings.liveViewMode || 'both',
           libraryBanner: formData.libraryBanner !== undefined ? formData.libraryBanner : (appSettings.libraryBanner || ''),
+          disablePreloader: formData.disablePreloader !== undefined ? Boolean(formData.disablePreloader) : Boolean(appSettings.disablePreloader),
           maintenanceEnabled: formData.maintenanceEnabled !== undefined ? formData.maintenanceEnabled : (appSettings.maintenanceEnabled || false),
           maintenanceTitle: formData.maintenanceTitle !== undefined ? formData.maintenanceTitle : (appSettings.maintenanceTitle || 'سنعود بعد قليل انتظرونا'),
           maintenanceMessage: formData.maintenanceMessage !== undefined ? formData.maintenanceMessage : (appSettings.maintenanceMessage || 'نقوم حالياً بإجراء بعض التحديثات وأعمال الصيانة لتحسين تجربة استخدام قناة الاتحاد السكندري. سنعود بعد قليل، انتظرونا!'),
@@ -4620,6 +4621,55 @@ export default function Admin() {
           {activeTab === 'settings' && (
             <div className="ds-content-card bg-white dark:bg-card-dark rounded-xl p-5 shadow-sm space-y-5 border border-border-light dark:border-border-dark">
               
+              {/* Preloader Control Card */}
+              <div className="p-4 sm:p-5 rounded-lg bg-emerald-500/10 dark:bg-emerald-950/25 border-2 border-emerald-500/40 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-md">
+                      <Zap size={20} />
+                    </div>
+                    <div>
+                      <h3 className="ds-content-heading text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
+                        <span>إلغاء شاشة التحميل المبدئية (Preloader)</span>
+                        {(formData.disablePreloader !== undefined ? Boolean(formData.disablePreloader) : Boolean(appSettings.disablePreloader)) ? (
+                          <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[12px] font-bold">
+                            ملغى (يفتح التطبيق مباشرة)
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[12px] font-bold">
+                            مُفعل (تظهر شاشة التحميل)
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-[12px] text-slate-600 dark:text-slate-400 font-bold">
+                        عند تفعيل هذا الخيار، يتم إلغاء شاشة التحميل الافتتاحية (Preloader) والدخول المباشر للتطبيق فوراً
+                      </p>
+                    </div>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer flex-shrink-0" aria-label="إلغاء شاشة التحميل المبدئية Preloader">
+                    <input
+                      type="checkbox"
+                      checked={formData.disablePreloader !== undefined ? Boolean(formData.disablePreloader) : Boolean(appSettings.disablePreloader)}
+                      onChange={async (e) => {
+                        const nextDisabled = e.target.checked;
+                        setFormData({ ...formData, disablePreloader: nextDisabled });
+                        const { setSettings } = useAppStore.getState();
+                        setSettings({ disablePreloader: nextDisabled });
+                        try {
+                          await setDoc(doc(db, 'settings', 'global'), { disablePreloader: nextDisabled }, { merge: true });
+                          toast.success(nextDisabled ? 'تم إلغاء الـ Preloader بنجاح' : 'تم تفعيل الـ Preloader بنجاح');
+                        } catch (err) {
+                          handleFirestoreError(err, OperationType.WRITE, 'settings/global');
+                        }
+                      }}
+                      className="ds-form-control sr-only peer"
+                    />
+                    <div className="ds-content-card w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+              </div>
+
               {/* Maintenance Mode Card */}
               <div className="p-4 sm:p-5 rounded-lg bg-amber-500/10 dark:bg-amber-950/25 border-2 border-amber-500/40 space-y-4">
                 <div className="flex items-center justify-between gap-3">

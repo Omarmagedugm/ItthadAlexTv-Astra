@@ -1,17 +1,35 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useAppStore } from '../store';
 
 interface AppPreloaderProps {
   fullScreen?: boolean;
 }
 
+export function isPreloaderDisabled(appSettings?: any): boolean {
+  if (appSettings?.disablePreloader === true || appSettings?.preloaderEnabled === false) {
+    return true;
+  }
+  try {
+    if (typeof window !== 'undefined' && localStorage.getItem('ittihad-disable-preloader') === '1') {
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
 export default function AppPreloader({ fullScreen = true }: AppPreloaderProps) {
+  const appSettings = useAppStore(state => state.appSettings);
+  const disabled = isPreloaderDisabled(appSettings);
+
   useEffect(() => {
-    if (!fullScreen) return;
+    if (!fullScreen || disabled) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = previous; };
-  }, [fullScreen]);
+  }, [fullScreen, disabled]);
+
+  if (disabled) return null;
 
   const splash = <div className={`app-splash ${fullScreen ? 'app-splash--fullscreen' : 'app-splash--inline'}`} role="status" aria-live="polite" aria-busy="true" dir="rtl">
     <div className="app-splash-brand"><div className="app-splash-halo" aria-hidden="true"/><img src="/icon.png" alt="قناة الاتحاد" width="128" height="128" fetchPriority="high" decoding="sync"/></div>
@@ -20,3 +38,4 @@ export default function AppPreloader({ fullScreen = true }: AppPreloaderProps) {
   </div>;
   return fullScreen ? createPortal(splash, document.body) : splash;
 }
+

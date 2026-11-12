@@ -1,7 +1,5 @@
 import { canAccessAdmin } from './lib/adminAccess';
-import AppPreloader from './components/AppPreloader';
-import OfflineStatusBar from './components/OfflineStatusBar';
-import OfflineLiveGate from './components/OfflineLiveGate';
+import AppPreloader, { isPreloaderDisabled } from './components/AppPreloader';
 import PageFrame from "./components/design/PageFrame";
 import React, { useEffect, useState, useRef, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
@@ -42,7 +40,6 @@ function safeLazy<T extends React.ComponentType<any>>(
 const Auth = safeLazy(() => import('./pages/Auth'));
 const News = safeLazy(() => import('./pages/News'));
 const NewsDetail = safeLazy(() => import('./pages/NewsDetail'));
-const OfflineReads = safeLazy(() => import('./pages/OfflineReads'));
 const Media = safeLazy(() => import('./pages/Media'));
 const Live = safeLazy(() => import('./pages/Live'));
 const Matches = safeLazy(() => import('./pages/Matches'));
@@ -245,16 +242,18 @@ export default function App() {
 }
 
 function AppContent() {
-  const { startupReady, startupFailed } = useFirestoreSync();
+  const { startupReady } = useFirestoreSync();
+  const appSettings = useAppStore(state => state.appSettings);
+  const preloaderDisabled = isPreloaderDisabled(appSettings);
   const [startupComplete, setStartupComplete] = useState(() => {
     try { return startupReady || sessionStorage.getItem('ittihad-startup-complete') === '1'; } catch { return startupReady; }
   });
   useEffect(() => {
-    if (startupReady || startupFailed) {
+    if (startupReady || preloaderDisabled) {
       setStartupComplete(true);
       try { sessionStorage.setItem('ittihad-startup-complete', '1'); } catch {}
     }
-  }, [startupReady, startupFailed]);
+  }, [startupReady, preloaderDisabled]);
   const matches = useAppStore(state => state.matches);
   const [showGoal, setShowGoal] = useState(false);
   const [showWin, setShowWin] = useState(false);
@@ -545,21 +544,12 @@ function GlobalSEOSynchronizer() {
   return null;
 }
 
-  // Keep all navigation and page chrome unmounted during startup.
-  if (!startupReady) {
-    if (!startupComplete && !startupFailed) return <AppPreloader />;
-    if (!startupFailed) return <AppPreloader />;
-    return <div role="alert" dir="rtl" className="min-h-screen flex flex-col gap-4 items-center justify-center p-6 text-center bg-background-light dark:bg-background-dark">
-      <h1 className="text-xl font-bold">تعذر فتح التطبيق بدون اتصال</h1>
-      <p className="max-w-sm text-sm text-slate-500 dark:text-slate-300">مفيش نسخة مكتملة من الإعدادات على الجهاز. افتح قناة الاتحاد مرة بالإنترنت علشان نحفظ المحتوى والإعدادات.</p>
-      <button onClick={() => window.location.reload()} className="rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white">إعادة المحاولة</button>
-    </div>;
-  }
+  // Keep all navigation and page chrome unmounted during startup unless preloader is disabled.
+  if (!preloaderDisabled && !startupReady && !startupComplete) return <AppPreloader />;
 
   // Auth Redirection Logic
   return (
     <BrowserRouter>
-      <OfflineStatusBar />
       <ScrollToTop />
       <NotificationNavigator />
       <AuthRedirector />
@@ -589,11 +579,10 @@ function GlobalSEOSynchronizer() {
             <Route path="/fan-zone" element={<FanZone />} />
             <Route path="/leaderboard" element={<FanZone />} />
             <Route path="/news" element={<News />} />
-            <Route path="/offline-reads" element={<OfflineReads />} />
             <Route path="/news/:id" element={<NewsDetail />} />
             <Route path="/news/:id/:slug" element={<NewsDetail />} />
             <Route path="/media" element={<Media />} />
-            <Route path="/live" element={<OfflineLiveGate><Live /></OfflineLiveGate>} />
+            <Route path="/live" element={<Live />} />
             <Route path="/matches" element={<Matches />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin" element={<Admin />} />
