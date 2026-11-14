@@ -42,10 +42,40 @@ import { useAppStore } from '../store';
 import { collection, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { getOptimizedImage } from '../lib/cloudinary';
-import type { Song } from '../store';
+import { extractYouTubeId, getFacebookEmbedUrl, getTikTokEmbedUrl, isFacebookUrl, isTikTokUrl, isYouTubeUrl } from '../lib/videoUtils';
+import type { MediaItem, Song } from '../store';
 import { downloadOfflineSong, removeOfflineSong, listOfflineSongs, formatOfflineSongSize, type OfflineSongSummary } from '../lib/offlineSongs';
 
 type TabType = 'photos' | 'videos' | 'songs' | 'books';
+type VideoOrientation = 'portrait' | 'landscape';
+
+const getLibraryVideoEmbedUrl = (url?: string, source?: MediaItem['source']) => {
+  if (typeof url !== 'string') return null;
+  if (source === 'embed') {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === 'https:' || parsed.protocol === 'http:') return parsed.href;
+    } catch {
+      return null;
+    }
+    return null;
+  }
+  if (isYouTubeUrl(url)) {
+    if (/^https?:\/\/(?:www\.|m\.)?youtube\.com\/embed\//i.test(url)) {
+      const parsed = new URL(url);
+      parsed.searchParams.set('autoplay', '1');
+      return parsed.href;
+    }
+    const id = extractYouTubeId(url);
+    if (id) return `https://www.youtube.com/embed/${id}?autoplay=1`;
+  }
+  if (isFacebookUrl(url)) return getFacebookEmbedUrl(url);
+  if (isTikTokUrl(url)) {
+    const embedUrl = getTikTokEmbedUrl(url);
+    if (embedUrl.startsWith('https://www.tiktok.com/embed/v2/')) return embedUrl;
+  }
+  return null;
+};
 
 const getDriveFileId = (url: string) => {
   try {
@@ -157,10 +187,10 @@ export default function Library() {
   
   // Modals state
   const [selectedBook, setSelectedBook] = useState<any | null>(null);
-  const [selectedVideo, setSelectedVideo] = useState<any | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<MediaItem | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<any | null>(null);
-  const [videoOrientations, setVideoOrientations] = useState<Record<string, 'portrait' | 'landscape'>>({});
-  const [modalVideoOrientation, setModalVideoOrientation] = useState<'unknown' | 'portrait' | 'landscape'>('unknown');
+  const [videoOrientations, setVideoOrientations] = useState<Record<string, VideoOrientation>>({});
+  const [modalVideoOrientation, setModalVideoOrientation] = useState<VideoOrientation | null>(null);
   const [isBookLoading, setIsBookLoading] = useState(true);
   const [bookLoadError, setBookLoadError] = useState(false);
 
@@ -262,7 +292,8 @@ export default function Library() {
     document.body.removeChild(link);
   };
 
-  const handleOpenVideo = (videoItem: any) => {
+  const handleOpenVideo = (videoItem: MediaItem) => {
+    setModalVideoOrientation(null);
     setSelectedVideo(videoItem);
     if (videoItem?.id && typeof videoItem.id === 'string' && !videoItem.id.startsWith('media_video_')) {
       try {
@@ -402,35 +433,14 @@ export default function Library() {
     return lower.includes('/shorts/') || lower.includes('/reel/') || lower.includes('/reels/') || lower.includes('tiktok.com');
   };
 
-  useEffect(() => {
-    if (activeTab !== 'videos' || videos.length === 0) return;
-    let cancelled = false;
+  const recordThumbnailOrientation = (url: string, img: HTMLImageElement) => {
+    if (!url || img.naturalWidth <= 0 || img.naturalHeight <= 0) return;
+    const orientation = img.naturalHeight > img.naturalWidth ? 'portrait' : 'landscape';
+    setVideoOrientations(prev => prev[url] === orientation ? prev : { ...prev, [url]: orientation });
+  };
 
-    videos.forEach((v) => {
-      if (!v?.id || !v.thumbnailUrl || videoOrientations[v.id]) return;
-      const src = getOptimizedImage(v.thumbnailUrl, 600) || v.thumbnailUrl;
-      if (!src) return;
-      const probe = new Image();
-      probe.referrerPolicy = 'no-referrer';
-      probe.onload = () => {
-        if (cancelled || probe.naturalWidth <= 0 || probe.naturalHeight <= 0) return;
-        const orientation: 'portrait' | 'landscape' = probe.naturalHeight > probe.naturalWidth ? 'portrait' : 'landscape';
-        setVideoOrientations((prev) => (prev[v.id] === orientation ? prev : { ...prev, [v.id]: orientation }));
-      };
-      probe.src = src;
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab, videos]);
-
-  useEffect(() => {
-    setModalVideoOrientation('unknown');
-  }, [selectedVideo?.id, selectedVideo?.videoUrl]);
-
-  const isVideoVertical = (v: any) =>
-    Boolean(v) && (isVerticalVideoUrl(v.videoUrl) || videoOrientations[v.id] === 'portrait');
+  const isVideoVertical = (video: MediaItem) =>
+    isVerticalVideoUrl(video.videoUrl || video.url) || videoOrientations[video.thumbnailUrl] === 'portrait';
 
   const verticalVideos = videos
     .filter(isVideoVertical)
@@ -438,30 +448,8 @@ export default function Library() {
 
   const landscapeVideos = videos.filter((v) => !isVideoVertical(v));
 
-  const getEmbedUrl = (url?: string, source?: string) => {
-    if (!url) return null;
-    if (source === 'embed') return url;
-    if (url.includes('youtube.com/watch?v=')) {
-      const id = url.split('v=')[1]?.split('&')[0];
-      return `https://www.youtube.com/embed/${id}?autoplay=1`;
-    } else if (url.includes('youtube.com/shorts/')) {
-      const id = url.split('youtube.com/shorts/')[1]?.split(/[?&/]/)[0];
-      return `https://www.youtube.com/embed/${id}?autoplay=1`;
-    } else if (url.includes('youtu.be/')) {
-      const id = url.split('youtu.be/')[1]?.split('?')[0];
-      return `https://www.youtube.com/embed/${id}?autoplay=1`;
-    } else if (url.includes('youtube.com/embed/')) {
-      return url.includes('?') ? `${url}&autoplay=1` : `${url}?autoplay=1`;
-    } else if (url.includes('facebook.com/')) {
-      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&autoplay=1`;
-    }
-    return null;
-  };
-
-  const isEmbeddable = (url?: string) => {
-    if (!url) return false;
-    return url.includes('youtube.com') || url.includes('youtu.be') || url.includes('facebook.com');
-  };
+  const selectedVideoUrl = selectedVideo?.videoUrl || selectedVideo?.url;
+  const selectedVideoEmbedUrl = getLibraryVideoEmbedUrl(selectedVideoUrl, selectedVideo?.source);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-background-dark pb-32 overflow-x-hidden w-full max-w-full touch-pan-y">
@@ -890,7 +878,7 @@ export default function Library() {
                       className="flex items-stretch gap-3.5 md:gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory scroll-smooth pb-2"
                     >
                       {verticalVideos.map((video) => {
-                        const isLandscapeThumbOnShort = videoOrientations[video.id] === 'landscape' && isVerticalVideoUrl(video.videoUrl);
+                        const isLandscapeThumbnail = videoOrientations[video.thumbnailUrl] === 'landscape';
                         return (
                           <div
                             key={video.id}
@@ -900,15 +888,9 @@ export default function Library() {
                             <img
                               src={getOptimizedImage(video.thumbnailUrl, 600) || video.thumbnailUrl}
                               alt={video.title}
-                              onLoad={(e) => {
-                                const img = e.currentTarget;
-                                if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-                                  const orientation: 'portrait' | 'landscape' = img.naturalHeight > img.naturalWidth ? 'portrait' : 'landscape';
-                                  setVideoOrientations((prev) => (prev[video.id] === orientation ? prev : { ...prev, [video.id]: orientation }));
-                                }
-                              }}
+                              onLoad={(e) => recordThumbnailOrientation(video.thumbnailUrl, e.currentTarget)}
                               className={`w-full h-full transition-transform duration-700 group-hover:scale-105 ${
-                                isLandscapeThumbOnShort ? 'object-cover' : 'object-contain'
+                                isLandscapeThumbnail ? 'object-cover' : 'object-contain'
                               }`}
                               referrerPolicy="no-referrer"
                             />
@@ -1031,13 +1013,7 @@ export default function Library() {
                         <img 
                           src={getOptimizedImage(item.thumbnailUrl, 600) || item.thumbnailUrl} 
                           alt={item.title} 
-                          onLoad={(e) => {
-                            const img = e.currentTarget;
-                            if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-                              const orientation: 'portrait' | 'landscape' = img.naturalHeight > img.naturalWidth ? 'portrait' : 'landscape';
-                              setVideoOrientations((prev) => (prev[item.id] === orientation ? prev : { ...prev, [item.id]: orientation }));
-                            }
-                          }}
+                          onLoad={(e) => recordThumbnailOrientation(item.thumbnailUrl, e.currentTarget)}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                           referrerPolicy="no-referrer" 
                         />
@@ -1535,9 +1511,9 @@ export default function Library() {
                     <Heart size={16} fill={isLikedByUser(selectedVideo.likes, auth.currentUser?.uid) ? 'currentColor' : 'none'} />
                     {getLikesCount(selectedVideo.likes)}
                   </button>
-                  {selectedVideo.videoUrl && !isEmbeddable(selectedVideo.videoUrl) && (
+                  {selectedVideoUrl && !selectedVideoEmbedUrl && selectedVideo.source !== 'embed' && (
                     <button 
-                      onClick={() => handleDownload(selectedVideo.videoUrl, selectedVideo.title)}
+                      onClick={() => handleDownload(selectedVideoUrl, selectedVideo.title)}
                       className="ds-control px-3 sm:px-4 py-2 bg-white/10 text-white rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-white/20 transition-all"
                     >
                       <Download size={16} />
@@ -1555,24 +1531,20 @@ export default function Library() {
               </div>
 
               {(() => {
-                const isEmbed = isEmbeddable(selectedVideo.videoUrl);
-                const isPortraitModal =
-                  modalVideoOrientation === 'portrait' ||
-                  (modalVideoOrientation === 'unknown' && (
-                    isVerticalVideoUrl(selectedVideo.videoUrl) ||
-                    videoOrientations[selectedVideo.id] === 'portrait'
-                  ));
+                const isPortraitModal = modalVideoOrientation
+                  ? modalVideoOrientation === 'portrait'
+                  : isVideoVertical(selectedVideo);
                 return (
                   <div className={
                     isPortraitModal
-                      ? isEmbed
+                      ? selectedVideoEmbedUrl
                         ? "aspect-[9/16] h-[min(75vh,calc(100dvh-8.5rem))] w-auto max-w-full mx-auto my-auto rounded-xl overflow-hidden bg-slate-900 shadow-sm relative border border-white/10"
                         : "w-fit max-w-full max-h-[calc(100dvh-8.5rem)] mx-auto my-auto rounded-xl overflow-hidden bg-slate-900 shadow-sm relative border border-white/10 flex items-center justify-center"
                       : "aspect-video w-full max-h-[calc(100dvh-8.5rem)] my-auto rounded-xl overflow-hidden bg-slate-900 shadow-sm relative border border-white/10"
                   }>
-                    {isEmbed ? (
+                    {selectedVideoEmbedUrl ? (
                       <iframe 
-                        src={getEmbedUrl(selectedVideo.videoUrl, selectedVideo.source) || undefined} 
+                        src={selectedVideoEmbedUrl}
                         className="w-full h-full border-none"
                         allow="autoplay; encrypted-media; picture-in-picture"
                         allowFullScreen
@@ -1580,7 +1552,7 @@ export default function Library() {
                       />
                     ) : (
                       <video 
-                        src={selectedVideo.videoUrl || undefined} 
+                        src={selectedVideo.source === 'embed' ? undefined : selectedVideoUrl}
                         controls 
                         autoPlay 
                         onLoadedMetadata={(e) => {

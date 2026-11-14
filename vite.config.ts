@@ -2,14 +2,13 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, type PluginOption, type UserConfig } from 'vite';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default defineConfig(async ({ command, mode }) => {
-  const env = loadEnv(mode, '.', '');
-  const pwaPlugins = [];
+export default defineConfig(async ({ command }): Promise<UserConfig> => {
+  const pwaPlugins: PluginOption[] = [];
   if (command === 'build') {
     const { VitePWA } = await import('vite-plugin-pwa');
     pwaPlugins.push(

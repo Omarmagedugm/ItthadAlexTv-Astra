@@ -102,25 +102,44 @@ test('one blue entrance sign per region in each route loop, never repeated down 
 });
 
 test('account bridge rejects outside frames and cannot credit a run to a different member',async()=>{
- const handlers:Record<string,Function>={}, replies:any[]=[], writes:any[]=[];
+ const messageHandlers: Array<(event: unknown) => void> = [];
+ const replies: any[] = [];
+ const writes: Array<{ authorization: string; result: unknown }> = [];
  const parent={postMessage:(message:any)=>replies.push(message)};
- const window={parent,addEventListener:(name:string,handler:Function)=>handlers[name] ||= handler};
- const auth:any={currentUser:{uid:'member-a'},authStateReady:async()=>{},onAuthStateChanged(callback:Function){handlers.auth=callback;callback(this.currentUser);return ()=>{}}};
- const input=readFileSync('src/gameAccount.ts','utf8').replace(/^import .*;\n/gm,'');
+ const window={parent,addEventListener: (_name: string, handler: (event: unknown) => void) => messageHandlers.push(handler)};
+ const member = (uid: string) => ({ uid, getIdToken: async () => `token-${uid}` });
+ let onAuthChange: (user: ReturnType<typeof member> | null) => void;
+ const auth = {
+  currentUser: member('member-a'),
+  authStateReady: async () => {},
+  onAuthStateChanged(callback: typeof onAuthChange) {
+   onAuthChange = callback;
+   callback(this.currentUser);
+  },
+ };
+ const input=readFileSync('src/gameAccount.ts','utf8').replace(/^import [^\r\n]*;\r?\n/gm,'');
  const js=ts.transpile(input,{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None});
  const storage={getItem:()=>null,setItem:()=>{}};
- const instance=new Function('auth','db','doc','runTransaction','validGameResult','improvedGameStats','window','location','crypto','localStorage','sessionStorage','setDoc','serverTimestamp',js+';return {flush:()=>queue};')(
-  auth,{},(_db:any,_collection:string,uid:string)=>({uid}),async(_db:any,work:Function)=>work({get:async()=>({exists:()=>true,data:()=>({stats:{}})}),update:(...args:any[])=>writes.push(args)}),validGameResult,improvedGameStats,window,{origin:'https://app.example'},crypto,storage,storage,async()=>{},()=>0);
+ const fetchScore = async (url: string, request: { method: string; headers: { Authorization: string }; body: string }) => {
+  assert.equal(url, '/api/game/record-score');
+  assert.equal(request.method, 'POST');
+  writes.push({ authorization: request.headers.Authorization, result: JSON.parse(request.body).result });
+  return { ok: true, json: async () => ({ success: true }) };
+ };
+ const instance=new Function('auth','db','doc','validGameResult','window','location','crypto','localStorage','sessionStorage','setDoc','serverTimestamp','fetch','startCoinRun',js+';return {flush:()=>Promise.all([queue,coinQueue])};')(
+  auth,{},()=>({}),validGameResult,window,{origin:'https://app.example'},crypto,storage,storage,async()=>{},()=>0,fetchScore,async()=>{});
  assert.ok(replies.some(r=>r.type==='ittihadawy:member-access'&&r.authorized===true));
- handlers.auth(null);assert.equal(replies.at(-1).authorized,false);
- const message=(type:string,id:string,result?:any,source:any=parent)=>handlers.message({origin:'https://app.example',source,data:{type,id,result}});
+ onAuthChange(null);assert.equal(replies.at(-1).authorized,false);
+ const message=(type:string,id:string,result?:unknown,source:unknown=parent)=>{
+  for (const handler of messageHandlers) handler({origin:'https://app.example',source,data:{type,id,result}});
+ };
  const result={score:500,distance:200,character:'adel'};
  message('ittihadawy:run-start','foreign',undefined,{});await instance.flush();
  message('ittihadawy:run-end','foreign',result);await instance.flush();assert.equal(writes.length,0);
- message('ittihadawy:run-start','switched');await instance.flush();auth.currentUser={uid:'member-b'};
+ message('ittihadawy:run-start','switched');await instance.flush();auth.currentUser=member('member-b');
  message('ittihadawy:run-end','switched',result);await instance.flush();assert.equal(writes.length,0);assert.equal(replies.at(-1).status,'guest');
  message('ittihadawy:run-start','valid');await instance.flush();message('ittihadawy:run-end','valid',result);await instance.flush();
- assert.equal(writes.length,1);assert.equal(writes[0][0].uid,'member-b');assert.equal(replies.at(-1).status,'saved');
+ assert.deepEqual(writes,[{ authorization: 'Bearer token-member-b', result }]);assert.equal(replies.at(-1).status,'saved');
  message('ittihadawy:run-end','valid',result);await instance.flush();assert.equal(writes.length,1);
 });
 

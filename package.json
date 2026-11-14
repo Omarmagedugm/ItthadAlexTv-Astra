@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "node --import tsx scripts/generate-sitemaps.ts && vite build && node --import tsx scripts/generate-page-meta.ts",
-    "start": "node server.ts",
+    "start": "node --import tsx server.ts",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "test": "node --import tsx --test tests/security.test.ts tests/adminAccess.test.ts tests/game-expansion.test.ts tests/game-score-api.test.ts"
