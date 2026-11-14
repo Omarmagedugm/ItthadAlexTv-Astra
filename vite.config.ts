@@ -3,17 +3,16 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
-import { VitePWA } from 'vite-plugin-pwa';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(async ({ command, mode }) => {
   const env = loadEnv(mode, '.', '');
-  return {
-    plugins: [
-      react(),
-      tailwindcss(),
+  const pwaPlugins = [];
+  if (command === 'build') {
+    const { VitePWA } = await import('vite-plugin-pwa');
+    pwaPlugins.push(
       VitePWA({
         registerType: 'prompt',
         injectRegister: null,
@@ -134,7 +133,28 @@ export default defineConfig(({ mode }) => {
             },
           ],
         },
-      }),
+      })
+    );
+  } else {
+    pwaPlugins.push({
+      name: 'pwa-dev-register-stub',
+      resolveId(id: string) {
+        if (id === 'virtual:pwa-register') {
+          return '\0virtual:pwa-register';
+        }
+      },
+      load(id: string) {
+        if (id === '\0virtual:pwa-register') {
+          return 'export function registerSW() { return async () => {}; }';
+        }
+      },
+    });
+  }
+  return {
+    plugins: [
+      react(),
+      tailwindcss(),
+      ...pwaPlugins,
     ],
     build: {
       outDir: 'dist',
@@ -180,6 +200,8 @@ export default defineConfig(({ mode }) => {
       dedupe: ['react', 'react-dom', 'react-router-dom'],
     },
     optimizeDeps: {
+      entries: ['index.html'],
+      holdUntilCrawlEnd: false,
       include: [
         'react',
         'react-dom',
@@ -187,13 +209,6 @@ export default defineConfig(({ mode }) => {
         'react/jsx-runtime',
         'react/jsx-dev-runtime',
         'react-router-dom',
-        'motion/react',
-        'lucide-react',
-        'zustand',
-        'firebase/app',
-        'firebase/auth',
-        'firebase/firestore',
-        'firebase/storage',
       ],
     },
     server: {
@@ -201,6 +216,7 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       allowedHosts: true,
       hmr: false,
+      ws: false,
     },
   };
 });

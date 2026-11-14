@@ -159,6 +159,8 @@ export default function Library() {
   const [selectedBook, setSelectedBook] = useState<any | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<any | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<any | null>(null);
+  const [videoOrientations, setVideoOrientations] = useState<Record<string, 'portrait' | 'landscape'>>({});
+  const [modalVideoOrientation, setModalVideoOrientation] = useState<'unknown' | 'portrait' | 'landscape'>('unknown');
   const [isBookLoading, setIsBookLoading] = useState(true);
   const [bookLoadError, setBookLoadError] = useState(false);
 
@@ -222,6 +224,7 @@ export default function Library() {
   // Scroll refs for horizontal scroll bars
   const mainTabsRef = React.useRef<HTMLDivElement>(null);
   const photoPlaylistsRef = React.useRef<HTMLDivElement>(null);
+  const verticalVideosCarouselRef = React.useRef<HTMLDivElement>(null);
   const videoPlaylistsRef = React.useRef<HTMLDivElement>(null);
   const songCategoriesRef = React.useRef<HTMLDivElement>(null);
   const albumsRef = React.useRef<HTMLDivElement>(null);
@@ -341,10 +344,6 @@ export default function Library() {
     (m.title?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const featuredVideo = !selectedPlaylistId && videos.length > 0 
-    ? (videos.find(v => v.isFeatured) || videos[0]) 
-    : null;
-
   const featuredPhoto = !selectedPlaylistId && photos.length > 0 
     ? (photos.find(p => p.isFeatured) || null) 
     : null;
@@ -397,11 +396,56 @@ export default function Library() {
     };
   }, [selectedBook, selectedVideo, selectedPhoto]);
 
+  const isVerticalVideoUrl = (url?: string) => {
+    if (!url || typeof url !== 'string') return false;
+    const lower = url.toLowerCase();
+    return lower.includes('/shorts/') || lower.includes('/reel/') || lower.includes('/reels/') || lower.includes('tiktok.com');
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'videos' || videos.length === 0) return;
+    let cancelled = false;
+
+    videos.forEach((v) => {
+      if (!v?.id || !v.thumbnailUrl || videoOrientations[v.id]) return;
+      const src = getOptimizedImage(v.thumbnailUrl, 600) || v.thumbnailUrl;
+      if (!src) return;
+      const probe = new Image();
+      probe.referrerPolicy = 'no-referrer';
+      probe.onload = () => {
+        if (cancelled || probe.naturalWidth <= 0 || probe.naturalHeight <= 0) return;
+        const orientation: 'portrait' | 'landscape' = probe.naturalHeight > probe.naturalWidth ? 'portrait' : 'landscape';
+        setVideoOrientations((prev) => (prev[v.id] === orientation ? prev : { ...prev, [v.id]: orientation }));
+      };
+      probe.src = src;
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, videos]);
+
+  useEffect(() => {
+    setModalVideoOrientation('unknown');
+  }, [selectedVideo?.id, selectedVideo?.videoUrl]);
+
+  const isVideoVertical = (v: any) =>
+    Boolean(v) && (isVerticalVideoUrl(v.videoUrl) || videoOrientations[v.id] === 'portrait');
+
+  const verticalVideos = videos
+    .filter(isVideoVertical)
+    .sort((a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0));
+
+  const landscapeVideos = videos.filter((v) => !isVideoVertical(v));
+
   const getEmbedUrl = (url?: string, source?: string) => {
     if (!url) return null;
     if (source === 'embed') return url;
     if (url.includes('youtube.com/watch?v=')) {
       const id = url.split('v=')[1]?.split('&')[0];
+      return `https://www.youtube.com/embed/${id}?autoplay=1`;
+    } else if (url.includes('youtube.com/shorts/')) {
+      const id = url.split('youtube.com/shorts/')[1]?.split(/[?&/]/)[0];
       return `https://www.youtube.com/embed/${id}?autoplay=1`;
     } else if (url.includes('youtu.be/')) {
       const id = url.split('youtu.be/')[1]?.split('?')[0];
@@ -809,55 +853,105 @@ export default function Library() {
                 exit={{ opacity: 0, y: -15 }}
                 className="space-y-8"
               >
-                {/* Featured Video Card */}
-                {featuredVideo && (
-                  <div 
-                    onClick={() => handleOpenVideo(featuredVideo)}
-                    className="relative w-full aspect-[16/9] md:aspect-[21/9] max-h-[420px] rounded-xl overflow-hidden group shadow-sm border border-white/10 cursor-pointer bg-slate-900"
-                  >
-                    <img 
-                      src={getOptimizedImage(featuredVideo.thumbnailUrl, 1000) || featuredVideo.thumbnailUrl} 
-                      alt={featuredVideo.title} 
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
-                      referrerPolicy="no-referrer" 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
-                    
-                    <div className="absolute top-4 left-4 flex gap-2 z-10">
-                      <div className="px-3 py-1 bg-primary/90 backdrop-blur-md rounded-xl text-[12px] font-bold text-white uppercase tracking-wider shadow-md">
-                        فيديو مميز
+                {/* Vertical Videos Carousel */}
+                {verticalVideos.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="ds-content-heading text-sm md:text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <Video size={18} className="text-primary" />
+                        <span>فيديوهات قصيرة (بالطول)</span>
+                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-bold">
+                          {verticalVideos.length}
+                        </span>
+                      </h3>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => scrollHorizontally(verticalVideosCarouselRef, 'right')}
+                          aria-label="الفيديو السابق"
+                          className="ds-control w-8 h-8 rounded-full bg-white dark:bg-card-dark border border-border-light dark:border-border-dark text-slate-700 dark:text-slate-200 hover:bg-primary hover:text-white hover:border-primary flex items-center justify-center shadow-sm transition-all active:scale-90"
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => scrollHorizontally(verticalVideosCarouselRef, 'left')}
+                          aria-label="الفيديو التالي"
+                          className="ds-control w-8 h-8 rounded-full bg-white dark:bg-card-dark border border-border-light dark:border-border-dark text-slate-700 dark:text-slate-200 hover:bg-primary hover:text-white hover:border-primary flex items-center justify-center shadow-sm transition-all active:scale-90"
+                        >
+                          <ChevronLeft size={16} />
+                        </button>
                       </div>
-                      {featuredVideo.duration && (
-                        <div className="px-3 py-1 bg-black/60 backdrop-blur-md rounded-xl text-[12px] font-bold text-white flex items-center gap-1">
-                          <Clock size={12} /> {featuredVideo.duration}
-                        </div>
-                      )}
                     </div>
-                    
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-16 h-16 md:w-20 md:h-20 bg-primary/90 text-white rounded-full flex items-center justify-center border-2 border-white/40 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:bg-primary">
-                        <Play size={32} fill="white" className="mr-0.5" />
-                      </div>
-                    </div>
-                    
-                    <div className="absolute bottom-6 left-6 right-6">
-                      <h2 className="ds-content-heading text-lg md:text-2xl font-bold text-white leading-tight mb-2 group-hover:text-primary-light transition-colors drop-shadow-md">
-                        {featuredVideo.title}
-                      </h2>
-                      <div className="flex items-center gap-4 text-white/70 text-xs font-bold">
-                        {featuredVideo.date && (
-                          <div className="flex items-center gap-1.5">
-                            <Calendar size={14} />
-                            {safeFormatDate(featuredVideo.date)}
+
+                    <div
+                      ref={verticalVideosCarouselRef}
+                      className="flex items-stretch gap-3.5 md:gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory scroll-smooth pb-2"
+                    >
+                      {verticalVideos.map((video) => {
+                        const isLandscapeThumbOnShort = videoOrientations[video.id] === 'landscape' && isVerticalVideoUrl(video.videoUrl);
+                        return (
+                          <div
+                            key={video.id}
+                            onClick={() => handleOpenVideo(video)}
+                            className="relative w-[172px] sm:w-[205px] md:w-[230px] aspect-[9/16] shrink-0 snap-start rounded-xl overflow-hidden group shadow-sm border border-white/10 cursor-pointer bg-slate-950"
+                          >
+                            <img
+                              src={getOptimizedImage(video.thumbnailUrl, 600) || video.thumbnailUrl}
+                              alt={video.title}
+                              onLoad={(e) => {
+                                const img = e.currentTarget;
+                                if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                                  const orientation: 'portrait' | 'landscape' = img.naturalHeight > img.naturalWidth ? 'portrait' : 'landscape';
+                                  setVideoOrientations((prev) => (prev[video.id] === orientation ? prev : { ...prev, [video.id]: orientation }));
+                                }
+                              }}
+                              className={`w-full h-full transition-transform duration-700 group-hover:scale-105 ${
+                                isLandscapeThumbOnShort ? 'object-cover' : 'object-contain'
+                              }`}
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent pointer-events-none"></div>
+
+                            <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-1.5 z-10 pointer-events-none">
+                              {video.isFeatured ? (
+                                <div className="px-2 py-0.5 bg-primary/90 backdrop-blur-md rounded-lg text-[11px] font-bold text-white shadow-md flex items-center gap-1">
+                                  <Sparkles size={10} className="fill-white" />
+                                  <span>مميز</span>
+                                </div>
+                              ) : <span />}
+                              {video.duration && (
+                                <div className="px-2 py-0.5 bg-black/65 backdrop-blur-md rounded-lg text-[11px] font-bold text-white flex items-center gap-1">
+                                  <Clock size={11} /> {video.duration}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <div className="w-12 h-12 bg-primary/90 text-white rounded-full flex items-center justify-center border-2 border-white/40 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:bg-primary">
+                                <Play size={20} fill="white" className="mr-0.5" />
+                              </div>
+                            </div>
+
+                            <div className="absolute bottom-3 left-3 right-3 z-10 pointer-events-none">
+                              <h4 className="ds-content-heading text-xs sm:text-sm font-bold text-white leading-snug line-clamp-2 drop-shadow-md">
+                                {video.title}
+                              </h4>
+                              {(getViewsCount(video.views) > 0 || video.date) && (
+                                <div className="flex items-center justify-between gap-2 mt-1.5 text-[11px] font-bold text-white/75">
+                                  {video.date ? <span className="truncate">{safeFormatDate(video.date)}</span> : <span />}
+                                  {getViewsCount(video.views) > 0 && (
+                                    <span className="flex items-center gap-1 shrink-0">
+                                      <Eye size={11} /> {getViewsCount(video.views)}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
-                        {getViewsCount(featuredVideo.views) > 0 && (
-                          <div className="ds-content-card flex items-center gap-1.5 px-2.5 py-0.5 bg-white/10 rounded-full">
-                            <Eye size={12} />
-                            {getViewsCount(featuredVideo.views)} مشاهدة
-                          </div>
-                        )}
-                      </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -924,8 +1018,9 @@ export default function Library() {
                 )}
 
                 {/* Videos Grid */}
+                {(landscapeVideos.length > 0 || videos.length === 0) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {videos.map((item) => (
+                  {landscapeVideos.map((item) => (
                     <motion.div 
                       key={item.id}
                       whileHover={{ y: -5 }}
@@ -936,6 +1031,13 @@ export default function Library() {
                         <img 
                           src={getOptimizedImage(item.thumbnailUrl, 600) || item.thumbnailUrl} 
                           alt={item.title} 
+                          onLoad={(e) => {
+                            const img = e.currentTarget;
+                            if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                              const orientation: 'portrait' | 'landscape' = img.naturalHeight > img.naturalWidth ? 'portrait' : 'landscape';
+                              setVideoOrientations((prev) => (prev[item.id] === orientation ? prev : { ...prev, [item.id]: orientation }));
+                            }
+                          }}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                           referrerPolicy="no-referrer" 
                         />
@@ -997,6 +1099,7 @@ export default function Library() {
                     </div>
                   )}
                 </div>
+                )}
               </motion.div>
             )}
 
@@ -1339,28 +1442,28 @@ export default function Library() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSelectedPhoto(null)}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 pt-[max(2.5rem,env(safe-area-inset-top))] cursor-pointer"
+            className="fixed inset-0 z-[100] flex flex-col items-center bg-black/95 backdrop-blur-md px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] overflow-y-auto cursor-pointer"
           >
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-5xl flex flex-col gap-4 cursor-default"
+              className="relative w-full max-w-5xl min-h-full flex flex-col gap-4 cursor-default"
             >
-              <div className="flex items-center justify-between text-white">
-                <div>
-                  <h2 className="ds-content-heading text-lg md:text-xl font-bold">{selectedPhoto.title}</h2>
+              <div className="sticky !top-0 z-20 shrink-0 flex items-center justify-between gap-3 py-3 border-b border-white/10 bg-black/90 backdrop-blur-md text-white">
+                <div className="min-w-0 flex-1">
+                  <h2 className="ds-content-heading text-base sm:text-lg md:text-xl font-bold leading-snug break-words">{selectedPhoto.title}</h2>
                   {selectedPhoto.date && (
                     <p className="text-xs text-slate-400 font-bold mt-0.5">
                       {safeFormatDate(selectedPhoto.date)}
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <button 
                     onClick={(e) => handleLikeMedia(e, selectedPhoto)}
-                    className={`ds-control flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs transition-all ${
+                    className={`ds-control flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl font-bold text-xs transition-all ${
                       isLikedByUser(selectedPhoto.likes, auth.currentUser?.uid) ? 'bg-primary text-white' : 'bg-white/10 text-white hover:bg-white/20'
                     }`}
                   >
@@ -1369,25 +1472,26 @@ export default function Library() {
                   </button>
                   <button 
                     onClick={() => handleDownload(selectedPhoto.url || selectedPhoto.thumbnailUrl, selectedPhoto.title)}
-                    className="ds-control px-4 py-2 bg-white/10 text-white rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-white/20 transition-all"
+                    className="ds-control px-3 sm:px-4 py-2 bg-white/10 text-white rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-white/20 transition-all"
                   >
                     <Download size={16} />
-                    تحميل
+                    <span className="hidden sm:inline">تحميل</span>
                   </button>
                   <button 
                     onClick={() => setSelectedPhoto(null)}
                     className="ds-control p-2.5 bg-white/10 text-white hover:bg-red-500 rounded-xl transition-all"
+                    aria-label="إغلاق"
                   >
                     <X size={18} />
                   </button>
                 </div>
               </div>
 
-              <div className="max-h-[80vh] w-full rounded-xl overflow-hidden bg-slate-900 flex items-center justify-center border border-white/10">
+              <div className="my-auto max-h-[calc(100dvh-8.5rem)] w-full rounded-xl overflow-hidden bg-slate-900 flex items-center justify-center border border-white/10">
                 <img 
                   src={selectedPhoto.url || selectedPhoto.thumbnailUrl || (selectedPhoto as any).imageUrl || (selectedPhoto as any).image} 
                   alt={selectedPhoto.title} 
-                  className="max-h-[80vh] w-auto max-w-full object-contain"
+                  className="max-h-[calc(100dvh-8.5rem)] w-auto max-w-full object-contain"
                   referrerPolicy="no-referrer"
                 />
               </div>
@@ -1404,27 +1508,27 @@ export default function Library() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSelectedVideo(null)}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 pt-[max(2.5rem,env(safe-area-inset-top))] cursor-pointer"
+            className="fixed inset-0 z-[100] flex flex-col items-center bg-black/95 backdrop-blur-md px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] overflow-y-auto cursor-pointer"
           >
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-5xl flex flex-col gap-4 cursor-default"
+              className="relative w-full max-w-5xl min-h-full flex flex-col gap-4 cursor-default"
             >
-              <div className="flex items-center justify-between text-white">
-                <div>
-                  <h2 className="ds-content-heading text-lg md:text-xl font-bold leading-tight">{selectedVideo.title}</h2>
+              <div className="sticky !top-0 z-20 shrink-0 flex items-center justify-between gap-3 py-3 border-b border-white/10 bg-black/90 backdrop-blur-md text-white">
+                <div className="min-w-0 flex-1">
+                  <h2 className="ds-content-heading text-base sm:text-lg md:text-xl font-bold leading-snug break-words">{selectedVideo.title}</h2>
                   <div className="flex items-center gap-3 text-xs text-slate-400 font-bold mt-1">
                     {selectedVideo.date && <span>{safeFormatDate(selectedVideo.date)}</span>}
                     {getViewsCount(selectedVideo.views) > 0 && <span>{getViewsCount(selectedVideo.views)} مشاهدة</span>}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <button 
                     onClick={(e) => handleLikeMedia(e, selectedVideo)}
-                    className={`ds-control flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs transition-all ${
+                    className={`ds-control flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl font-bold text-xs transition-all ${
                       isLikedByUser(selectedVideo.likes, auth.currentUser?.uid) ? 'bg-primary text-white' : 'bg-white/10 text-white hover:bg-white/20'
                     }`}
                   >
@@ -1434,39 +1538,63 @@ export default function Library() {
                   {selectedVideo.videoUrl && !isEmbeddable(selectedVideo.videoUrl) && (
                     <button 
                       onClick={() => handleDownload(selectedVideo.videoUrl, selectedVideo.title)}
-                      className="ds-control px-4 py-2 bg-white/10 text-white rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-white/20 transition-all"
+                      className="ds-control px-3 sm:px-4 py-2 bg-white/10 text-white rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-white/20 transition-all"
                     >
                       <Download size={16} />
-                      تحميل
+                      <span className="hidden sm:inline">تحميل</span>
                     </button>
                   )}
                   <button 
                     onClick={() => setSelectedVideo(null)}
                     className="ds-control p-2.5 bg-white/10 text-white hover:bg-red-500 rounded-xl transition-all"
+                    aria-label="إغلاق"
                   >
                     <X size={18} />
                   </button>
                 </div>
               </div>
 
-              <div className="aspect-video w-full rounded-xl overflow-hidden bg-slate-900 shadow-sm relative border border-white/10">
-                {isEmbeddable(selectedVideo.videoUrl) ? (
-                  <iframe 
-                    src={getEmbedUrl(selectedVideo.videoUrl, selectedVideo.source) || undefined} 
-                    className="w-full h-full border-none"
-                    allow="autoplay; encrypted-media; picture-in-picture"
-                    allowFullScreen
-                    title={selectedVideo.title}
-                  />
-                ) : (
-                  <video 
-                    src={selectedVideo.videoUrl || undefined} 
-                    controls 
-                    autoPlay 
-                    className="w-full h-full object-contain"
-                  />
-                )}
-              </div>
+              {(() => {
+                const isEmbed = isEmbeddable(selectedVideo.videoUrl);
+                const isPortraitModal =
+                  modalVideoOrientation === 'portrait' ||
+                  (modalVideoOrientation === 'unknown' && (
+                    isVerticalVideoUrl(selectedVideo.videoUrl) ||
+                    videoOrientations[selectedVideo.id] === 'portrait'
+                  ));
+                return (
+                  <div className={
+                    isPortraitModal
+                      ? isEmbed
+                        ? "aspect-[9/16] h-[min(75vh,calc(100dvh-8.5rem))] w-auto max-w-full mx-auto my-auto rounded-xl overflow-hidden bg-slate-900 shadow-sm relative border border-white/10"
+                        : "w-fit max-w-full max-h-[calc(100dvh-8.5rem)] mx-auto my-auto rounded-xl overflow-hidden bg-slate-900 shadow-sm relative border border-white/10 flex items-center justify-center"
+                      : "aspect-video w-full max-h-[calc(100dvh-8.5rem)] my-auto rounded-xl overflow-hidden bg-slate-900 shadow-sm relative border border-white/10"
+                  }>
+                    {isEmbed ? (
+                      <iframe 
+                        src={getEmbedUrl(selectedVideo.videoUrl, selectedVideo.source) || undefined} 
+                        className="w-full h-full border-none"
+                        allow="autoplay; encrypted-media; picture-in-picture"
+                        allowFullScreen
+                        title={selectedVideo.title}
+                      />
+                    ) : (
+                      <video 
+                        src={selectedVideo.videoUrl || undefined} 
+                        controls 
+                        autoPlay 
+                        onLoadedMetadata={(e) => {
+                          const v = e.currentTarget;
+                          if (v.videoWidth > 0 && v.videoHeight > 0) {
+                            setModalVideoOrientation(v.videoHeight > v.videoWidth ? 'portrait' : 'landscape');
+                          }
+                        }}
+                        className={isPortraitModal ? "max-h-[calc(100dvh-8.5rem)] w-auto max-w-full object-contain" : "w-full h-full object-contain"}
+                      />
+                    )}
+                  </div>
+                );
+              })()}
             </motion.div>
           </motion.div>
         )}

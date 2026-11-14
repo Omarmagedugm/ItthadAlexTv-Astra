@@ -49,7 +49,7 @@ async function startServer() {
   // The application container runs an nginx proxy on external port (8080) that strictly proxies to 3000.
   // Port 3000 is required by the container infrastructure in both dev and production.
   const portArgument = process.argv.indexOf('--port');
-  const requestedPort = Number(portArgument >= 0 ? process.argv[portArgument + 1] : process.env.PORT || 3000);
+  const requestedPort = Number(portArgument >= 0 ? process.argv[portArgument + 1] : (isProduction ? process.env.PORT || 3000 : 3000));
   const PORT = Number.isInteger(requestedPort) && requestedPort > 0 && requestedPort < 65536 ? requestedPort : 3000;
 
   // Multer setup for memory storage
@@ -1035,49 +1035,77 @@ OUTPUT: Return ONLY the transformed image.`;
   });
 
   // Vite middleware for development vs static dist serving in production
-  let viteLoaded = false;
+  let viteMiddleware: any = null;
+  let viteInstance: any = null;
+  let viteReady = false;
+  let viteFailed = false;
+  const viteInitPromise = !isProduction
+    ? (async () => {
+        try {
+          const { createServer: createViteServer } = await import('vite');
+          const vite = await createViteServer({
+            server: { middlewareMode: true, allowedHosts: true, hmr: false, ws: false },
+            appType: 'spa',
+          });
+          viteInstance = vite;
+          viteMiddleware = vite.middlewares;
+          viteReady = true;
+        } catch (viteErr) {
+          viteFailed = true;
+          console.warn('Vite development server could not be started, falling back to static files:', viteErr);
+        }
+      })()
+    : Promise.resolve();
+
   if (!isProduction) {
-    try {
-      const { createServer: createViteServer } = await import('vite');
-      const vite = await createViteServer({
-        server: { middlewareMode: true, allowedHosts: true, hmr: false },
-        appType: 'spa',
-      });
-      app.use(vite.middlewares);
-      viteLoaded = true;
-    } catch (viteErr) {
-      console.warn('Vite development server could not be started, falling back to static files:', viteErr);
-    }
+    app.use(async (req, res, next) => {
+      if (!viteReady && !viteFailed) {
+        await viteInitPromise;
+      }
+      if (viteMiddleware) {
+        return viteMiddleware(req, res, next);
+      }
+      return next();
+    });
   }
 
-  if (isProduction || !viteLoaded) {
-    const staticPath = fs.existsSync(path.join(distPath, 'index.html'))
-      ? distPath
-      : ((typeof __dirname !== 'undefined' && fs.existsSync(path.join(__dirname, 'index.html'))) ? __dirname : distPath);
+  const staticPath = fs.existsSync(path.join(distPath, 'index.html'))
+    ? distPath
+    : ((typeof __dirname !== 'undefined' && fs.existsSync(path.join(__dirname, 'index.html'))) ? __dirname : distPath);
 
-    if (fs.existsSync(staticPath) && fs.existsSync(path.join(staticPath, 'index.html'))) {
-      app.get(Object.keys(PUBLIC_PAGE_METADATA), (req, res) => {
-        res.type('html').send(injectPageMetadata(fs.readFileSync(path.join(staticPath, 'index.html'), 'utf8'), req.path));
-      });
-      app.use(express.static(staticPath));
-      app.use((req, res) => {
-        if (req.path.startsWith('/api/')) {
-          return res.status(404).json({ error: 'Endpoint not found' });
-        }
-        res.sendFile(path.join(staticPath, 'index.html'));
-      });
+  if (fs.existsSync(staticPath) && fs.existsSync(path.join(staticPath, 'index.html'))) {
+    app.get(Object.keys(PUBLIC_PAGE_METADATA), (req, res) => {
+      res.type('html').send(injectPageMetadata(fs.readFileSync(path.join(staticPath, 'index.html'), 'utf8'), req.path));
+    });
+    app.use(express.static(staticPath));
+    app.use((req, res) => {
+      if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ error: 'Endpoint not found' });
+      }
+      res.sendFile(path.join(staticPath, 'index.html'));
+    });
+    if (isProduction) {
       console.log('Serving static files from:', staticPath);
-    } else {
-      console.error('DIST folder not found! Build may have failed.');
-      app.use((req, res) => {
-        res.status(500).send('Application is building or failed to build. Please check logs.');
-      });
     }
+  } else if (isProduction) {
+    console.error('DIST folder not found! Build may have failed.');
+    app.use((req, res) => {
+      res.status(500).send('Application is building or failed to build. Please check logs.');
+    });
+  } else {
+    app.use((req, res) => {
+      if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ error: 'Endpoint not found' });
+      }
+      res.status(503).send('Development server is initializing.');
+    });
   }
 
   // Primary container port: 3000 (Required for internal reverse proxy and container sandbox)
   const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://0.0.0.0:${PORT} (mode: ${isProduction ? 'production' : 'development'})`);
+    if (server.listening) {
+      console.log(`Server running on http://0.0.0.0:${PORT} (mode: ${isProduction ? 'production' : 'development'})`);
+    }
   });
 
   server.on('error', (err: any) => {
@@ -1088,7 +1116,7 @@ OUTPUT: Return ONLY the transformed image.`;
   // also bind a listener to process.env.PORT to satisfy Cloud Run's ingress routing and health checks.
   let externalServer: any = null;
   const envPort = process.env.PORT ? parseInt(process.env.PORT, 10) : null;
-  if (envPort && envPort !== PORT) {
+  if (isProduction && envPort && envPort !== PORT) {
     try {
       externalServer = app.listen(envPort, '0.0.0.0', () => {
         console.log(`Cloud Run ingress listener active on http://0.0.0.0:${envPort}`);
@@ -1108,6 +1136,11 @@ OUTPUT: Return ONLY the transformed image.`;
 
   const handleShutdown = (signal: string) => {
     console.log(`${signal} signal received: closing HTTP servers`);
+    if (viteInstance) {
+      try {
+        void viteInstance.close();
+      } catch (_) {}
+    }
     if (externalServer) {
       try {
         externalServer.close();
