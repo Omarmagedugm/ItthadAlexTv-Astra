@@ -405,11 +405,23 @@ function AppContent() {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
             const data = userDoc.data();
+            // The users doc stores the account name in `name` and has no
+            // `displayName` field, so without resolving it here the stale
+            // guest displayName ('مشجع سكندري') survives the merge and
+            // shadows the real name wherever displayName is read first.
+            const resolvedName = data.name || data.displayName || user.displayName || undefined;
             updateProfile({
               ...data,
               uid: user.uid,
-              email: user.email || data.email || ''
+              email: user.email || data.email || '',
+              ...(resolvedName
+                ? { name: resolvedName, displayName: resolvedName }
+                : { displayName: undefined })
             });
+          } else if (user.displayName) {
+            updateProfile({ name: user.displayName, displayName: user.displayName });
+          } else {
+            updateProfile({ displayName: undefined });
           }
         } catch (e) {
           console.debug('Failed to sync user profile on auth change:', e);

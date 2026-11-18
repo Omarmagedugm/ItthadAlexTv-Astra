@@ -285,7 +285,7 @@ export default function Live() {
     const optimisticComment: Comment = {
       id: tempId,
       userId: auth.currentUser.uid,
-      userName: profile?.displayName || profile?.name || auth.currentUser.displayName || 'مشجع اتحادي',
+      userName: profile?.name || profile?.displayName || auth.currentUser.displayName || 'مشجع اتحادي',
       userAvatar: profile?.avatar || auth.currentUser.photoURL || '',
       text: messageText,
       createdAt: { toDate: () => new Date() },
@@ -297,7 +297,7 @@ export default function Live() {
     try {
       await addDoc(collection(db, 'live_comments'), {
         userId: auth.currentUser.uid,
-        userName: profile?.displayName || profile?.name || auth.currentUser.displayName || 'مشجع اتحادي',
+        userName: profile?.name || profile?.displayName || auth.currentUser.displayName || 'مشجع اتحادي',
         userAvatar: profile?.avatar || auth.currentUser.photoURL || '',
         text: messageText,
         createdAt: serverTimestamp(),
