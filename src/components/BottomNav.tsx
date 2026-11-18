@@ -2,6 +2,7 @@ import { resolveBottomNavigation } from '../lib/bottomNavigation';
 import { getSectionKeyForPath } from '../types/sections';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppStore } from '../store';
+import { createPortal } from 'react-dom';
 
 export default function BottomNav() {
   const location = useLocation();
@@ -21,7 +22,7 @@ export default function BottomNav() {
   const isClassic = appSettings?.bottomNavStyle === 'classic';
 
   if (isClassic) {
-    return (
+    return createPortal(
       <nav
         dir="rtl"
         aria-label="شريط التنقل السفلي"
@@ -98,12 +99,13 @@ export default function BottomNav() {
             );
           })}
         </div>
-      </nav>
+      </nav>,
+      document.body
     );
   }
 
   // Modern / New floating capsule design:
-  return (
+  return createPortal(
     <nav
       dir="rtl"
         aria-label="شريط التنقل السفلي"
@@ -144,6 +146,7 @@ export default function BottomNav() {
           );
         })}
       </div>
-    </nav>
+    </nav>,
+    document.body
   );
 }
