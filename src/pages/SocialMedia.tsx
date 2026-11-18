@@ -21,35 +21,106 @@ import toast from 'react-hot-toast';
 import { useAppStore } from '../store';
 import { getOptimizedImage } from '../lib/cloudinary';
 
-const DEFAULT_FB_PAGE = 'https://www.facebook.com/Itthadalexchannel';
+const DEFAULT_FB_PAGE = 'https://www.facebook.com/itthadalexchannel';
 const FB_USERNAME = 'itthadalexchannel';
+const ELFSIGHT_SCRIPT_SRC = 'https://elfsightcdn.com/platform.js';
+const ELFSIGHT_WIDGET_CLASS = 'elfsight-app-c8fe9704-59e6-4f00-9106-b50ce0d24545';
+
+declare global {
+  interface Window {
+    eapps?: {
+      init?: () => void;
+    };
+  }
+}
 
 export default function SocialMedia() {
   const { appSettings } = useAppStore();
   const [activeTab, setActiveTab] = useState<'timeline' | 'channels'>('timeline');
   const [copied, setCopied] = useState(false);
-  const [feedWidth, setFeedWidth] = useState(300);
   const [feedVersion, setFeedVersion] = useState(0);
   const [feedLoading, setFeedLoading] = useState(true);
+  const [feedError, setFeedError] = useState(false);
   const feedContainer = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const container = feedContainer.current;
-    if (!container) return;
-    const measure = () => setFeedWidth(Math.min(500, Math.max(180, Math.floor(container.clientWidth - 18))));
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    setFeedLoading(true);
-    const timeout = window.setTimeout(() => setFeedLoading(false), 12000);
-    return () => window.clearTimeout(timeout);
-  }, [feedWidth, feedVersion, activeTab]);
+  const elfsightContainerRef = useRef<HTMLDivElement>(null);
 
   const fbUrl = (appSettings as any)?.socialLinks?.facebook || (appSettings as any)?.facebookPageUrl || DEFAULT_FB_PAGE;
+
+  useEffect(() => {
+    if (activeTab === 'channels') return;
+
+    let active = true;
+    setFeedLoading(true);
+    setFeedError(false);
+
+    const finishLoading = () => {
+      if (active) setFeedLoading(false);
+    };
+
+    const initElfsight = () => {
+      if (!active) return;
+      try {
+        window.eapps?.init?.();
+      } catch {}
+    };
+
+    const target = elfsightContainerRef.current;
+    let observer: MutationObserver | undefined;
+    if (target) {
+      observer = new MutationObserver(() => {
+        const widgetEl = target.querySelector(`.${ELFSIGHT_WIDGET_CLASS}`);
+        if (widgetEl && widgetEl.children.length > 0) {
+          finishLoading();
+        }
+      });
+      observer.observe(target, { childList: true, subtree: true });
+    }
+
+    const timeout = window.setTimeout(finishLoading, 10000);
+
+    let cleanupExisting: (() => void) | undefined;
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      `script[src="${ELFSIGHT_SCRIPT_SRC}"]`
+    );
+
+    if (window.eapps?.init) {
+      initElfsight();
+    } else if (existingScript) {
+      const onLoad = () => initElfsight();
+      const onError = () => {
+        if (active) {
+          setFeedLoading(false);
+          setFeedError(true);
+        }
+      };
+      existingScript.addEventListener('load', onLoad);
+      existingScript.addEventListener('error', onError);
+      cleanupExisting = () => {
+        existingScript.removeEventListener('load', onLoad);
+        existingScript.removeEventListener('error', onError);
+      };
+    } else {
+      const script = document.createElement('script');
+      script.src = ELFSIGHT_SCRIPT_SRC;
+      script.async = true;
+      script.onload = () => initElfsight();
+      script.onerror = () => {
+        if (active) {
+          setFeedLoading(false);
+          setFeedError(true);
+        }
+      };
+      document.body.appendChild(script);
+    }
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+      observer?.disconnect();
+      cleanupExisting?.();
+    };
+  }, [activeTab, feedVersion]);
+
   const youtubeUrl = (appSettings as any)?.socialLinks?.youtube || 'https://youtube.com/@itthadalexchannel';
   const instagramUrl = (appSettings as any)?.socialLinks?.instagram || 'https://instagram.com/itthadalexchannel';
   const tiktokUrl = (appSettings as any)?.socialLinks?.tiktok || 'https://tiktok.com/@itthadalexchannel';
@@ -77,13 +148,6 @@ export default function SocialMedia() {
       handleCopyLink();
     }
   };
-
-  const feedParams = new URLSearchParams({
-    href: fbUrl, tabs: 'timeline', width: String(feedWidth), height: '650',
-    small_header: 'true', adapt_container_width: 'true', hide_cover: 'false',
-    show_facepile: 'false', show_posts: 'true'
-  });
-  const feedSrc = `https://www.facebook.com/plugins/page.php?${feedParams}`;
 
   // Official Channel Social Links - All customizable from Admin Dashboard
   const socialChannels = [
@@ -303,14 +367,38 @@ export default function SocialMedia() {
                 <span className="text-xs text-slate-500" role="status">{feedLoading ? 'جاري تحميل منشورات فيسبوك…' : 'منشورات فيسبوك'}</span>
                 <button type="button" onClick={() => setFeedVersion(version => version + 1)} className="ds-control inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-bold whitespace-nowrap"><RefreshCw size={14} className={feedLoading ? 'animate-spin' : ''}/>إعادة تحميل</button>
               </div>
-              <div className="w-full flex justify-center overflow-hidden rounded-lg" aria-busy={feedLoading}>
-                <iframe key={`${feedWidth}-${feedVersion}`} title="منشورات صفحة قناة الاتحاد السكندري على فيسبوك"
-                  src={feedSrc} width={feedWidth} height="650"
-                  style={{ border: 0, width: '100%', maxWidth: feedWidth, height: 650 }}
-                  onLoad={() => setFeedLoading(false)} onError={() => setFeedLoading(false)}
-                  allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowFullScreen />
+              <div
+                ref={elfsightContainerRef}
+                className="w-full overflow-hidden rounded-lg min-h-[260px]"
+                aria-busy={feedLoading}
+              >
+                {feedError ? (
+                  <div className="w-full min-h-[260px] flex flex-col items-center justify-center gap-3 p-6 text-center bg-slate-50 dark:bg-surface-dark text-slate-700 dark:text-slate-200">
+                    <p className="text-sm font-bold">تعذّر تحميل منشورات فيسبوك</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
+                      تحقق من اتصالك بالإنترنت أو عطّل مانع الإعلانات وأعد المحاولة، أو افتح الصفحة مباشرة على فيسبوك.
+                    </p>
+                    <a
+                      href={fbUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5"
+                    >
+                      <ExternalLink size={14} />
+                      <span>فتح الصفحة على فيسبوك</span>
+                    </a>
+                  </div>
+                ) : (
+                  <div
+                    key={feedVersion}
+                    className={ELFSIGHT_WIDGET_CLASS}
+                    data-elfsight-app-lazy=""
+                  />
+                )}
               </div>
-              <p className="w-full px-2 pt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">لو فيسبوك لم يعرض المنشورات، جرّب إعادة التحميل أو افتح الصفحة الرسمية من الزر أسفل العرض.</p>
+              <p className="w-full px-2 pt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                لو لم تظهر المنشورات فوراً، جرّب الضغط على إعادة تحميل أو افتح الصفحة الرسمية مباشرة من الزر بالأسفل.
+              </p>
 
               {/* Bottom Helpful Callout */}
               <div className="w-full mt-3 p-3 bg-blue-50/70 dark:bg-blue-950/30 rounded-lg border border-blue-200/50 dark:border-blue-900/40 flex items-center justify-between gap-2">

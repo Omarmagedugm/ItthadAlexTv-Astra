@@ -769,8 +769,10 @@ export default function Admin() {
   const searchRef = useRef<HTMLDivElement>(null);
 
   const [liveAdSettings, setLiveAdSettings] = useState(() => ({
-    enabled: appSettings.liveAdBanner?.enabled !== false && (appSettings as any).liveBannerActive !== false,
-    imageUrl: appSettings.liveAdBanner?.imageUrl || (appSettings as any).liveBannerUrl || '/nada_ad.png',
+    enabled: appSettings.liveAdBanner?.enabled !== undefined
+      ? appSettings.liveAdBanner.enabled === true
+      : (appSettings as any).liveBannerActive === true,
+    imageUrl: appSettings.liveAdBanner?.imageUrl || (appSettings as any).liveBannerUrl || '',
     link: appSettings.liveAdBanner?.link !== undefined ? appSettings.liveAdBanner.link : ((appSettings as any).liveBannerLink || ''),
     title: appSettings.liveAdBanner?.title || (appSettings as any).liveBannerTitle || ''
   }));
@@ -778,8 +780,12 @@ export default function Admin() {
   useEffect(() => {
     if (appSettings) {
       setLiveAdSettings(prev => ({
-        enabled: appSettings.liveAdBanner?.enabled !== false && (appSettings as any).liveBannerActive !== false,
-        imageUrl: appSettings.liveAdBanner?.imageUrl || (appSettings as any).liveBannerUrl || prev.imageUrl || '/nada_ad.png',
+        enabled: appSettings.liveAdBanner?.enabled !== undefined
+          ? appSettings.liveAdBanner.enabled === true
+          : (appSettings as any).liveBannerActive === true,
+        imageUrl: appSettings.liveAdBanner?.imageUrl !== undefined
+          ? appSettings.liveAdBanner.imageUrl
+          : ((appSettings as any).liveBannerUrl !== undefined ? (appSettings as any).liveBannerUrl : prev.imageUrl || ''),
         link: appSettings.liveAdBanner?.link !== undefined ? appSettings.liveAdBanner.link : ((appSettings as any).liveBannerLink || prev.link || ''),
         title: appSettings.liveAdBanner?.title || (appSettings as any).liveBannerTitle || prev.title || ''
       }));

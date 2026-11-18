@@ -879,15 +879,15 @@ export const useAppStore = create<AppState>()(
         bottomNavStyle: 'modern',
         defaultSport: 'auto',
         liveViewMode: 'both',
-        liveBannerUrl: '/nada_ad.png',
+        liveBannerUrl: '',
         liveBannerLink: '',
         liveBannerTitle: '',
-        liveBannerActive: true,
+        liveBannerActive: false,
         liveAdBanner: {
-          imageUrl: '/nada_ad.png',
+          imageUrl: '',
           link: '',
           title: '',
-          enabled: true
+          enabled: false
         },
         facebookPageUrl: 'https://www.facebook.com/Itthadalexchannel',
         disablePreloader: true,
@@ -1178,6 +1178,16 @@ export const useAppStore = create<AppState>()(
         if (state) {
           // Active ad visibility is revalidated from Firestore before use.
           state.ads = [];
+          if (state.appSettings) {
+            state.appSettings = {
+              ...state.appSettings,
+              liveBannerActive: false,
+              liveAdBanner: {
+                ...(state.appSettings.liveAdBanner || { imageUrl: '', link: '', title: '', enabled: false }),
+                enabled: false,
+              },
+            };
+          }
           state.dataLoaded = true;
           // Filter out legacy default items cached from older sessions so only user-added data remains
           if (Array.isArray(state.songs)) {
