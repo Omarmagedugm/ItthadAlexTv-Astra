@@ -210,10 +210,14 @@ export default function PullToRefresh({ children, onRefresh }: PullToRefreshProp
 
       {/* Main App Content Wrapper */}
       <div 
-        style={{
-          transform: pullDistance > 0 ? `translateY(${Math.min(pullDistance * 0.4, 35)}px)` : undefined,
-          transition: isPullingRef.current ? 'none' : 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)'
-        }}
+        style={
+          pullDistance > 0
+            ? {
+                transform: `translateY(${Math.min(pullDistance * 0.4, 35)}px)`,
+                transition: isPullingRef.current ? 'none' : 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)'
+              }
+            : undefined
+        }
       >
         {children}
       </div>

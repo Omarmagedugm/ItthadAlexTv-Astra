@@ -1,14 +1,18 @@
-import { INSTALL_KEY, hasInstalledApp, isStandaloneApp, rememberAppInstalled } from '../lib/pwaInstallation';
+import { createPortal } from 'react-dom';
+import {
+  INSTALL_KEY,
+  type BeforeInstallPromptEvent,
+  type InstallDevice,
+  clearInstalledApp,
+  detectInstallDevice,
+  hasInstalledApp,
+  isInAppBrowser,
+  isStandaloneApp,
+  rememberAppInstalled,
+} from '../lib/pwaInstallation';
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Download, Share, PlusSquare, X, Smartphone, Monitor } from 'lucide-react';
-
-type InstallDevice = 'android' | 'ios' | 'desktop';
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
-}
 
 declare global {
   interface Window {
@@ -16,67 +20,93 @@ declare global {
   }
 }
 
-const detectInstallDevice = (): InstallDevice => {
-  const ua = navigator.userAgent;
-  const isIOS = /iPad|iPhone|iPod/.test(ua) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if (isIOS) return 'ios';
-  if (/Android/i.test(ua)) return 'android';
-  return 'desktop';
-};
-
 const PWAInstallPrompt: React.FC = () => {
-  const [device, setDevice] = useState<InstallDevice>('desktop');
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [device, setDevice] = useState<InstallDevice>(() => detectInstallDevice());
+  const [inAppBrowser, setInAppBrowser] = useState<boolean>(() => isInAppBrowser());
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(() =>
+    typeof window !== 'undefined' ? window.deferredPwaInstallPrompt ?? null : null
+  );
   const [visible, setVisible] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isStandalone, setIsStandalone] = useState<boolean>(() => isStandaloneApp());
   const [showManualInstructions, setShowManualInstructions] = useState(false);
 
   useEffect(() => {
-    if (hasInstalledApp()) {
-      if (isStandaloneApp()) rememberAppInstalled();
-      setIsInstalled(true);
+    if (isStandaloneApp()) {
+      rememberAppInstalled();
+      setIsStandalone(true);
       return;
     }
 
     const detectedDevice = detectInstallDevice();
     setDevice(detectedDevice);
+    setInAppBrowser(isInAppBrowser());
+
     if (window.deferredPwaInstallPrompt) {
+      clearInstalledApp();
       setDeferredPrompt(window.deferredPwaInstallPrompt);
     }
+
     let cancelled = false;
     const showTimer = window.setTimeout(() => {
-      if (!cancelled && !hasInstalledApp() && (detectedDevice === 'ios' || window.deferredPwaInstallPrompt)) setVisible(true);
-    }, 3000);
+      if (
+        !cancelled &&
+        !isStandaloneApp() &&
+        !hasInstalledApp() &&
+        (detectedDevice === 'android' || detectedDevice === 'ios' || Boolean(window.deferredPwaInstallPrompt))
+      ) {
+        setVisible(true);
+      }
+    }, 2500);
 
     const handleInstallAvailable = () => {
-      if (!hasInstalledApp() && window.deferredPwaInstallPrompt) {
+      if (!isStandaloneApp() && window.deferredPwaInstallPrompt) {
         setDeferredPrompt(window.deferredPwaInstallPrompt);
+        setShowManualInstructions(false);
         setVisible(true);
       }
     };
 
+    const handleOpenInstallPrompt = () => {
+      if (isStandaloneApp()) return;
+      clearInstalledApp();
+      if (window.deferredPwaInstallPrompt) {
+        setDeferredPrompt(window.deferredPwaInstallPrompt);
+        setShowManualInstructions(false);
+      } else {
+        setShowManualInstructions(detectedDevice !== 'ios');
+      }
+      setVisible(true);
+    };
+
     const handleAppInstalled = () => {
-      setIsInstalled(true);
+      setIsStandalone(true);
       setVisible(false);
       setDeferredPrompt(null);
       window.deferredPwaInstallPrompt = undefined;
+      rememberAppInstalled();
     };
 
     const syncInstallation = () => {
-      if (isStandaloneApp()) rememberAppInstalled();
-      if (hasInstalledApp()) handleAppInstalled();
+      if (isStandaloneApp()) {
+        rememberAppInstalled();
+        setIsStandalone(true);
+        setVisible(false);
+      }
     };
+
     const handleStorage = (event: StorageEvent) => {
       if (event.key === INSTALL_KEY || event.key === null) syncInstallation();
     };
+
     const standaloneQuery = window.matchMedia('(display-mode: standalone)');
     standaloneQuery.addEventListener?.('change', syncInstallation);
     window.addEventListener('storage', handleStorage);
     window.addEventListener('focus', syncInstallation);
     window.addEventListener('pwa-install-state-changed', syncInstallation);
     window.addEventListener('pwa-install-available', handleInstallAvailable);
+    window.addEventListener('pwa-open-install-prompt', handleOpenInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
+
     return () => {
       cancelled = true;
       window.clearTimeout(showTimer);
@@ -85,27 +115,31 @@ const PWAInstallPrompt: React.FC = () => {
       window.removeEventListener('focus', syncInstallation);
       window.removeEventListener('pwa-install-state-changed', syncInstallation);
       window.removeEventListener('pwa-install-available', handleInstallAvailable);
+      window.removeEventListener('pwa-open-install-prompt', handleOpenInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    if (hasInstalledApp()) {
-      setIsInstalled(true);
+    if (isStandaloneApp()) {
+      setIsStandalone(true);
       setVisible(false);
       return;
     }
-    if (!deferredPrompt) {
+
+    const promptEvent = deferredPrompt || window.deferredPwaInstallPrompt;
+    if (!promptEvent) {
       setShowManualInstructions(true);
       return;
     }
 
     try {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
+      await promptEvent.prompt();
+      const { outcome } = await promptEvent.userChoice;
       window.deferredPwaInstallPrompt = undefined;
       setDeferredPrompt(null);
       if (outcome === 'accepted') {
+        rememberAppInstalled();
         setVisible(false);
       } else {
         setShowManualInstructions(true);
@@ -116,7 +150,12 @@ const PWAInstallPrompt: React.FC = () => {
     }
   };
 
-  if (isInstalled || hasInstalledApp()) return null;
+  const handleMarkInstalled = () => {
+    rememberAppInstalled();
+    setVisible(false);
+  };
+
+  if (isStandalone) return null;
 
   const isIOS = device === 'ios';
   const canInstallNow = Boolean(deferredPrompt);
@@ -128,10 +167,12 @@ const PWAInstallPrompt: React.FC = () => {
   const subtitle = isIOS
     ? 'افتح قائمة المشاركة ثم اختر «إضافة إلى الشاشة الرئيسية».'
     : canInstallNow
-      ? 'اضغط على الزر لفتح نافذة التثبيت على جهازك.'
-      : 'اضغط «تثبيت الآن»، وإذا لم تظهر نافذة التثبيت ستظهر لك خطوات المتصفح.';
+      ? 'اضغط على الزر لتثبيت التطبيق مباشرة على جهازك.'
+      : inAppBrowser
+        ? 'افتح الرابط في متصفح Chrome ثم اختر «تثبيت التطبيق».'
+        : 'اضغط «تثبيت الآن» أو من قائمة المتصفح (⋮) اختر «تثبيت التطبيق».';
 
-  return (
+  const content = (
     <AnimatePresence>
       {visible && (
         <motion.div
@@ -143,7 +184,7 @@ const PWAInstallPrompt: React.FC = () => {
           aria-label="تثبيت تطبيق قناة الاتحاد"
           dir="rtl"
         >
-          <div className="ds-content-card solid-install-card bg-white dark:bg-[#072418] rounded-xl p-5 shadow-sm border-2 border-slate-200 dark:border-emerald-600/40">
+          <div className="ds-content-card solid-install-card bg-white dark:bg-[#072418] rounded-xl p-5 shadow-2xl border-2 border-slate-200 dark:border-emerald-600/40">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 shrink-0 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20">
@@ -182,18 +223,20 @@ const PWAInstallPrompt: React.FC = () => {
                 className="ds-control mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-95"
               >
                 <Download size={17} />
-                تثبيت الآن
+                تثبيت التطبيق الآن
               </button>
             )}
 
-            <button type="button" onClick={rememberAppInstalled} className="mt-3 w-full text-center text-xs text-slate-500 underline">
+            <button type="button" onClick={handleMarkInstalled} className="mt-3 w-full text-center text-xs text-slate-500 underline">
               التطبيق مثبت بالفعل
             </button>
 
             {!isIOS && showManualInstructions && (
-              <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-[12px] leading-5 font-bold text-slate-600 dark:border-emerald-600/20 dark:bg-[#0b3322] dark:text-slate-200">
+              <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-[12px] leading-6 font-bold text-slate-600 dark:border-emerald-600/20 dark:bg-[#0b3322] dark:text-slate-200">
                 {device === 'android'
-                  ? 'من متصفح Chrome اضغط ⋮ ثم «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».'
+                  ? inAppBrowser
+                    ? 'أنت تتصفح من داخل تطبيق آخر. اضغط على (⋮) أعلى الشاشة واختر «فتح في Chrome»، ثم اضغط (⋮) واختر «تثبيت التطبيق».'
+                    : 'من متصفح Chrome اضغط على القائمة (⋮) أعلى المتصفح ثم اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».'
                   : 'من Chrome أو Edge افتح قائمة المتصفح ثم اختر «تثبيت التطبيق» أو «إنشاء اختصار».'}
               </div>
             )}
@@ -202,6 +245,13 @@ const PWAInstallPrompt: React.FC = () => {
       )}
     </AnimatePresence>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(content, document.body);
+  }
+
+  return content;
 };
 
 export default PWAInstallPrompt;
+

@@ -1,8 +1,14 @@
 {
+  "id": "/",
   "name": "قناة الاتحاد السكندري",
   "short_name": "قناة الاتحاد",
+  "description": "كل ما يخص نادي الاتحاد السكندري وجماهيره - سيد البلد",
+  "dir": "rtl",
+  "lang": "ar",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "gcm_sender_id": "103953800507",
   "background_color": "#072418",
   "theme_color": "#072418",
@@ -11,12 +17,19 @@
       "src": "/icon.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

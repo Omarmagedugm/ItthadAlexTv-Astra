@@ -1,15 +1,10 @@
-import { hasInstalledApp, rememberAppInstalled, isStandaloneApp } from './lib/pwaInstallation';
+import { clearInstalledApp, rememberAppInstalled, isStandaloneApp, type BeforeInstallPromptEvent } from './lib/pwaInstallation';
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import './lib/confetti';
 import { registerSW } from 'virtual:pwa-register';
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
-}
 
 declare global {
   interface Window {
@@ -22,7 +17,9 @@ if (isStandaloneApp()) rememberAppInstalled();
 // Capture this before lazy-loaded UI mounts so the install prompt is not missed.
 window.addEventListener('beforeinstallprompt', (event: Event) => {
   event.preventDefault();
-  if (hasInstalledApp()) return;
+  if (isStandaloneApp()) return;
+  // Browser firing beforeinstallprompt proves the app is not currently installed.
+  clearInstalledApp();
   window.deferredPwaInstallPrompt = event as BeforeInstallPromptEvent;
   window.dispatchEvent(new Event('pwa-install-available'));
 });

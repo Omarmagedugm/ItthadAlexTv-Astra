@@ -517,7 +517,17 @@ export function useFirestoreSync() {
           (docSnap) => {
             if (docSnap.exists()) {
               const userData = docSnap.data() as any;
-              getStore().updateProfile({ ...userData, uid: currentUser.uid });
+              const resolvedName =
+                (userData.name && userData.name !== 'مشجع سكندري' ? userData.name : '') ||
+                (userData.displayName && userData.displayName !== 'مشجع سكندري' ? userData.displayName : '') ||
+                currentUser.displayName ||
+                userData.name ||
+                '';
+              getStore().updateProfile({
+                ...userData,
+                uid: currentUser.uid,
+                ...(resolvedName ? { name: resolvedName, displayName: resolvedName } : {})
+              });
             }
           },
           (err) => {

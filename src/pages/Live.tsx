@@ -273,6 +273,26 @@ export default function Live() {
     }
   }, [comments]);
 
+  const resolveCurrentUserName = () => {
+    const uid = auth.currentUser?.uid;
+    const storeUser = uid ? users[uid] : undefined;
+    const candidates = [
+      profile?.name,
+      storeUser?.name,
+      auth.currentUser?.displayName,
+      profile?.displayName,
+      profile?.username !== 'fan_ittihad' ? profile?.username : undefined,
+      auth.currentUser?.email ? auth.currentUser.email.split('@')[0] : undefined,
+    ];
+    for (const candidate of candidates) {
+      const trimmed = candidate?.trim();
+      if (trimmed && trimmed !== 'مشجع سكندري') {
+        return trimmed;
+      }
+    }
+    return profile?.name?.trim() || 'مشجع اتحادي';
+  };
+
   const handleSendMessage = async () => {
     if (!chatMessage.trim() || !auth.currentUser || isSending) return;
     
@@ -280,13 +300,20 @@ export default function Live() {
     const messageText = chatMessage.trim();
     setChatMessage(''); // Clear immediately for UX
 
+    const resolvedAuthorName = resolveCurrentUserName();
+    const resolvedAuthorAvatar =
+      (profile?.avatar && profile.avatar !== '/guest-fan-avatar.svg' ? profile.avatar : '') ||
+      users[auth.currentUser.uid]?.avatar ||
+      auth.currentUser.photoURL ||
+      '';
+
     // Optimistic local comment so author sees it instantly without waiting for network
     const tempId = 'temp-' + Date.now();
     const optimisticComment: Comment = {
       id: tempId,
       userId: auth.currentUser.uid,
-      userName: profile?.name || profile?.displayName || auth.currentUser.displayName || 'مشجع اتحادي',
-      userAvatar: profile?.avatar || auth.currentUser.photoURL || '',
+      userName: resolvedAuthorName,
+      userAvatar: resolvedAuthorAvatar,
       text: messageText,
       createdAt: { toDate: () => new Date() },
       role: profile?.role || 'user'
@@ -297,8 +324,8 @@ export default function Live() {
     try {
       await addDoc(collection(db, 'live_comments'), {
         userId: auth.currentUser.uid,
-        userName: profile?.name || profile?.displayName || auth.currentUser.displayName || 'مشجع اتحادي',
-        userAvatar: profile?.avatar || auth.currentUser.photoURL || '',
+        userName: resolvedAuthorName,
+        userAvatar: resolvedAuthorAvatar,
         text: messageText,
         createdAt: serverTimestamp(),
         role: profile?.role || 'user'
@@ -661,15 +688,27 @@ export default function Live() {
                   </div>
                 ) : (
                   comments.map((comment) => {
-                    const isAdmin = comment.role === 'admin' || comment.role === 'supervisor' || users[comment.userId]?.role === 'admin' || users[comment.userId]?.role === 'supervisor';
+                    const commentUser = users[comment.userId];
+                    const isAdmin = comment.role === 'admin' || comment.role === 'supervisor' || commentUser?.role === 'admin' || commentUser?.role === 'supervisor';
                     const isAuthor = auth.currentUser?.uid === comment.userId;
                     const canDelete = isAuthor || profile?.role === 'admin';
+                    const displayCommentName =
+                      (commentUser?.name && commentUser.name !== 'مشجع سكندري' ? commentUser.name : '') ||
+                      (isAuthor ? resolveCurrentUserName() : '') ||
+                      (comment.userName && comment.userName !== 'مشجع سكندري' ? comment.userName : '') ||
+                      commentUser?.name ||
+                      comment.userName ||
+                      'مشجع اتحادي';
+                    const displayCommentAvatar =
+                      commentUser?.avatar ||
+                      (isAuthor && profile?.avatar && profile.avatar !== '/guest-fan-avatar.svg' ? profile.avatar : '') ||
+                      (comment.userAvatar && comment.userAvatar !== '/guest-fan-avatar.svg' ? comment.userAvatar : '');
 
                     return (
                       <div key={comment.id} className="flex items-start gap-2.5 group">
                         <div className="ds-content-card w-8 h-8 rounded-xl overflow-hidden bg-slate-200 dark:bg-surface-dark flex items-center justify-center shrink-0 border border-border-light dark:border-border-dark shadow-xs">
-                          {comment.userAvatar ? (
-                            <img src={comment.userAvatar} alt={comment.userName} className="w-full h-full object-cover" />
+                          {displayCommentAvatar ? (
+                            <img src={displayCommentAvatar} alt={displayCommentName} className="w-full h-full object-cover" />
                           ) : (
                             <User size={14} className="text-slate-400" />
                           )}
@@ -678,7 +717,7 @@ export default function Live() {
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-1.5">
                               <span className="text-[11px] font-bold text-slate-800 dark:text-white">
-                                {comment.userName}
+                                {displayCommentName}
                               </span>
                               {isAdmin && (
                                 <span className="bg-primary/10 text-primary text-[12px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 border border-primary/20">

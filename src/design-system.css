@@ -71,7 +71,7 @@ html.dark{--ds-bg:#141b1b;--ds-surface:#202a28;--ds-soft:#283330;--ds-line:#3541
 .ds-home-section--city {margin-top:0;}
 .glass-nav {background:color-mix(in srgb,var(--ds-surface) 94%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);}
 @media(min-width:768px) and (max-width:1023px) {
-  .ds-app nav[aria-label="شريط التنقل السفلي"] {display:block;}
+  nav[aria-label="شريط التنقل السفلي"] {display:block;}
 }
 @media(max-width:767px) {
   .ds-home-section {margin-bottom:24px!important;}

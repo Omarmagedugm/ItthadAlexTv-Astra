@@ -8,147 +8,108 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig(async ({ command }): Promise<UserConfig> => {
-  const pwaPlugins: PluginOption[] = [];
-  if (command === 'build') {
-    const { VitePWA } = await import('vite-plugin-pwa');
-    pwaPlugins.push(
-      VitePWA({
-        registerType: 'prompt',
-        injectRegister: null,
-        workbox: {
-          importScripts: ['https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js'],
-          cleanupOutdatedCaches: true,
-          skipWaiting: false,
-          clientsClaim: false,
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,json,woff2,webmanifest}'],
-          // Large game bundles and media are opt-in; keep the offline shell compact.
-          globIgnores: ['**/storage/**', '**/vendor-charts*', '**/Admin*', '**/games/ittihadawy/**', '**/assets/aistudio/**'],
-          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // Increase to 5MB
-          navigateFallback: 'index.html',
-          navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/(?:robots\.txt|(?:news-)?sitemap\.xml)$/, /\.[^/]+$/],
-          // Optimize for Vercel
-          runtimeCaching: [
-            {
-              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'google-fonts-cache',
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-            {
-              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'gstatic-fonts-cache',
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-            {
-              urlPattern: /^https:\/\/res\.cloudinary\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'cloudinary-images-cache-v1',
-                expiration: {
-                  maxEntries: 300,
-                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
-                  purgeOnQuotaError: true,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-            {
-              urlPattern: /^https:\/\/(?:images\.unsplash\.com|firebasestorage\.googleapis\.com|upload\.wikimedia\.org|ui-avatars\.com|lh3\.googleusercontent\.com)\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'cdn-images-cache-v1',
-                expiration: {
-                  maxEntries: 200,
-                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
-                  purgeOnQuotaError: true,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-            {
-              urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif|ico)(?:\?.*)?$/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'static-images-cache-v1',
-                expiration: {
-                  maxEntries: 250,
-                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
-                  purgeOnQuotaError: true,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-          ],
-        },
-        manifest: {
-          name: 'قناة الاتحاد',
-          short_name: 'قناة الاتحاد',
-          description: 'تطبيق قناة الاتحاد الرسمي',
-          theme_color: '#072418',
-          background_color: '#072418',
-          display: 'standalone',
-          orientation: 'portrait',
-          start_url: '/',
-          scope: '/',
-          icons: [
-            {
-              src: '/icon.png',
-              sizes: '192x192',
-              type: 'image/png',
-            },
-            {
-              src: '/icon.png',
-              sizes: '512x512',
-              type: 'image/png',
-            },
-            {
-              src: '/icon.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any maskable',
-            },
-          ],
-        },
-      })
-    );
-  } else {
-    pwaPlugins.push({
-      name: 'pwa-dev-register-stub',
-      resolveId(id: string) {
-        if (id === 'virtual:pwa-register') {
-          return '\0virtual:pwa-register';
-        }
+  const { VitePWA } = await import('vite-plugin-pwa');
+  const pwaPlugins: PluginOption[] = [
+    VitePWA({
+      registerType: 'prompt',
+      injectRegister: null,
+      manifest: false,
+      devOptions: {
+        enabled: true,
+        type: 'classic',
       },
-      load(id: string) {
-        if (id === '\0virtual:pwa-register') {
-          return 'export function registerSW() { return async () => {}; }';
-        }
+      workbox: {
+        ...(command === 'build'
+          ? { importScripts: ['https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js'] }
+          : {}),
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,woff2,webmanifest}'],
+        // Large game bundles and media are opt-in; keep the offline shell compact.
+        globIgnores: ['**/storage/**', '**/vendor-charts*', '**/Admin*', '**/games/ittihadawy/**', '**/assets/aistudio/**'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // Increase to 5MB
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/(?:robots\.txt|(?:news-)?sitemap\.xml)$/, /\.[^/]+$/],
+        // Optimize for Vercel
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'gstatic-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/res\.cloudinary\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'cloudinary-images-cache-v1',
+              expiration: {
+                maxEntries: 300,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
+                purgeOnQuotaError: true,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/(?:images\.unsplash\.com|firebasestorage\.googleapis\.com|upload\.wikimedia\.org|ui-avatars\.com|lh3\.googleusercontent\.com)\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'cdn-images-cache-v1',
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
+                purgeOnQuotaError: true,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif|ico)(?:\?.*)?$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'static-images-cache-v1',
+              expiration: {
+                maxEntries: 250,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
+                purgeOnQuotaError: true,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       },
-    });
-  }
+    }),
+  ];
   return {
     plugins: [
       react(),

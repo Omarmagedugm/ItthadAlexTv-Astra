@@ -400,28 +400,28 @@ function AppContent() {
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (user) => {
       if (user) {
-        updateProfile({ uid: user.uid, email: user.email || '' });
+        const authDisplayName = user.displayName && user.displayName !== 'مشجع سكندري' ? user.displayName : '';
+        updateProfile({
+          uid: user.uid,
+          email: user.email || '',
+          ...(authDisplayName ? { name: authDisplayName, displayName: authDisplayName } : { displayName: '' })
+        });
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
             const data = userDoc.data();
-            // The users doc stores the account name in `name` and has no
-            // `displayName` field, so without resolving it here the stale
-            // guest displayName ('مشجع سكندري') survives the merge and
-            // shadows the real name wherever displayName is read first.
-            const resolvedName = data.name || data.displayName || user.displayName || undefined;
+            const resolvedName =
+              (data.name && data.name !== 'مشجع سكندري' ? data.name : '') ||
+              (data.displayName && data.displayName !== 'مشجع سكندري' ? data.displayName : '') ||
+              authDisplayName ||
+              data.name ||
+              '';
             updateProfile({
               ...data,
               uid: user.uid,
               email: user.email || data.email || '',
-              ...(resolvedName
-                ? { name: resolvedName, displayName: resolvedName }
-                : { displayName: undefined })
+              ...(resolvedName ? { name: resolvedName, displayName: resolvedName } : {})
             });
-          } else if (user.displayName) {
-            updateProfile({ name: user.displayName, displayName: user.displayName });
-          } else {
-            updateProfile({ displayName: undefined });
           }
         } catch (e) {
           console.debug('Failed to sync user profile on auth change:', e);
