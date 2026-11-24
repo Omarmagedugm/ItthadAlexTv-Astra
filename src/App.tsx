@@ -74,6 +74,7 @@ const WinCelebration = safeLazy(() => import('./components/WinCelebration'));
 
 import BottomNav from './components/BottomNav';
 import TopHeader from './components/TopHeader';
+import OfflineIndicator from './components/OfflineIndicator';
 import { ManagedSectionKey } from './types/sections';
 
 function FeatureGuardRoute({ sectionKey, component: Component }: { sectionKey: ManagedSectionKey; component: React.ComponentType<any> }) {
@@ -115,15 +116,21 @@ class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBound
   }
 
   handleReload = async () => {
-    // Preserve session state, including the one-time startup screen.
-    if ('caches' in window) {
+    // Only clear caches when online; clearing caches offline would remove the cached app shell.
+    if (navigator.onLine && 'caches' in window) {
       await caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(() => {});
     }
     window.location.reload();
   };
 
+  handleGoHome = () => {
+    this.setState({ hasError: false, error: null });
+    window.location.href = '/';
+  };
+
   render() {
     if (this.state.hasError) {
+      const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
       return (
         <div style={{
           minHeight: '100vh',
@@ -142,36 +149,58 @@ class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBound
             width: '64px',
             height: '64px',
             borderRadius: '50%',
-            backgroundColor: 'rgba(239, 68, 68, 0.2)',
+            backgroundColor: isOffline ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: '1.5rem'
           }}>
-            <span style={{ fontSize: '32px' }}>⚽</span>
+            <span style={{ fontSize: '32px' }}>{isOffline ? '📡' : '⚽'}</span>
           </div>
           <h1 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '0.5rem' }}>
-            عذراً، حدث خطأ أثناء تحميل التطبيق
+            {isOffline ? 'هذه الصفحة غير محفوظة بدون إنترنت' : 'عذراً، حدث خطأ أثناء تحميل التطبيق'}
           </h1>
           <p style={{ fontSize: '0.875rem', opacity: 0.8, marginBottom: '1.5rem', maxWidth: '320px' }}>
-            {this.state.error?.message || "فشل تحميل بعض عناصر الصفحة."}
+            {isOffline
+              ? 'يمكنك العودة للصفحة الرئيسية وتصفح الأخبار والمباريات المحفوظة.'
+              : (this.state.error?.message || "فشل تحميل بعض عناصر الصفحة.")}
           </p>
-          <button 
-            onClick={this.handleReload}
-            style={{
-              padding: '0.75rem 1.5rem',
-              backgroundColor: '#10b981',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '1rem',
-              fontWeight: 800,
-              fontSize: '0.875rem',
-              cursor: 'pointer',
-              boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)'
-            }}
-          >
-            إعادة تحميل التطبيق
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {isOffline && (
+              <button
+                onClick={this.handleGoHome}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#10b981',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '1rem',
+                  fontWeight: 800,
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)'
+                }}
+              >
+                العودة للرئيسية
+              </button>
+            )}
+            <button
+              onClick={this.handleReload}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: isOffline ? 'rgba(255,255,255,0.12)' : '#10b981',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '1rem',
+                fontWeight: 800,
+                fontSize: '0.875rem',
+                cursor: 'pointer',
+                boxShadow: isOffline ? 'none' : '0 10px 15px -3px rgba(16, 185, 129, 0.3)'
+              }}
+            >
+              إعادة المحاولة
+            </button>
+          </div>
         </div>
       );
     }
@@ -199,6 +228,7 @@ function MainContentWrapper({ children, showGoal, showWin, activeMatch, scoredTe
     <div className="ds-app">
       <a href="#main-content" className="ds-skip-link">تخطّي إلى المحتوى</a>
       {!isGameRoute && <TopHeader />}
+      <OfflineIndicator />
       <PageFrame><Suspense fallback={<PageLoader />}>{children}</Suspense></PageFrame>
 
       {/* Non-blocking background and utility widgets */}
@@ -264,9 +294,10 @@ function AppContent() {
   const lastMatchStatus = useRef<Record<string, string>>({});
   const isInitialized = useRef(false);
 
-  // Pre-cache key club branding assets & initialize OneSignal smoothly after initial render
+  // Pre-cache key club branding assets & initialize OneSignal smoothly when online
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const startOnlineServices = () => {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
       preloadImages([
         '/icon.png',
         'https://res.cloudinary.com/dqj6gzwfg/image/upload/v1777841244/admin_logo/fpjoepth9okjaedlcj97.png',
@@ -276,18 +307,22 @@ function AppContent() {
       // If permission is already granted, refresh the token and update metadata
       if ('Notification' in window && Notification.permission === 'granted') {
         setTimeout(() => {
-          requestNotificationPermission();
+          if (navigator.onLine) requestNotificationPermission();
         }, 2000);
       }
-    }, 1200);
+    };
 
-    // Idle prefetch primary pages so transitions feel instant
+    const timer = setTimeout(startOnlineServices, 1200);
+    window.addEventListener('online', startOnlineServices);
+
+    // Idle prefetch primary pages when online so transitions & offline viewing feel instant
     const prefetchCoreRoutes = () => {
-      import('./pages/News');
-      import('./pages/Matches');
-      import('./pages/Live');
-      import('./pages/FanZone');
-      import('./pages/Library');
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+      import('./pages/News').catch(() => {});
+      import('./pages/Matches').catch(() => {});
+      import('./pages/Live').catch(() => {});
+      import('./pages/FanZone').catch(() => {});
+      import('./pages/Library').catch(() => {});
     };
 
     let idleId: any;
@@ -301,6 +336,7 @@ function AppContent() {
 
     return () => {
       clearTimeout(timer);
+      window.removeEventListener('online', startOnlineServices);
       if (idleId) {
         if (typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
           (window as any).cancelIdleCallback(idleId);

@@ -7,10 +7,13 @@ import { defineConfig, type PluginOption, type UserConfig } from 'vite';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default defineConfig(async ({ command }): Promise<UserConfig> => {
+export default defineConfig(async (): Promise<UserConfig> => {
   const { VitePWA } = await import('vite-plugin-pwa');
   const pwaPlugins: PluginOption[] = [
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'prompt',
       injectRegister: null,
       manifest: false,
@@ -18,94 +21,44 @@ export default defineConfig(async ({ command }): Promise<UserConfig> => {
         enabled: true,
         type: 'classic',
       },
-      workbox: {
-        ...(command === 'build'
-          ? { importScripts: ['https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js'] }
-          : {}),
-        cleanupOutdatedCaches: true,
-        skipWaiting: true,
-        clientsClaim: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,woff2,webmanifest}'],
-        // Large game bundles and media are opt-in; keep the offline shell compact.
-        globIgnores: ['**/storage/**', '**/vendor-charts*', '**/Admin*', '**/games/ittihadawy/**', '**/assets/aistudio/**'],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // Increase to 5MB
-        navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/(?:robots\.txt|(?:news-)?sitemap\.xml)$/, /\.[^/]+$/],
-        // Optimize for Vercel
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'gstatic-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/res\.cloudinary\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'cloudinary-images-cache-v1',
-              expiration: {
-                maxEntries: 300,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
-                purgeOnQuotaError: true,
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/(?:images\.unsplash\.com|firebasestorage\.googleapis\.com|upload\.wikimedia\.org|ui-avatars\.com|lh3\.googleusercontent\.com)\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'cdn-images-cache-v1',
-              expiration: {
-                maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
-                purgeOnQuotaError: true,
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif|ico)(?:\?.*)?$/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'static-images-cache-v1',
-              expiration: {
-                maxEntries: 250,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
-                purgeOnQuotaError: true,
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
+      injectManifest: {
+        rollupFormat: 'iife',
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        // Keep the initial precache compact and rock-solid so iOS Safari installs reliably.
+        // Secondary lazy routes and media are cached automatically at runtime by src/sw.ts.
+        globPatterns: [
+          'index.html',
+          'manifest.json',
+          'icon.png',
+          'interaction-guard.js',
+          'guest-fan-avatar.svg',
+          'assets/app-*.{js,css}',
+          'assets/vendor-core-*.js',
+          'assets/vendor-firebase-*.js',
+          'assets/vendor-icons-*.js',
+          'assets/vendor-motion-*.js',
+          'assets/firebase-*.js',
+          'assets/PWAInstallPrompt-*.js',
+          'assets/MusicPlayer-*.js',
+          'assets/News-*.js',
+          'assets/NewsDetail-*.js',
+          'assets/Matches-*.js',
+          'assets/*Widget-*.js',
+        ],
+        globIgnores: [
+          '**/storage/**',
+          '**/games/**',
+          '**/assets/aistudio/**',
+          '**/ads/**',
+          '**/*migration-report*.json',
+          '**/cloudinary-backup-index.json',
+          '**/OneSignalSDK*.js',
+          '**/firebase-messaging-sw.js',
+          '**/Admin*',
+          '**/vendor-charts*',
+          '**/vendor-hls*',
+          '**/vendor-html2canvas*',
+          '**/vendor-zip*',
         ],
       },
     }),

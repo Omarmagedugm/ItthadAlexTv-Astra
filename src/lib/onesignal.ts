@@ -116,6 +116,7 @@ async function cleanLegacyServiceWorkers() {
  */
 export async function initOneSignal(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return false;
   if (isOneSignalInitialized) return true;
   if (initializationPromise) return initializationPromise;
 
@@ -218,6 +219,7 @@ export async function initOneSignal(): Promise<boolean> {
       } else {
         console.warn('[OneSignal Diagnostic] ❌ OneSignal initialization exception:', errMsg);
       }
+      initializationPromise = null;
       return false;
     }
   })();

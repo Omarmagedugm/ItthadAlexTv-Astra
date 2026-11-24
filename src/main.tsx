@@ -29,10 +29,15 @@ window.addEventListener('appinstalled', () => {
   rememberAppInstalled();
 });
 
+// Register immediately so the offline app shell is installed right away on mobile Safari.
 // Updates must not reload an active session.
 registerSW({
+  immediate: true,
   onOfflineReady() {
     console.log('[PWA] App is ready for offline use');
+  },
+  onRegisterError(error) {
+    console.warn('[PWA] Service Worker registration error:', error);
   },
 });
 
