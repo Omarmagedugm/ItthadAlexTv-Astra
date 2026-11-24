@@ -19,31 +19,20 @@ export default defineConfig(async (): Promise<UserConfig> => {
       manifest: false,
       devOptions: {
         enabled: true,
-        type: 'classic',
+        type: 'module',
       },
       injectManifest: {
         rollupFormat: 'iife',
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        // Keep the initial precache compact and rock-solid so iOS Safari installs reliably.
-        // Secondary lazy routes and media are cached automatically at runtime by src/sw.ts.
+        // Precache all core routes, widgets, and their shared helper chunks so Home and
+        // main sections never hit a missing dynamic import while offline.
         globPatterns: [
           'index.html',
           'manifest.json',
           'icon.png',
           'interaction-guard.js',
           'guest-fan-avatar.svg',
-          'assets/app-*.{js,css}',
-          'assets/vendor-core-*.js',
-          'assets/vendor-firebase-*.js',
-          'assets/vendor-icons-*.js',
-          'assets/vendor-motion-*.js',
-          'assets/firebase-*.js',
-          'assets/PWAInstallPrompt-*.js',
-          'assets/MusicPlayer-*.js',
-          'assets/News-*.js',
-          'assets/NewsDetail-*.js',
-          'assets/Matches-*.js',
-          'assets/*Widget-*.js',
+          'assets/*.{js,css}',
         ],
         globIgnores: [
           '**/storage/**',
@@ -59,6 +48,8 @@ export default defineConfig(async (): Promise<UserConfig> => {
           '**/vendor-hls*',
           '**/vendor-html2canvas*',
           '**/vendor-zip*',
+          '**/Game-*',
+          '**/gameAccount-*',
         ],
       },
     }),

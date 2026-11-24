@@ -2,14 +2,14 @@
 @import "./design-system.css";
 @theme {
  --color-primary: #087c60; --color-primary-dark: #074c3d; --color-primary-light: #92dbb8; --color-accent: #b9df71;
- --color-background-light: #f5f5ef; --color-background-dark: #141b1b;
- --color-surface-light: #ffffff; --color-card-light: #ffffff; --color-surface-dark: #202a28; --color-card-dark: #202a28;
- --color-border-light: #e0e5db; --color-border-dark: #35403c;
+ --color-background-light: #f5f5ef; --color-background-dark: #072418;
+ --color-surface-light: #ffffff; --color-card-light: #ffffff; --color-surface-dark: #0d3324; --color-card-dark: #0d3324;
+ --color-border-light: #e0e5db; --color-border-dark: #1f543e;
  --font-sans: "Alexandria", ui-sans-serif, system-ui, sans-serif;
 }
 @variant dark (&:where(.dark, .dark *));
 @layer base {
- html {scroll-behavior:smooth;} body {margin:0;font-family:var(--font-sans);background:var(--ds-bg);color:var(--ds-text);-webkit-font-smoothing:antialiased;} * {box-sizing:border-box;} button,a,input,textarea,select {-webkit-tap-highlight-color:transparent;} button {cursor:pointer;} button:disabled {cursor:wait;opacity:.6;}
+ html {scroll-behavior:smooth;background:var(--ds-bg);} body {margin:0;font-family:var(--font-sans);background:var(--ds-bg);color:var(--ds-text);-webkit-font-smoothing:antialiased;} * {box-sizing:border-box;} button,a,input,textarea,select {-webkit-tap-highlight-color:transparent;} button {cursor:pointer;} button:disabled {cursor:wait;opacity:.6;}
 }
 @media (display-mode:standalone){.standalone\:hidden{display:none!important;}}
 .no-scrollbar{scrollbar-width:none}.no-scrollbar::-webkit-scrollbar{display:none}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:#718a7d66;border-radius:5px}
@@ -52,7 +52,7 @@
 }
 
 
-.club-welcome {--club-muted:#9bb3a7;--club-line:#294039;--club-ink:#f3f6ee;--club-panel:#102a25;color:var(--club-ink);padding:22px 0 10px;}
+.club-welcome {--club-muted:#9dc0b0;--club-line:#1f543e;--club-ink:#f2f7f3;--club-panel:#0d3324;color:var(--club-ink);padding:22px 0 10px;}
 html:not(.dark) .club-welcome {--club-muted:#60766b;--club-line:#d9e1d5;--club-ink:#123c30;--club-panel:#fff;}
 .club-eyebrow {display:flex;justify-content:space-between;color:var(--club-muted);font-size:10px;letter-spacing:1px;padding-bottom:20px;border-bottom:1px solid var(--club-line);}
 .club-eyebrow [lang] {letter-spacing:3px;font-size:10px;}
@@ -112,8 +112,8 @@ html:not(.dark) .club-welcome {--club-muted:#60766b;--club-line:#d9e1d5;--club-i
 .ds-home-news-list>div>a>div:last-child>div{margin-top:auto;gap:12px;flex-wrap:wrap}
 .home-widget-kicker{display:block;font-size:11px;font-weight:600;color:var(--ds-brand);line-height:1.8}
 .home-news-slider{border:1px solid var(--ds-line);border-radius:12px;overflow:hidden;background:var(--ds-soft);touch-action:pan-y}
-.home-news-slide{display:grid;grid-template-columns:1fr;isolation:isolate;position:relative;min-height:390px;background:#141b1b;color:white}
-.home-news-photo{position:absolute;inset:0;z-index:-1;min-width:0;background:#141b1b}
+.home-news-slide{display:grid;grid-template-columns:1fr;isolation:isolate;position:relative;min-height:390px;background:#072418;color:white}
+.home-news-photo{position:absolute;inset:0;z-index:-1;min-width:0;background:#072418}
 .home-news-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .home-news-photo>span{position:absolute;top:18px;right:18px;background:#153c2eee;color:#fff;padding:7px 13px;border-radius:6px;font-size:11px}
 .home-news-shade{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.94) 0%,rgba(0,0,0,.66) 35%,rgba(0,0,0,.12) 75%,rgba(0,0,0,.15) 100%)}
@@ -199,7 +199,7 @@ html:not(.dark) .club-welcome {--club-muted:#60766b;--club-line:#d9e1d5;--club-i
 .home-simple-widget a:focus-visible,.home-simple-widget button:focus-visible,.home-news-slider a:focus-visible,.home-news-slider button:focus-visible{outline:2px solid var(--ds-brand);outline-offset:3px}
 /* Explicit image, shade and copy layers keep every headline readable. */
 .home-news-viewport{overflow:hidden}.home-news-track{display:flex;direction:rtl;transition:transform .5s ease}.home-news-track>.home-news-slide{flex:0 0 100%;min-width:0;display:block}
-.home-news-story{display:block;position:relative;min-height:390px;height:100%;isolation:isolate;background:#141b1b}
+.home-news-story{display:block;position:relative;min-height:390px;height:100%;isolation:isolate;background:#072418}
 .home-news-story .home-news-photo{z-index:0}.home-news-story .home-news-shade{z-index:1;background:linear-gradient(to top,#000 0%,rgba(0,0,0,.9) 18%,rgba(0,0,0,.55) 45%,rgba(0,0,0,.08) 65%,transparent 80%,transparent 100%);pointer-events:none}
 .home-news-story .home-news-copy{z-index:2;min-height:390px}.home-news-category{position:absolute;z-index:2;top:20px;right:24px;background:#123f32;color:#fff;border-radius:5px;padding:6px 12px;font-size:11px}.ds-app .home-news-copy h2{color:#fff!important;text-shadow:0 2px 8px #0009}
 .home-slider-controls{flex-wrap:wrap}.home-slider-dots{gap:0;flex-wrap:wrap}.home-slider-dots button{min-width:26px}.home-slider-arrows{margin-inline-start:auto}
@@ -238,7 +238,7 @@ html:not(.dark) .club-welcome {--club-muted:#60766b;--club-line:#d9e1d5;--club-i
 .home-news-carousel{border:0;border-radius:0;background:transparent;overflow:visible;touch-action:auto;min-width:0}
 .home-news-card-track{display:flex;gap:16px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scroll-padding-inline:10%;padding:4px 10% 8px;scrollbar-width:none;direction:rtl;-webkit-overflow-scrolling:touch}
 .home-news-card-track::-webkit-scrollbar{display:none}
-.home-news-card-track>.home-news-slide{flex:0 0 100%;min-width:0;min-height:0;display:block;border-radius:17px;overflow:hidden;scroll-snap-align:center;background:#141b1b}
+.home-news-card-track>.home-news-slide{flex:0 0 100%;min-width:0;min-height:0;display:block;border-radius:17px;overflow:hidden;scroll-snap-align:center;background:#072418}
 .home-news-carousel .home-news-story{min-height:0;height:380px;display:flex;align-items:flex-end;border-radius:17px;overflow:hidden}
 .home-news-carousel .home-news-story .home-news-shade{background:linear-gradient(to top,rgba(0,0,0,.94) 0%,rgba(0,0,0,.72) 23%,rgba(0,0,0,.22) 52%,transparent 76%)}
 .home-news-carousel .home-news-story .home-news-copy{min-height:0;width:100%;padding:90px 25px 24px;gap:14px}

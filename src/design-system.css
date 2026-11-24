@@ -1,5 +1,5 @@
 :root{--ds-bg:#f5f5ef;--ds-surface:#fff;--ds-soft:#eef1e9;--ds-line:#dfe5da;--ds-text:#18352c;--ds-muted:#718075;--ds-brand:#087c60;--ds-accent:#c5e589;--ds-rail:242px;--ds-header:78px;--ds-radius:14px;--ds-shadow:0 12px 38px #152f2310;color-scheme:light}
-html.dark{--ds-bg:#141b1b;--ds-surface:#202a28;--ds-soft:#283330;--ds-line:#35413b;--ds-text:#f0f3e8;--ds-muted:#a1b0a4;--ds-brand:#83d7b2;--ds-accent:#c5e589;--ds-shadow:0 12px 38px #0002;color-scheme:dark}
+html.dark{--ds-bg:#072418;--ds-surface:#0d3324;--ds-soft:#134230;--ds-line:#1f543e;--ds-text:#f2f7f3;--ds-muted:#9dc0b0;--ds-brand:#83d7b2;--ds-accent:#c5e589;--ds-shadow:0 12px 38px #02110b55;color-scheme:dark}
 .ds-app{background:var(--ds-bg);color:var(--ds-text);min-height:100vh;isolation:isolate}
 .ds-app a,.ds-app button{touch-action:manipulation}
 .ds-app :focus-visible{outline:3px solid var(--ds-brand);outline-offset:4px}

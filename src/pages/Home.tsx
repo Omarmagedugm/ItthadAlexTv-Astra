@@ -53,16 +53,29 @@ import HomeSkeleton from "../components/HomeSkeleton";
 import { SafeImage } from "../components/SafeImage";
 import { getOptimizedImage } from "../lib/cloudinary";
 
+function safeWidgetLazy<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>
+) {
+  return lazy(async () => {
+    try {
+      return await factory();
+    } catch (error) {
+      console.warn('Home widget failed to load offline:', error);
+      return { default: (() => null) as unknown as T };
+    }
+  });
+}
+
 // Lazy-loaded secondary widgets to accelerate initial page paint
-const AdvertiseWidget = lazy(() => import("../components/AdvertiseWidget"));
-const TicketsWidget = lazy(() => import("../components/TicketsWidget"));
-const HtmlWidget = lazy(() => import("../components/HtmlWidget"));
-const ClubMembersWidget = lazy(() => import("../components/ClubMembersWidget"));
-const BusinessWidget = lazy(() => import("../components/BusinessWidget"));
-const WorldFansWidget = lazy(() => import("../components/worldFans/WorldFansWidget"));
-const PublicServicesWidget = lazy(() => import("../components/widgets/PublicServicesWidget"));
-const VideoEmbedWidget = lazy(() => import("../components/widgets/VideoEmbedWidget"));
-const GameAdWidget = lazy(() => import("../components/widgets/GameAdWidget"));
+const AdvertiseWidget = safeWidgetLazy(() => import("../components/AdvertiseWidget"));
+const TicketsWidget = safeWidgetLazy(() => import("../components/TicketsWidget"));
+const HtmlWidget = safeWidgetLazy(() => import("../components/HtmlWidget"));
+const ClubMembersWidget = safeWidgetLazy(() => import("../components/ClubMembersWidget"));
+const BusinessWidget = safeWidgetLazy(() => import("../components/BusinessWidget"));
+const WorldFansWidget = safeWidgetLazy(() => import("../components/worldFans/WorldFansWidget"));
+const PublicServicesWidget = safeWidgetLazy(() => import("../components/widgets/PublicServicesWidget"));
+const VideoEmbedWidget = safeWidgetLazy(() => import("../components/widgets/VideoEmbedWidget"));
+const GameAdWidget = safeWidgetLazy(() => import("../components/widgets/GameAdWidget"));
 
 function WidgetSkeletonFallback() {
   return (

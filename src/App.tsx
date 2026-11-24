@@ -66,11 +66,24 @@ const EducationService = safeLazy(() => import('./pages/EducationService'));
 const PrivacyPolicy = safeLazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfService = safeLazy(() => import('./pages/TermsOfService'));
 
-// Non-critical interactive components
-const MusicPlayer = safeLazy(() => import('./components/MusicPlayer'));
-const PWAInstallPrompt = safeLazy(() => import('./components/PWAInstallPrompt'));
-const GoalCelebration = safeLazy(() => import('./components/GoalCelebration'));
-const WinCelebration = safeLazy(() => import('./components/WinCelebration'));
+function safeOptionalLazy<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>
+) {
+  return lazy(async () => {
+    try {
+      return await factory();
+    } catch (error) {
+      console.warn('Optional widget failed to load (offline or unavailable):', error);
+      return { default: (() => null) as unknown as T };
+    }
+  });
+}
+
+// Non-critical interactive components (degrade silently if unavailable offline)
+const MusicPlayer = safeOptionalLazy(() => import('./components/MusicPlayer'));
+const PWAInstallPrompt = safeOptionalLazy(() => import('./components/PWAInstallPrompt'));
+const GoalCelebration = safeOptionalLazy(() => import('./components/GoalCelebration'));
+const WinCelebration = safeOptionalLazy(() => import('./components/WinCelebration'));
 
 import BottomNav from './components/BottomNav';
 import TopHeader from './components/TopHeader';
@@ -102,6 +115,19 @@ interface ErrorBoundaryProps {
 interface ErrorBoundaryState {
   hasError: boolean;
   error: any;
+}
+
+class SilentErrorBoundary extends React.Component<ErrorBoundaryProps, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error) {
+    console.warn('Non-critical widget error contained:', error);
+  }
+  render() {
+    return this.state.hasError ? null : this.props.children;
+  }
 }
 
 class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -232,31 +258,37 @@ function MainContentWrapper({ children, showGoal, showWin, activeMatch, scoredTe
       <PageFrame><Suspense fallback={<PageLoader />}>{children}</Suspense></PageFrame>
 
       {/* Non-blocking background and utility widgets */}
-      <Suspense fallback={null}>
-        <MusicPlayer />
-        <PWAInstallPrompt />
-      </Suspense>
+      <SilentErrorBoundary>
+        <Suspense fallback={null}>
+          <MusicPlayer />
+          <PWAInstallPrompt />
+        </Suspense>
+      </SilentErrorBoundary>
 
       {/* Celebrations loaded only when triggered */}
       {showWin && (
-        <Suspense fallback={null}>
-          <WinCelebration
-            show={showWin}
-            onComplete={() => setShowWin(false)}
-            match={activeMatch}
-          />
-        </Suspense>
+        <SilentErrorBoundary>
+          <Suspense fallback={null}>
+            <WinCelebration
+              show={showWin}
+              onComplete={() => setShowWin(false)}
+              match={activeMatch}
+            />
+          </Suspense>
+        </SilentErrorBoundary>
       )}
 
       {showGoal && (
-        <Suspense fallback={null}>
-          <GoalCelebration 
-            show={showGoal} 
-            onComplete={handleGoalComplete} 
-            teamName={scoredTeam} 
-            match={activeMatch}
-          />
-        </Suspense>
+        <SilentErrorBoundary>
+          <Suspense fallback={null}>
+            <GoalCelebration 
+              show={showGoal} 
+              onComplete={handleGoalComplete} 
+              teamName={scoredTeam} 
+              match={activeMatch}
+            />
+          </Suspense>
+        </SilentErrorBoundary>
       )}
       <AppNav />
     </div>
