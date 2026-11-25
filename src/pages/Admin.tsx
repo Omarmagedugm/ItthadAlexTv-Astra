@@ -8097,6 +8097,10 @@ export default function Admin() {
             <div className="flex items-center gap-2.5 mt-6">
               <button 
                 onClick={() => {
+                  if (activeTab === 'media' && !isEditing) {
+                    handleAdd();
+                    return;
+                  }
                   if (window.confirm(isEditing ? 'هل أنت متأكد من حفظ التعديلات؟' : 'هل أنت متأكد من الإضافة؟')) {
                     handleAdd();
                   }
