@@ -430,20 +430,67 @@ export default function Library() {
     };
   }, [selectedBook, selectedVideo, selectedPhoto]);
 
+  const probedThumbUrlsRef = React.useRef<Set<string>>(new Set());
+
+  const isStrictVerticalVideoUrl = (url?: string) => {
+    if (!url || typeof url !== 'string') return false;
+    const lower = url.toLowerCase();
+    return lower.includes('/shorts/') || lower.includes('tiktok.com');
+  };
+
   const isVerticalVideoUrl = (url?: string) => {
     if (!url || typeof url !== 'string') return false;
     const lower = url.toLowerCase();
-    return lower.includes('/shorts/') || lower.includes('/reel/') || lower.includes('/reels/') || lower.includes('tiktok.com');
+    return isStrictVerticalVideoUrl(lower) || lower.includes('/reel/') || lower.includes('/reels/');
   };
 
   const recordThumbnailOrientation = (url: string, img: HTMLImageElement) => {
     if (!url || img.naturalWidth <= 0 || img.naturalHeight <= 0) return;
-    const orientation = img.naturalHeight > img.naturalWidth ? 'portrait' : 'landscape';
+    const orientation: VideoOrientation = img.naturalHeight > img.naturalWidth ? 'portrait' : 'landscape';
     setVideoOrientations(prev => prev[url] === orientation ? prev : { ...prev, [url]: orientation });
   };
 
-  const isVideoVertical = (video: MediaItem) =>
-    isVerticalVideoUrl(video.videoUrl || video.url) || videoOrientations[video.thumbnailUrl] === 'portrait';
+  useEffect(() => {
+    if (activeTab !== 'videos' || videos.length === 0) return;
+    let active = true;
+    const pendingInRun = new Set<string>();
+
+    for (const v of videos) {
+      const thumbUrl = v.thumbnailUrl;
+      if (!thumbUrl || videoOrientations[thumbUrl] || probedThumbUrlsRef.current.has(thumbUrl)) continue;
+      if (isStrictVerticalVideoUrl(v.videoUrl || v.url)) continue;
+
+      probedThumbUrlsRef.current.add(thumbUrl);
+      pendingInRun.add(thumbUrl);
+      const img = new Image();
+      img.referrerPolicy = 'no-referrer';
+      img.onload = () => {
+        pendingInRun.delete(thumbUrl);
+        if (!active || img.naturalWidth <= 0 || img.naturalHeight <= 0) return;
+        const orientation: VideoOrientation = img.naturalHeight > img.naturalWidth ? 'portrait' : 'landscape';
+        setVideoOrientations(prev => prev[thumbUrl] === orientation ? prev : { ...prev, [thumbUrl]: orientation });
+      };
+      img.onerror = () => {
+        pendingInRun.delete(thumbUrl);
+        probedThumbUrlsRef.current.delete(thumbUrl);
+      };
+      img.src = getOptimizedImage(thumbUrl, 600) || thumbUrl;
+    }
+
+    return () => {
+      active = false;
+      pendingInRun.forEach((url) => probedThumbUrlsRef.current.delete(url));
+    };
+  }, [activeTab, effectiveMedia]);
+
+  const isVideoVertical = (video: MediaItem) => {
+    const rawUrl = video.videoUrl || video.url;
+    if (isStrictVerticalVideoUrl(rawUrl)) return true;
+    const thumbOrientation = video.thumbnailUrl ? videoOrientations[video.thumbnailUrl] : undefined;
+    if (thumbOrientation === 'portrait') return true;
+    if (thumbOrientation === 'landscape') return false;
+    return isVerticalVideoUrl(rawUrl);
+  };
 
   const verticalVideos = videos
     .filter(isVideoVertical)

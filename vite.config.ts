@@ -54,10 +54,28 @@ export default defineConfig(async (): Promise<UserConfig> => {
       },
     }),
   ];
+  const disableHmrClientWsPlugin: PluginOption = {
+    name: 'disable-hmr-client-ws',
+    apply: 'serve',
+    transform(code, id) {
+      if (!id.replace(/\\/g, '/').endsWith('/vite/dist/client/client.mjs')) {
+        return null;
+      }
+      const target = 'const createWebSocketModuleRunnerTransport = (options) => {';
+      if (code.includes(target)) {
+        return code.replace(
+          target,
+          'const createWebSocketModuleRunnerTransport = () => ({ async connect() {}, disconnect() {}, send() {} });\nconst __disabledCreateWebSocketModuleRunnerTransport = (options) => {'
+        );
+      }
+      return null;
+    },
+  };
   return {
     plugins: [
       react(),
       tailwindcss(),
+      disableHmrClientWsPlugin,
       ...pwaPlugins,
     ],
     build: {
