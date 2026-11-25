@@ -850,7 +850,7 @@ export default function Library() {
                     <div className="flex items-center justify-between">
                       <h3 className="ds-content-heading text-sm md:text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
                         <Video size={18} className="text-primary" />
-                        <span>فيديوهات قصيرة (بالطول)</span>
+                        <span>فيديوهات قصيرة</span>
                         <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-bold">
                           {verticalVideos.length}
                         </span>

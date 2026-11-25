@@ -6,7 +6,6 @@ import {
   RefreshCw, 
   MessageSquare, 
   Calendar, 
-  Sparkles, 
   ThumbsUp, 
   Globe, 
   CheckCircle2, 
@@ -23,14 +22,14 @@ import { getOptimizedImage } from '../lib/cloudinary';
 
 const DEFAULT_FB_PAGE = 'https://www.facebook.com/itthadalexchannel';
 const FB_USERNAME = 'itthadalexchannel';
-const ELFSIGHT_SCRIPT_SRC = 'https://elfsightcdn.com/platform.js';
-const ELFSIGHT_WIDGET_CLASS = 'elfsight-app-c8fe9704-59e6-4f00-9106-b50ce0d24545';
+const FB_PAGE_PLUGIN_SRC = 'https://connect.facebook.net/ar_AR/sdk.js#xfbml=1&version=v19.0';
 
 declare global {
   interface Window {
-    eapps?: {
-      init?: () => void;
+    FB?: {
+      init?: (options: { xfbml: boolean; version: string }) => void;
     };
+    fbAsyncInit?: () => void;
   }
 }
 
@@ -42,7 +41,6 @@ export default function SocialMedia() {
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedError, setFeedError] = useState(false);
   const feedContainer = useRef<HTMLDivElement>(null);
-  const elfsightContainerRef = useRef<HTMLDivElement>(null);
 
   const fbUrl = (appSettings as any)?.socialLinks?.facebook || (appSettings as any)?.facebookPageUrl || DEFAULT_FB_PAGE;
 
@@ -57,53 +55,63 @@ export default function SocialMedia() {
       if (active) setFeedLoading(false);
     };
 
-    const initElfsight = () => {
+    const initFbPlugin = () => {
       if (!active) return;
       try {
-        window.eapps?.init?.();
-      } catch {}
+        if (window.FB?.init) {
+          window.FB.init({ xfbml: true, version: 'v19.0' });
+        }
+        // Re-parse XFBML explicitly: React may mount the fb-page div after the
+        // SDK is ready (tab switch, feedVersion remount), and the SDK does not
+        // watch the DOM on its own.
+        const target = feedContainer.current;
+        if (target && (window as any).FB?.XFBML?.parse) {
+          (window as any).FB.XFBML.parse(target);
+        }
+      } catch {
+        finishLoading();
+      }
     };
 
-    const target = elfsightContainerRef.current;
-    let observer: MutationObserver | undefined;
-    if (target) {
-      observer = new MutationObserver(() => {
-        const widgetEl = target.querySelector(`.${ELFSIGHT_WIDGET_CLASS}`);
-        if (widgetEl && widgetEl.children.length > 0) {
-          finishLoading();
-        }
-      });
-      observer.observe(target, { childList: true, subtree: true });
-    }
+    window.fbAsyncInit = () => {
+      window.FB?.init?.({ xfbml: true, version: 'v19.0' });
+      if (active && feedContainer.current) {
+        initFbPlugin();
+      }
+    };
 
     const timeout = window.setTimeout(finishLoading, 10000);
 
     let cleanupExisting: (() => void) | undefined;
     const existingScript = document.querySelector<HTMLScriptElement>(
-      `script[src="${ELFSIGHT_SCRIPT_SRC}"]`
+      `script[src^="https://connect.facebook.net"]`
     );
 
-    if (window.eapps?.init) {
-      initElfsight();
-    } else if (existingScript) {
-      const onLoad = () => initElfsight();
-      const onError = () => {
-        if (active) {
-          setFeedLoading(false);
-          setFeedError(true);
-        }
-      };
-      existingScript.addEventListener('load', onLoad);
-      existingScript.addEventListener('error', onError);
-      cleanupExisting = () => {
-        existingScript.removeEventListener('load', onLoad);
-        existingScript.removeEventListener('error', onError);
-      };
+    if (existingScript) {
+      if (window.FB?.init) {
+        initFbPlugin();
+      } else {
+        const onLoad = () => initFbPlugin();
+        const onError = () => {
+          if (active) {
+            setFeedLoading(false);
+            setFeedError(true);
+          }
+        };
+        existingScript.addEventListener('load', onLoad);
+        existingScript.addEventListener('error', onError);
+        cleanupExisting = () => {
+          existingScript.removeEventListener('load', onLoad);
+          existingScript.removeEventListener('error', onError);
+        };
+      }
     } else {
       const script = document.createElement('script');
-      script.src = ELFSIGHT_SCRIPT_SRC;
+      script.src = FB_PAGE_PLUGIN_SRC;
       script.async = true;
-      script.onload = () => initElfsight();
+      script.defer = true;
+      script.crossOrigin = 'anonymous';
+      script.onload = () => initFbPlugin();
       script.onerror = () => {
         if (active) {
           setFeedLoading(false);
@@ -116,7 +124,6 @@ export default function SocialMedia() {
     return () => {
       active = false;
       window.clearTimeout(timeout);
-      observer?.disconnect();
       cleanupExisting?.();
     };
   }, [activeTab, feedVersion]);
@@ -238,107 +245,66 @@ export default function SocialMedia() {
   ];
 
   return (
-    <div className="min-h-screen pb-28 pt-2 px-3 sm:px-4 max-w-lg mx-auto">
-      {/* Hero Header Card */}
-      <div className=" ds-feature-panel relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-900 via-primary-dark to-slate-950 p-5 text-white shadow-sm border border-emerald-500/20 mb-4">
-        <div className="absolute -right-8 -top-8 w-40 h-40 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -left-8 -bottom-8 w-40 h-40 bg-blue-500/20 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-3">
+    <div className="ds-biz-page pb-24">
+      {/* Toolbar: channel identity and actions */}
+      <div className="ds-toolbar flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-4 min-w-0 flex-1">
+          <div className="relative w-16 h-16 rounded-xl border-2 border-[var(--ds-line)] bg-[var(--ds-surface)] p-1.5 flex items-center justify-center shrink-0 shadow-sm">
+            <img
+              src={getOptimizedImage(appSettings?.appLogo, 160) || '/icon.png'}
+              alt="قناة الاتحاد السكندري"
+              className="w-full h-full object-contain"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2">
-              <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping" />
-              <span className="text-[11px] font-bold text-emerald-300 uppercase tracking-wider">
-                التغطية المباشرة المعتمدة
-              </span>
+              <h1 className="ds-page-heading truncate">سوشيال ميديا</h1>
+              <CheckCircle2 size={17} className="text-blue-500 shrink-0 fill-blue-500/15" />
             </div>
-            <div className="ds-content-card flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
-              <Sparkles size={13} className="text-amber-400" />
-              <span className="text-[12px] font-bold text-white">سوشيال ميديا</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3.5 mt-1">
-            <div className="ds-content-card relative w-14 h-14 rounded-lg bg-white/10 p-1.5 ring-2 ring-emerald-400/40 shadow-inner flex items-center justify-center shrink-0">
-              <img 
-                src={getOptimizedImage(appSettings?.appLogo, 120) || '/icon.png'} 
-                alt="قناة الاتحاد السكندري" 
-                className="w-full h-full object-contain"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute -bottom-1 -left-1 bg-blue-600 text-white rounded-full p-1 shadow-md">
-                <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-              </div>
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <h1 className="ds-content-heading text-base sm:text-lg font-bold text-white truncate">
-                  قناة الاتحاد السكندري
-                </h1>
-                <CheckCircle2 size={16} className="text-blue-400 shrink-0 fill-blue-400/20" />
-              </div>
-              <p className="text-xs text-slate-300 font-bold mt-0.5" dir="ltr">
-                @{FB_USERNAME}
-              </p>
-              <p className="text-[11px] text-emerald-300/90 font-medium mt-1 line-clamp-1">
-                الصفحة الرسمية لتغطية أخبار وكواليس زعيم الثغر
-              </p>
-            </div>
-          </div>
-
-          {/* Action Buttons Bar */}
-          <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-white/10">
-            <a
-              href={fbUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md active:scale-95 text-center"
-            >
-              <ExternalLink size={14} />
-              <span>فتح بفيسبوك</span>
-            </a>
-
-            <button
-              onClick={handleShare}
-              className="ds-control flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/10 active:scale-95"
-            >
-              <Share2 size={14} />
-              <span>مشاركة</span>
-            </button>
-
-
+            <p className="text-xs text-[var(--ds-muted)] font-bold" dir="ltr">@{FB_USERNAME}</p>
+            <p className="text-[11px] text-[var(--ds-muted)] font-bold leading-snug">الصفحة الرسمية لتغطية أخبار زعيم الثغر</p>
           </div>
         </div>
+
+        <div className="flex items-center gap-2 shrink-0 max-sm:w-full max-sm:[&>*]:flex-1 max-sm:[&>*]:justify-center">
+          <button onClick={handleShare} className="ds-primary-button flex items-center gap-1.5" aria-label="مشاركة الصفحة">
+            <Share2 size={15} />
+            <span>مشاركة</span>
+          </button>
+          <a
+            href={fbUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ds-control flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg border border-[var(--ds-line)] bg-[var(--ds-surface)] text-[12px] font-bold text-[var(--ds-text)] hover:border-blue-400/60 transition-colors"
+          >
+            <ExternalLink size={15} />
+            <span>فيسبوك</span>
+          </a>
+        </div>
       </div>
-
-      {/* Navigation Sub-Tabs */}
-      <div className="ds-content-card flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-card-dark rounded-lg border border-slate-200/80 dark:border-border-dark mb-4">
-        <button
-          onClick={() => setActiveTab('timeline')}
-          className={`ds-control flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
-            activeTab === 'timeline'
-              ? 'bg-primary text-white shadow-md'
-              : 'text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-primary-light'
-          }`}
-        >
-          <Flame size={16} />
-          <span>منشورات فيسبوك</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('channels')}
-          className={`ds-control flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
-            activeTab === 'channels'
-              ? 'bg-primary text-white shadow-md'
-              : 'text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-primary-light'
-          }`}
-        >
-          <Globe size={16} />
-          <span>كل منصات القناة الرسمية</span>
-        </button>
+      {/* Section tabs */}
+      <div className="ds-toolbar">
+        <div className="ds-segmented w-full" role="tablist" aria-label="أقسام سوشيال ميديا">
+          <button
+            role="tab"
+            aria-pressed={activeTab === 'timeline'}
+            onClick={() => setActiveTab('timeline')}
+            className={`flex-1 justify-center ${activeTab === 'timeline' ? 'is-active' : ''}`}
+          >
+            <Flame size={15} />
+            <span>منشورات فيسبوك</span>
+          </button>
+          <button
+            role="tab"
+            aria-pressed={activeTab === 'channels'}
+            onClick={() => setActiveTab('channels')}
+            className={`flex-1 justify-center ${activeTab === 'channels' ? 'is-active' : ''}`}
+          >
+            <Globe size={15} />
+            <span>كل المنصات</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Content Area */}
@@ -349,27 +315,32 @@ export default function SocialMedia() {
             <div className="ds-content-card w-full bg-white dark:bg-card-dark rounded-xl overflow-hidden shadow-lg border border-slate-200/80 dark:border-border-dark p-2 flex flex-col items-center min-w-0">
               
               {/* Quick Bar Above Frame */}
-              <div className="w-full flex items-center justify-between px-2 py-1.5 mb-2 border-b border-slate-100 dark:border-border-dark/60 text-xs">
-                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-bold">
-                  <ThumbsUp size={13} className="text-blue-600 dark:text-blue-400" />
-                  <span>منشورات الصفحة الرسمية</span>
+              <div className="w-full flex items-center justify-between gap-2 px-3 py-2.5 mb-2 border-b border-[var(--ds-line)]">
+                <div className="flex items-center gap-1.5 text-[var(--ds-muted)] font-bold text-xs">
+                  <ThumbsUp size={14} className="text-blue-500 shrink-0" />
+                  <span role="status">{feedLoading ? 'جاري تحميل منشورات فيسبوك…' : 'منشورات الصفحة الرسمية'}</span>
                 </div>
-                <button
-                  onClick={handleCopyLink}
-                  className="ds-control flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors"
-                >
-                  <Copy size={12} />
-                  <span>{copied ? 'تم النسخ' : 'نسخ الرابط'}</span>
-                </button>
-              </div>
-
-              <div className="w-full flex items-center justify-between gap-2 mb-3 px-2">
-                <span className="text-xs text-slate-500" role="status">{feedLoading ? 'جاري تحميل منشورات فيسبوك…' : 'منشورات فيسبوك'}</span>
-                <button type="button" onClick={() => setFeedVersion(version => version + 1)} className="ds-control inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-bold whitespace-nowrap"><RefreshCw size={14} className={feedLoading ? 'animate-spin' : ''}/>إعادة تحميل</button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCopyLink}
+                    className="ds-control flex items-center gap-1 text-[11px] font-bold text-[var(--ds-muted)] hover:text-[var(--ds-brand)] transition-colors"
+                  >
+                    <Copy size={12} />
+                    <span>{copied ? 'تم النسخ' : 'نسخ الرابط'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFeedVersion(version => version + 1)}
+                    className="ds-control inline-flex items-center gap-1 rounded-lg border border-[var(--ds-line)] px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-[var(--ds-text)]"
+                  >
+                    <RefreshCw size={13} className={feedLoading ? 'animate-spin' : ''} />
+                    <span>إعادة تحميل</span>
+                  </button>
+                </div>
               </div>
               <div
-                ref={elfsightContainerRef}
-                className="w-full overflow-hidden rounded-lg min-h-[260px]"
+                ref={feedContainer}
+                className="w-full overflow-hidden rounded-lg min-h-[260px] flex justify-center"
                 aria-busy={feedLoading}
               >
                 {feedError ? (
@@ -391,8 +362,15 @@ export default function SocialMedia() {
                 ) : (
                   <div
                     key={feedVersion}
-                    className={ELFSIGHT_WIDGET_CLASS}
-                    data-elfsight-app-lazy=""
+                    className="fb-page w-full"
+                    data-href={fbUrl}
+                    data-tabs="timeline"
+                    data-width="380"
+                    data-height="600"
+                    data-small-header="false"
+                    data-adapt-container-width="true"
+                    data-hide-cover="false"
+                    data-show-facepile="true"
                   />
                 )}
               </div>
@@ -412,7 +390,7 @@ export default function SocialMedia() {
                     <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
                       هل تريد التفاعل مباشرة بالتعليقات والإعجابات؟
                     </p>
-                    <p className="text-[12px] font-bold text-slate-500 dark:text-slate-400">
+                    <p className="text-[11px] font-bold text-[var(--ds-muted)] mt-0.5">
                       يمكنك فتح الصفحة في تطبيق فيسبوك بضغطة زر
                     </p>
                   </div>
@@ -433,49 +411,49 @@ export default function SocialMedia() {
         ) : (
           /* All Channels Directory Tab */
           <div className="space-y-3">
-            <div className="ds-content-card p-4 rounded-xl bg-slate-100/80 dark:bg-card-dark border border-slate-200 dark:border-border-dark">
-              <h2 className="ds-content-heading text-sm font-bold text-slate-800 dark:text-white mb-1">
+            <div>
+              <h2 className="ds-section-title" style={{ marginBottom: 8 }}>
                 منصات التواصل الرسمية لقناة الاتحاد السكندري
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-[12px] text-[var(--ds-muted)] leading-relaxed" style={{ marginBottom: 16 }}>
                 تابع جميع حسابات القناة الرسمية للحصول على أحدث الأخبار والتغطيات الحصرية.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-3">
+            <div className="ds-biz-list">
               {socialChannels.map((channel, idx) => (
                 <a
                   key={idx}
                   href={channel.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-4 rounded-lg bg-white dark:bg-card-dark border border-slate-200/80 dark:border-border-dark hover:border-primary/50 transition-all flex items-center justify-between group shadow-sm"
+                  className="ds-biz-row"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center border ${channel.bgColor} transition-transform group-hover:scale-105`}>
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center border shrink-0 [&_svg]:w-5 [&_svg]:h-5 ${channel.bgColor} transition-transform group-hover:scale-105`}>
                       {channel.icon}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <h3 className="ds-content-heading text-sm font-bold text-slate-800 dark:text-white group-hover:text-primary transition-colors">
+                    <div className="min-w-0 space-y-0.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h3 className="text-sm font-bold text-[var(--ds-text)] truncate">
                           {channel.name}
                         </h3>
                         {channel.active && (
-                          <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold rounded-full border border-emerald-500/20">
+                          <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded-full border border-emerald-500/20 shrink-0">
                             نشط
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-400 font-bold mt-0.5" dir="ltr">
+                      <p className="text-[11px] text-[var(--ds-muted)] font-bold" dir="ltr">
                         {channel.handle}
                       </p>
-                      <p className="text-[12px] text-slate-500 dark:text-slate-400 font-medium mt-1">
+                      <p className="text-[11px] text-[var(--ds-muted)] font-bold">
                         {channel.badge}
                       </p>
                     </div>
                   </div>
 
-                  <div className="ds-content-card w-8 h-8 rounded-xl bg-slate-50 dark:bg-surface-dark flex items-center justify-center text-slate-400 group-hover:text-primary group-hover:bg-primary/10 transition-colors">
+                  <div className="w-9 h-9 rounded-lg border border-[var(--ds-line)] bg-[var(--ds-surface)] flex items-center justify-center text-[var(--ds-muted)] group-hover:text-[var(--ds-brand)] transition-colors shrink-0">
                     <ExternalLink size={16} />
                   </div>
                 </a>

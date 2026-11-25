@@ -578,3 +578,23 @@ html.dark{--ds-bg:#072418;--ds-surface:#0d3324;--ds-soft:#134230;--ds-line:#1f54
 @media (prefers-reduced-motion: reduce) {
   .club-portal *, .history-page-modern * { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* Itthadawy Business directory */
+.ds-biz-featured{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.ds-biz-feature-card{display:flex;gap:16px;align-items:center;background:#193c30;color:#e4eddb;border-radius:12px;padding:20px;cursor:pointer;text-align:right;overflow:hidden}
+.ds-biz-feature-card img{width:84px;height:84px;border-radius:8px;object-fit:cover;flex-shrink:0}
+.ds-biz-feature-card h3{font-size:15px;font-weight:700;margin-top:6px}
+.ds-biz-feature-card p{font-size:11px;opacity:.75;margin-top:5px;line-height:1.8;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ds-biz-feature-card .ds-image-tag{position:static;width:fit-content;margin-bottom:2px}
+.ds-biz-feature-card>svg{margin-right:auto;flex-shrink:0;opacity:.8}
+.ds-biz-list{display:grid;gap:14px}
+.ds-biz-row{display:flex;align-items:center;gap:16px;background:var(--ds-surface);border:1px solid var(--ds-line);border-radius:12px;padding:18px}
+.ds-biz-row img{width:72px;height:72px;border-radius:8px;object-fit:cover;flex-shrink:0}
+.ds-biz-row h3{font-size:14px;font-weight:700;color:var(--ds-text)}
+.ds-biz-row .ds-biz-row-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:10px;color:var(--ds-muted);margin-top:5px}
+.ds-biz-row .ds-biz-row-meta span{display:flex;gap:5px;align-items:center}
+.ds-biz-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:650;padding:4px 9px;border-radius:5px;border:1px solid var(--ds-line);color:var(--ds-muted)}
+.ds-biz-badge.is-approved{color:var(--ds-brand);border-color:rgba(8,124,96,.25);background:rgba(8,124,96,.06)}
+.ds-biz-badge.is-pending{color:#a16207;background:rgba(197,229,137,.25);border-color:#c5e589}
+.ds-biz-badge.is-rejected{color:#c14d37;background:rgba(193,77,55,.08);border-color:rgba(193,77,55,.25)}
+@media(max-width:767px){.ds-biz-featured{grid-template-columns:1fr}.ds-biz-row{flex-direction:column;align-items:stretch}.ds-biz-row img{width:100%;height:150px}.ds-biz-row>div:last-child{justify-content:center}}

@@ -167,60 +167,49 @@ export default function DiscountsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 text-right" dir="rtl">
-      {/* Header Bar */}
-      <div className=" ds-feature-panel bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 text-white pt-5 pb-6 px-4 shadow-lg sticky top-0 z-30">
-        <div className="max-w-xl md:max-w-4xl lg:max-w-5xl mx-auto">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <button
-              onClick={() => navigate('/club-members')}
-              className="ds-control w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-all border border-white/15"
-              aria-label="رجوع"
-            >
-              <ArrowRight size={20} />
-            </button>
-            
-            <div className="text-center flex-1">
-              <div className="flex items-center justify-center gap-1.5">
-                <Percent size={20} className="text-amber-300" />
-                <h1 className="ds-content-heading text-lg font-bold tracking-tight text-white">الخصومات</h1>
-              </div>
-              <p className="text-[11px] font-medium text-emerald-100/80">المزايا والخصومات المتاحة لأعضاء النادي</p>
+      {/* Page header: back action, title, and search in a ds toolbar */}
+      <div className="ds-toolbar flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <button
+            onClick={() => navigate('/club-members')}
+            className="ds-control w-10 h-10 rounded-lg border border-[var(--ds-line)] bg-[var(--ds-surface)] flex items-center justify-center text-[var(--ds-text)] hover:border-[var(--ds-brand)]/50 transition-colors shrink-0"
+            aria-label="رجوع إلى صفحة الأعضاء"
+          >
+            <ArrowRight size={18} />
+          </button>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="ds-page-heading truncate">الخصومات</h1>
+              <Percent size={18} className="text-[var(--ds-brand)] shrink-0" />
             </div>
-
-            <div className="w-9 h-9 rounded-full bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
-              <Sparkles size={18} />
-            </div>
-          </div>
-
-          {/* Search Input */}
-          <div className="relative mt-2">
-            <Search size={18} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-200/70 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ابحث عن مستشفى، عيادة، معمل، أو طبيب..."
-              className="ds-form-control w-full bg-white/15 backdrop-blur-md border border-white/20 rounded-lg py-2.5 pr-10 pl-9 text-xs text-white placeholder-emerald-100/60 focus:outline-none focus:ring-2 focus:ring-amber-300/50 transition-all"
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="ds-control absolute left-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white"
-              >
-                <X size={16} />
-              </button>
-            )}
+            <p className="text-[11px] text-[var(--ds-muted)] font-bold mt-0.5">المزايا والخصومات المتاحة لأعضاء النادي</p>
           </div>
         </div>
+
+        <label className="ds-field-search w-full sm:w-80 shrink-0">
+          <Search size={16} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="ابحث عن مستشفى، عيادة، معمل، أو طبيب..."
+            aria-label="البحث في الخصومات"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="ds-control text-[var(--ds-muted)]" aria-label="مسح البحث">
+              <X size={15} />
+            </button>
+          )}
+        </label>
       </div>
 
-      <div className="max-w-xl md:max-w-4xl lg:max-w-5xl mx-auto px-4 pt-4 space-y-4">
+      <div className="ds-biz-page px-4 sm:px-6 pb-24 space-y-4">
         {/* Medical / Service Disclaimer Banner */}
-        <div className="bg-amber-500/10 border border-amber-500/25 rounded-lg p-3 flex items-start gap-2.5 text-amber-800 dark:text-amber-300 text-xs leading-relaxed">
-          <ShieldAlert size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/25 bg-amber-500/10 p-3">
+          <ShieldAlert size={17} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div>
-            <span className="font-bold block mb-0.5 text-[11px] text-amber-700 dark:text-amber-300">تنويه هام للأعضاء:</span>
-            <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-snug">
+            <span className="block text-[11px] font-bold text-amber-700 dark:text-amber-300 mb-0.5">تنويه هام للأعضاء:</span>
+            <p className="text-[11px] text-[var(--ds-muted)] leading-snug">
               هذه الخدمة استرشادية فقط لأعضاء نادي الاتحاد السكندري. لا تقدم المنصة أي توصيات طبية ولا تقيم جودة الخدمات الطبية.
             </p>
           </div>
@@ -229,47 +218,41 @@ export default function DiscountsPage() {
         {/* Categories Horizontal Selector */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-              <Tag size={14} className="text-primary" /> التخصص / الفئة
+            <span className="text-xs font-bold text-[var(--ds-text)] flex items-center gap-1.5">
+              <Tag size={14} className="text-[var(--ds-brand)]" /> التخصص / الفئة
             </span>
-            <span className="text-[12px] text-slate-500 dark:text-slate-400 font-bold">
+            <span className="text-[12px] text-[var(--ds-muted)] font-bold">
               {filteredDiscounts.length} جهة
             </span>
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4">
-            {CATEGORIES_FILTER.map(cat => {
-              const isSelected = selectedCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`ds-control px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 border shrink-0 ${
-                    isSelected
-                      ? 'bg-primary text-white border-primary shadow-sm scale-[1.02]'
-                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-emerald-500/30'
-                  }`}
-                >
-                  <span>{cat.icon}</span>
-                  <span>{cat.name}</span>
-                </button>
-              );
-            })}
+          <div className="ds-filter-chips" role="tablist" aria-label="تصنيف الخصومات">
+            {CATEGORIES_FILTER.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                aria-pressed={selectedCategory === cat.id}
+                className={selectedCategory === cat.id ? 'is-active' : ''}
+              >
+                <span>{cat.icon}</span>
+                <span>{cat.name}</span>
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Location & Sort Controls Bar */}
-        <div className="ds-content-card bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+        <div className="rounded-xl border border-[var(--ds-line)] bg-[var(--ds-surface)] p-3 space-y-3">
           <div className="flex items-center justify-between gap-2">
             {/* Location Selector */}
             <div className="flex-1 min-w-0">
-              <label className="block text-[12px] font-bold text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1">
-                <Compass size={12} className="text-emerald-600" /> المنطقة / الحي:
+              <label className="flex items-center gap-1 text-[12px] font-bold text-[var(--ds-muted)] mb-1">
+                <Compass size={12} className="text-[var(--ds-brand)]" /> المنطقة / الحي:
               </label>
               <select
                 value={selectedLocation}
                 onChange={(e) => setSelectedLocation(e.target.value)}
-                className="ds-form-control w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-bold focus:outline-none focus:ring-1 focus:ring-primary"
+                className="ds-form-control w-full rounded-lg border border-[var(--ds-line)] bg-[var(--ds-surface)] px-2.5 py-2 text-xs font-bold text-[var(--ds-text)]"
               >
                 {LOCATIONS_FILTER.map(loc => (
                   <option key={loc} value={loc}>{loc}</option>
@@ -279,13 +262,13 @@ export default function DiscountsPage() {
 
             {/* Sort Dropdown */}
             <div className="w-36 shrink-0">
-              <label className="block text-[12px] font-bold text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1">
-                <Filter size={12} className="text-emerald-600" /> الترتيب:
+              <label className="flex items-center gap-1 text-[12px] font-bold text-[var(--ds-muted)] mb-1">
+                <Filter size={12} className="text-[var(--ds-brand)]" /> الترتيب:
               </label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="ds-form-control w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-bold focus:outline-none focus:ring-1 focus:ring-primary"
+                className="ds-form-control w-full rounded-lg border border-[var(--ds-line)] bg-[var(--ds-surface)] px-2.5 py-2 text-xs font-bold text-[var(--ds-text)]"
               >
                 <option value="default">الافتراضي (المميز أولاً)</option>
                 <option value="highest_discount">الأعلى خصمًا %</option>
@@ -296,11 +279,11 @@ export default function DiscountsPage() {
 
           {/* Active Filter Chips Bar */}
           {(selectedCategory !== 'all' || selectedLocation !== 'جميع المناطق' || searchQuery || sortBy !== 'default') && (
-            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
-              <span className="text-slate-500 font-medium">الفلاتر المطبقة</span>
+            <div className="flex items-center justify-between pt-2 border-t border-[var(--ds-line)] text-[11px]">
+              <span className="font-bold text-[var(--ds-muted)]">فلاتر مطبقة</span>
               <button
                 onClick={handleResetFilters}
-                className="ds-control text-primary hover:text-emerald-600 font-bold flex items-center gap-1 text-[12px]"
+                className="ds-control flex items-center gap-1 text-[12px] font-bold text-[var(--ds-brand)]"
               >
                 <RotateCcw size={12} /> إعادة ضبط
               </button>
@@ -310,23 +293,16 @@ export default function DiscountsPage() {
 
         {/* Discounts Providers List Grid */}
         {filteredDiscounts.length === 0 ? (
-          <div className="ds-content-card bg-white dark:bg-slate-900 rounded-xl p-8 text-center border border-slate-200 dark:border-slate-800 shadow-sm my-6">
-            <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-3">
-              <Search size={28} />
-            </div>
-            <h3 className="ds-content-heading text-sm font-bold text-slate-800 dark:text-slate-200 mb-1">لم نجد نتائج مطابقة</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 max-w-xs mx-auto">
-              جرب البحث بكلمات مختلفة أو تغيير التخصص أو المنطقة
-            </p>
-            <button
-              onClick={handleResetFilters}
-              className="ds-control px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs shadow-md hover:bg-emerald-700 transition-all inline-flex items-center gap-1.5"
-            >
+          <div className="ds-empty-state my-6">
+            <Search />
+            <h2>لم نجد نتائج مطابقة</h2>
+            <p>جرب البحث بكلمات مختلفة أو تغيير التخصص أو المنطقة</p>
+            <button onClick={handleResetFilters} className="ds-primary-button inline-flex items-center gap-1.5">
               <RotateCcw size={14} /> عرض جميع الخصومات
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <div className="ds-biz-list">
             {filteredDiscounts.map((item) => {
               const badge = getCategoryBadge(item.category);
               const maxPerc = getHighestDiscountPercentage(item.discountDetails);
@@ -337,7 +313,7 @@ export default function DiscountsPage() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   whileHover={{ y: -2 }}
-                  className="ds-content-card bg-white dark:bg-slate-900 rounded-lg p-4 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all relative overflow-hidden group"
+                  className="ds-biz-row flex-col items-stretch gap-3 group"
                 >
                   {/* Top Bar: Category Badge & Featured Tag */}
                   <div className="flex items-center justify-between gap-2 mb-2">

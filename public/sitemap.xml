@@ -3,31 +3,31 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://itthadalextv.com</loc>
-    <lastmod>2026-11-13T22:05:54Z</lastmod>
+    <lastmod>2026-11-24T12:28:15Z</lastmod>
     <changefreq>hourly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/news</loc>
-    <lastmod>2026-11-13T22:05:54Z</lastmod>
+    <lastmod>2026-11-24T12:28:15Z</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/matches</loc>
-    <lastmod>2026-11-13T22:05:54Z</lastmod>
+    <lastmod>2026-11-24T12:28:15Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/media</loc>
-    <lastmod>2026-11-13T22:05:54Z</lastmod>
+    <lastmod>2026-11-24T12:28:15Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/live</loc>
-    <lastmod>2026-11-13T22:05:54Z</lastmod>
+    <lastmod>2026-11-24T12:28:15Z</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -39,37 +39,37 @@
   </url>
   <url>
     <loc>https://itthadalextv.com/fanzone</loc>
-    <lastmod>2026-11-13T22:05:54Z</lastmod>
+    <lastmod>2026-11-24T12:28:15Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/club-members</loc>
-    <lastmod>2026-11-13T22:05:54Z</lastmod>
+    <lastmod>2026-11-24T12:28:15Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/discounts</loc>
-    <lastmod>2026-11-13T22:05:54Z</lastmod>
+    <lastmod>2026-11-24T12:28:15Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/business</loc>
-    <lastmod>2026-11-13T22:05:54Z</lastmod>
+    <lastmod>2026-11-24T12:28:15Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/world-fans</loc>
-    <lastmod>2026-11-13T22:05:54Z</lastmod>
+    <lastmod>2026-11-24T12:28:15Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/services</loc>
-    <lastmod>2026-11-13T22:05:54Z</lastmod>
+    <lastmod>2026-11-24T12:28:15Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -84,6 +84,36 @@
     <lastmod>2026-08-01T00:00:00Z</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://itthadalextv.com/news/zegKLT1RiDlusCVQsuYg</loc>
+    <lastmod>2026-11-24T12:28:15Z</lastmod>
+    <changefreq>never</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0026252792.firebasestorage.app/o/uploads%2FzMc78jz5NRhDkoOFBmkIATk9AAl1%2Fadmin_image%2F1795523280241_409ddc96-0e2c-4757-ac94-47ab4bb547db_IMG-20261124-WA0011_compressed_compressed.webp?alt=media&amp;token=10629faf-4f8e-4fef-b9c0-375a826dd8ff</image:loc>
+      <image:title>اتحاد السلة يعلن حضور 2000 مشجع في نهائي دوري المرتبط</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://itthadalextv.com/news/8nHLqKw19Duq4qjs1hdt</loc>
+    <lastmod>2026-11-22T12:57:47Z</lastmod>
+    <changefreq>never</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0026252792.firebasestorage.app/o/uploads%2FzMc78jz5NRhDkoOFBmkIATk9AAl1%2Fadmin_image%2F1795352149769_5115bef7-998c-495b-ad80-f70243ff47cc_IMG-20261122-WA0018_compressed_compressed.webp?alt=media&amp;token=4757e64b-fa06-42d3-ba9c-c3ead6c2e357</image:loc>
+      <image:title>دعم سيد البلد في السويس.. تفاصيل رحلة جماهير الثغر لمواجهة وادي دجلة</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://itthadalextv.com/news/fzV4lA34J4ErX7XZnskL</loc>
+    <lastmod>2026-11-18T17:53:44Z</lastmod>
+    <changefreq>never</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0026252792.firebasestorage.app/o/uploads%2FzMc78jz5NRhDkoOFBmkIATk9AAl1%2Fadmin_image%2F1795024339666_012a58e2-a77b-49bf-810a-3255d0215fe5_FB_IMG_1795024135464_compressed_compressed.webp?alt=media&amp;token=4053c7e5-fee7-4c1f-94a1-96fa986d27c2</image:loc>
+      <image:title>سيد البلد يفوز على الجونة ليتأهل إلى الدور الثمانيه في كأس مصر</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://itthadalextv.com/news/54DBUBFBR6kzxJQix8Hi</loc>
@@ -312,7 +342,7 @@
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0026252792.firebasestorage.app/o/admin_image%2F1792019163633_818819_compressed_compressed.webp?alt=media&amp;token=ac22a9d9-6b5a-4fc3-91c7-582f53198ae3</image:loc>
-      <image:title>البطائح الإماراتي والاتحاد السكندري يتبادلان الدروع التذكارية</image:title>
+      <image:title>البطائح الإماراتي والاتحاد السكند��ي يتبادلان الدروع التذكارية</image:title>
     </image:image>
   </url>
   <url>
@@ -332,7 +362,7 @@
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0026252792.firebasestorage.app/o/admin_image%2F1792018065807_818716_compressed.webp?alt=media&amp;token=57179715-2343-40e7-8880-465f1d01fae8</image:loc>
-      <image:title>الاتحاد السكندري يواجه الشارقة الإماراتي في نصف نهائي دورة دمشق الدولية لكرة السلة</image:title>
+      <image:title>الاتحاد السكندري يواجه الشارقة الإماراتي في نصف نهائي دورة دمشق الدولية لكرة ��لسلة</image:title>
     </image:image>
   </url>
   <url>
@@ -382,7 +412,7 @@
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0026252792.firebasestorage.app/o/admin_image%2F1791737155697_b55249da-5bda-44c0-b81c-0b91f527e63c_compressed.webp?alt=media&amp;token=bbbf193b-5dbd-4048-acf4-ba42ae566785</image:loc>
-      <image:title>دورة دمشق ال��ولية تعلن ترتيب المجموعة الثانية.. والاتحاد السكندري في الصدارة</image:title>
+      <image:title>دورة دمشق الدولية تعلن ترتيب المجموعة الثانية.. والاتحاد السكندري في الصدارة</image:title>
     </image:image>
   </url>
   <url>
@@ -502,7 +532,7 @@
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0026252792.firebasestorage.app/o/admin_image%2F1791235373477_1001013162.jpg?alt=media&amp;token=cbfa993a-cc43-47a3-a895-78769cf70692</image:loc>
-      <image:title>الاتحاد السكندري يهزم سبورتنج في دوري المر��بط</image:title>
+      <image:title>الاتحاد السكندري يهزم سبورتنج في دوري المرتبط</image:title>
     </image:image>
   </url>
   <url>
@@ -562,7 +592,7 @@
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0026252792.firebasestorage.app/o/admin_image%2F1790785778441_159492.png?alt=media&amp;token=3ec50415-060d-4b56-adc6-8a2453d82956</image:loc>
-      <image:title>انتهاء أزمة بعثة سلة الاتحاد.. والفريق يستعد للس��ر إلى دمشق</image:title>
+      <image:title>انتهاء أزمة بعثة سلة الاتحاد.. والفريق يستعد للسفر إلى دمشق</image:title>
     </image:image>
   </url>
   <url>
@@ -572,7 +602,7 @@
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0026252792.firebasestorage.app/o/admin_image%2F1790267588320_151912.png?alt=media&amp;token=80337306-2b92-4755-814f-af098b90a82f</image:loc>
-      <image:title>مرتبط 16 ��نة.. الاتحاد السكندري يواصل انتصاراته ويهزم سبورتنج</image:title>
+      <image:title>مرتبط 16 سنة.. الاتحاد السكندري يواصل انتصاراته ويهزم سبورتنج</image:title>
     </image:image>
   </url>
   <url>
@@ -872,7 +902,7 @@
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://itthadalextv.com/storage/migrated/29_bml2a8n7fpc70d4gc680.jpg</image:loc>
-      <image:title>الاتحاد السكندري يواجه الزمالك في افتتاح مشواره بالدوري المصري</image:title>
+      <image:title>الاتحاد السكندري يواجه الزمالك في افتتاح مشواره بالدوري المص��ي</image:title>
     </image:image>
   </url>
   <url>
@@ -1202,7 +1232,7 @@
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://itthadalextv.com/storage/migrated/15_hp5gco5ofyymvd9lxvwr.jpg</image:loc>
-      <image:title>ط��رف مصطفى ضمن المرشحين لقيادة الاتحاد السكندري  في الموسم الجديد</image:title>
+      <image:title>طارف مصطفى ضمن المرشحين لقيادة الاتحاد السكندري  في الموسم الجديد</image:title>
     </image:image>
   </url>
   <url>
@@ -1232,7 +1262,7 @@
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://itthadalextv.com/storage/migrated/61_vvchmqi8iu7gujmyizr9.jpg</image:loc>
-      <image:title>قائمة سيد البلد لمباراة مودرن سبورت</image:title>
+      <image:title>قائمة سيد البلد لمباراة مود��ن سبورت</image:title>
     </image:image>
   </url>
   <url>
@@ -1302,7 +1332,7 @@
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://itthadalextv.com/storage/migrated/39_tbp2k4fu6uz4x3x5rwfa.jpg</image:loc>
-      <image:title>فوز فريق 2005 على نادى سيراميكا كيلوباترا 2/1</image:title>
+      <image:title>فوز فريق 2005 على نادى سيراميكا كيل��باترا 2/1</image:title>
     </image:image>
   </url>
   <url>
