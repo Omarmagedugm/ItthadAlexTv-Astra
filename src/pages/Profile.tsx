@@ -334,17 +334,17 @@ export default function Profile() {
            animate={{ opacity: 1, y: 0 }}
            className="px-4 pb-4"
         >
-          <div className=" ds-feature-panel relative overflow-hidden rounded-xl bg-gradient-to-r from-emerald-900 via-primary-dark to-slate-900 p-5 text-white shadow-lg border border-primary/30 flex items-center justify-between">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-lg bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
-                <Trophy size={24} />
+          <div className="ds-feature-panel relative overflow-hidden rounded-xl bg-gradient-to-r from-emerald-900 via-primary-dark to-slate-900 p-3.5 sm:p-5 text-white shadow-lg border border-primary/30 flex items-center justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-300">
+                <Trophy size={20} className="sm:w-[22px] sm:h-[22px]" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[12px] font-bold text-amber-300 uppercase tracking-wider">رصيد الولاء والتفاعل</span>
+              <div className="min-w-0 flex flex-col justify-center gap-1.5">
+                <div className="flex items-center">
+                  <span className="text-xs font-bold text-amber-300 leading-none whitespace-nowrap">رصيد التفاعل</span>
                 </div>
-                <h3 className="ds-content-heading text-2xl font-bold text-white mt-0.5">
-                  {engagementStats.totalPoints.toLocaleString('ar-EG')}{' '}
+                <h3 className="text-xl sm:text-2xl font-bold text-white leading-none flex items-baseline gap-1.5 tabular-nums whitespace-nowrap">
+                  <span>{engagementStats.totalPoints.toLocaleString('ar-EG')}</span>
                   <span className="text-xs font-bold text-emerald-200">نقطة</span>
                 </h3>
               </div>
@@ -352,7 +352,7 @@ export default function Profile() {
 
             <button
               onClick={() => navigate('/fanzone?tab=leaderboard', { state: { activeTab: 'leaderboard' } })}
-              className="ds-control px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+              className="ds-control shrink-0 whitespace-nowrap px-3 sm:px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
             >
               <Award size={14} className="text-amber-300" />
               <span>لوحة الصدارة</span>
