@@ -342,9 +342,6 @@ export default function Profile() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-[12px] font-bold text-amber-300 uppercase tracking-wider">رصيد الولاء والتفاعل</span>
-                  <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full border ${engagementStats.rankBadge.bg} ${engagementStats.rankBadge.color}`}>
-                    {engagementStats.rankBadge.label}
-                  </span>
                 </div>
                 <h3 className="ds-content-heading text-2xl font-bold text-white mt-0.5">
                   {engagementStats.totalPoints.toLocaleString('ar-EG')}{' '}
