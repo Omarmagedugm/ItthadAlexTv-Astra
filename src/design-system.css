@@ -598,3 +598,29 @@ html.dark{--ds-bg:#072418;--ds-surface:#0d3324;--ds-soft:#134230;--ds-line:#1f54
 .ds-biz-badge.is-pending{color:#a16207;background:rgba(197,229,137,.25);border-color:#c5e589}
 .ds-biz-badge.is-rejected{color:#c14d37;background:rgba(193,77,55,.08);border-color:rgba(193,77,55,.25)}
 @media(max-width:767px){.ds-biz-featured{grid-template-columns:1fr}.ds-biz-row{flex-direction:column;align-items:stretch}.ds-biz-row img{width:100%;height:150px}.ds-biz-row>div:last-child{justify-content:center}}
+
+@keyframes stream-cta-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.6); }
+  70% { box-shadow: 0 0 0 14px rgba(250, 204, 21, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+}
+@keyframes stream-cta-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+@keyframes stream-cta-glow {
+  0%, 100% { text-shadow: none; }
+  50% { text-shadow: 0 0 10px rgba(250, 204, 21, 0.8); }
+}
+.stream-cta-attention {
+  animation:
+    stream-cta-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite,
+    stream-cta-bounce 2s ease-in-out infinite;
+}
+.stream-cta-attention .material-symbols-outlined {
+  animation: stream-cta-glow 2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .stream-cta-attention,
+  .stream-cta-attention .material-symbols-outlined { animation: none; }
+}

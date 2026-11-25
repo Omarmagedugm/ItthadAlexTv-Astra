@@ -421,9 +421,12 @@ export default function Home() {
   const allLive = useMemo(() => matches.filter((m) => m.status === "live"), [matches]);
 
   const defaultSport = useMemo(() => {
-    const defaultMatch = allFeatured[0] || allLive[0];
+    const byDate = (a: any, b: any) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime();
+    const nearestLive = [...allLive].sort(byDate)[0];
+    const nearestUpcoming = matches.filter((m) => m.status === "upcoming").sort(byDate)[0];
+    const defaultMatch = nearestLive || allFeatured[0] || nearestUpcoming;
     return defaultMatch && isBasketballMatch(defaultMatch) ? "basketball" : "football";
-  }, [allFeatured, allLive]);
+  }, [allFeatured, allLive, matches]);
 
   const effectiveSport = useMemo(
     () => selectedSport === "auto" ? defaultSport : selectedSport,
@@ -854,7 +857,7 @@ export default function Home() {
                               ? "/live"
                               : "/matches"
                           }
-                          className="ds-content-card h-14 rounded-lg bg-white text-primary-dark hover:bg-primary-light hover:text-white transition-all duration-300 font-bold text-[12px] flex items-center justify-center gap-3 shadow-sm group/btn relative z-30 cursor-pointer"
+                          className="ds-content-card h-14 rounded-lg bg-white text-primary-dark hover:bg-primary-light hover:text-white transition-all duration-300 font-bold text-[12px] flex items-center justify-center gap-3 shadow-sm group/btn relative z-30 cursor-pointer stream-cta-attention"
                         >
                           <span className="material-symbols-outlined !text-[20px] group-hover/btn:translate-x-1 transition-transform">
                             {heroMatch.status === "live" ||
