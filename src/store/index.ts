@@ -110,7 +110,7 @@ export interface MediaItem {
   id: string;
   title: string;
   type: 'video' | 'photo';
-  source?: 'upload' | 'youtube' | 'embed';
+  source?: 'upload' | 'youtube' | 'facebook' | 'embed';
   url: string;
   thumbnailUrl: string;
   videoUrl?: string;

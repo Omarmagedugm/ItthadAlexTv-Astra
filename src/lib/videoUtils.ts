@@ -118,7 +118,7 @@ export function getYouTubeThumbnail(url?: string): string {
 export function isFacebookUrl(url?: string): boolean {
   if (!url || typeof url !== 'string') return false;
   const cleaned = extractEmbedSrc(url).trim();
-  return /^(https?:\/\/)?(www\.|web\.|m\.)?(facebook\.com|fb\.watch)\/.+/i.test(cleaned);
+  return /^(https?:\/\/)?(www\.|web\.|m\.|mbasic\.)?(facebook\.com|fb\.watch|fb\.com)\/.+/i.test(cleaned);
 }
 
 /**
@@ -135,6 +135,55 @@ export function getFacebookEmbedUrl(url?: string, autoplay = true): string {
 
   const encoded = encodeURIComponent(cleaned);
   return `https://www.facebook.com/plugins/video.php?href=${encoded}&show_text=0&autoplay=${autoplay ? '1' : '0'}`;
+}
+
+/**
+ * Fetches high-resolution thumbnail URL for YouTube or Facebook videos via backend endpoint.
+ * Falls back cleanly to standard YouTube hqdefault thumbnail if offline/unavailable.
+ */
+export async function fetchVideoThumbnail(
+  rawUrl: string,
+  idToken?: string,
+  signal?: AbortSignal
+): Promise<{ thumbnailUrl: string; provider: 'youtube' | 'facebook' } | null> {
+  const cleaned = extractEmbedSrc(rawUrl).trim();
+  if (!cleaned) return null;
+
+  const isYt = isYouTubeUrl(cleaned);
+  const isFb = isFacebookUrl(cleaned);
+  if (!isYt && !isFb) return null;
+
+  const fallbackYtThumb = isYt ? getYouTubeThumbnail(cleaned) : '';
+
+  try {
+    const headers: Record<string, string> = {};
+    if (idToken) {
+      headers.Authorization = `Bearer ${idToken}`;
+    }
+
+    const res = await fetch(`/api/video-thumbnail?url=${encodeURIComponent(cleaned)}`, {
+      method: 'GET',
+      headers,
+      signal,
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data.thumbnailUrl === 'string' && data.thumbnailUrl.startsWith('https://')) {
+        return {
+          thumbnailUrl: data.thumbnailUrl,
+          provider: data.provider === 'facebook' ? 'facebook' : 'youtube',
+        };
+      }
+    }
+  } catch (err: any) {
+    if (err?.name === 'AbortError') return null;
+  }
+
+  if (fallbackYtThumb) {
+    return { thumbnailUrl: fallbackYtThumb, provider: 'youtube' };
+  }
+  return null;
 }
 
 /**

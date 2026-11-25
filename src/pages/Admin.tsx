@@ -110,7 +110,7 @@ import {
   Code,
   PenTool
 } from 'lucide-react';
-import { parseLiveStreamUrl, isYouTubeUrl, isFacebookUrl, isEmbedCode } from '../lib/videoUtils';
+import { parseLiveStreamUrl, isYouTubeUrl, isFacebookUrl, isEmbedCode, getYouTubeThumbnail, fetchVideoThumbnail } from '../lib/videoUtils';
 import VideoEmbedWidget from '../components/widgets/VideoEmbedWidget';
 import { motion } from 'motion/react';
 import AdminSidebar from '../components/AdminSidebar';
@@ -520,13 +520,36 @@ export default function Admin() {
 
   const cleanPayload = (obj: any) => JSON.parse(JSON.stringify(obj));
 
+  const ADMIN_SESSION_KEY = 'ittihad_admin_session_v1';
+  const DEFAULT_VIDEO_PLACEHOLDER = 'https://images.unsplash.com/photo-1510563399035-7140409890a5';
+
+  const savedSessionRef = useRef<Record<string, any> | null>(null);
+  if (savedSessionRef.current === null) {
+    try {
+      const raw = typeof window !== 'undefined' ? window.sessionStorage.getItem(ADMIN_SESSION_KEY) : null;
+      savedSessionRef.current = raw ? JSON.parse(raw) : {};
+    } catch {
+      savedSessionRef.current = {};
+    }
+  }
+  const savedSession = savedSessionRef.current || {};
+
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = (searchParams.get('tab') as any) || 'overview';
-  
+  const urlTab = searchParams.get('tab');
+  const activeTab = (urlTab || savedSession.activeTab || 'overview') as any;
+
+  useEffect(() => {
+    if (!urlTab && savedSession.activeTab && savedSession.activeTab !== 'overview') {
+      setSearchParams({ tab: savedSession.activeTab }, { replace: true });
+    }
+  }, [urlTab, savedSession.activeTab, setSearchParams]);
+
   const setActiveTab = (tab: any) => {
     setSearchParams({ tab });
     try {
-      if (typeof window !== 'undefined') localStorage.setItem('lastAdminTab', tab);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('lastAdminTab', tab);
+      }
     } catch (e) {}
   };
   const [rssSources, setRssSources] = useState<any[]>([]);
@@ -544,14 +567,14 @@ export default function Admin() {
     window.addEventListener('keydown', close);
     return () => { document.body.style.overflow = previous; window.removeEventListener('keydown', close); };
   }, [showSidebar]);
-  const [historySubTab, setHistorySubTab] = useState<'stats' | 'titles' | 'timeline' | 'stadiums'>('stats');
-  const [mediaSubTab, setMediaSubTab] = useState<'items' | 'playlists' | 'banner'>('items');
-  const [musicSubTab, setMusicSubTab] = useState<'songs' | 'albums' | 'playlists'>('songs');
-  const [liveSportSubTab, setLiveSportSubTab] = useState<'football' | 'basketball' | 'programs' | 'custom'>('football');
-  const [clubSubTab, setClubSubTab] = useState<'committees' | 'announcements' | 'services' | 'trips' | 'discounts' | 'settings'>('committees');
+  const [historySubTab, setHistorySubTab] = useState<'stats' | 'titles' | 'timeline' | 'stadiums'>(() => savedSession.historySubTab || 'stats');
+  const [mediaSubTab, setMediaSubTab] = useState<'items' | 'playlists' | 'banner'>(() => savedSession.mediaSubTab || 'items');
+  const [musicSubTab, setMusicSubTab] = useState<'songs' | 'albums' | 'playlists'>(() => savedSession.musicSubTab || 'songs');
+  const [liveSportSubTab, setLiveSportSubTab] = useState<'football' | 'basketball' | 'programs' | 'custom'>(() => savedSession.liveSportSubTab || 'football');
+  const [clubSubTab, setClubSubTab] = useState<'committees' | 'announcements' | 'services' | 'trips' | 'discounts' | 'settings'>(() => savedSession.clubSubTab || 'committees');
   const [isExporting, setIsExporting] = useState(false);
   const [aiUsage, setAiUsage] = useState<any[]>([]);
-  const [newsFilterType, setNewsFilterType] = useState<'all' | 'news' | 'article'>('all');
+  const [newsFilterType, setNewsFilterType] = useState<'all' | 'news' | 'article'>(() => savedSession.newsFilterType || 'all');
 
   const isBootstrapUid = BOOTSTRAP_ADMIN_UIDS.has(profile.uid || '');
   const isSuperAdmin = isSuperAdminProfile(profile);
@@ -736,49 +759,48 @@ export default function Admin() {
     }
   };
 
-  const [orderFilter, setOrderFilter] = useState<'all' | 'pending' | 'processing' | 'delivered'>('all');
+  const [orderFilter, setOrderFilter] = useState<'all' | 'pending' | 'processing' | 'delivered'>(() => savedSession.orderFilter || 'all');
   const [comments, setComments] = useState<any[]>([]);
   const [fanComments, setFanComments] = useState<any[]>([]);
-  const [showModal, setShowModal] = useState(() => {
-    try {
-      const saved = typeof window !== 'undefined' ? localStorage.getItem('adminDraft_showModal') : null;
-      return saved ? JSON.parse(saved) : false;
-    } catch (e) { return false; }
-  });
-  const [formData, setFormData] = useState<any>(() => {
-    try {
-      const saved = typeof window !== 'undefined' ? localStorage.getItem('adminDraft_formData') : null;
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) { return {}; }
-  });
-  const [isEditing, setIsEditing] = useState(() => {
-    try {
-      const saved = typeof window !== 'undefined' ? localStorage.getItem('adminDraft_isEditing') : null;
-      return saved ? JSON.parse(saved) : false;
-    } catch (e) { return false; }
-  });
-  const [editingId, setEditingId] = useState<string | null>(() => {
-    try {
-      return typeof window !== 'undefined' ? localStorage.getItem('adminDraft_editingId') || null : null;
-    } catch (e) { return null; }
-  });
+  const [showModal, setShowModal] = useState<boolean>(() => Boolean(savedSession.showModal));
+  const [formData, setFormData] = useState<any>(() => (savedSession.formData && typeof savedSession.formData === 'object' ? savedSession.formData : {}));
+  const [isEditing, setIsEditing] = useState<boolean>(() => Boolean(savedSession.isEditing));
+  const [editingId, setEditingId] = useState<string | null>(() => (typeof savedSession.editingId === 'string' ? savedSession.editingId : null));
   const [activeSearchField, setActiveSearchField] = useState<'home' | 'away' | null>(null);
   const [clubSearchQuery, setClubSearchQuery] = useState('');
   const [isCsvImporterOpen, setIsCsvImporterOpen] = useState(false);
   const [isCsvVideosImporterOpen, setIsCsvVideosImporterOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  const [liveAdSettings, setLiveAdSettings] = useState(() => ({
-    enabled: appSettings.liveAdBanner?.enabled !== undefined
-      ? appSettings.liveAdBanner.enabled === true
-      : (appSettings as any).liveBannerActive === true,
-    imageUrl: appSettings.liveAdBanner?.imageUrl || (appSettings as any).liveBannerUrl || '',
-    link: appSettings.liveAdBanner?.link !== undefined ? appSettings.liveAdBanner.link : ((appSettings as any).liveBannerLink || ''),
-    title: appSettings.liveAdBanner?.title || (appSettings as any).liveBannerTitle || ''
-  }));
+  const [fetchingThumbnail, setFetchingThumbnail] = useState(false);
+  const [thumbnailAutoStatus, setThumbnailAutoStatus] = useState<'' | 'loading' | 'success' | 'error'>('');
+  const lastAutoThumbRef = useRef<string>('');
+  const thumbAbortRef = useRef<AbortController | null>(null);
+  const thumbDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const thumbReqSeqRef = useRef<number>(0);
+
+  const [liveAdDirty, setLiveAdDirty] = useState<boolean>(() => Boolean(savedSession.liveAdDirty));
+  const [liveAdSettings, setLiveAdSettings] = useState(() => {
+    if (savedSession.liveAdDirty && savedSession.liveAdSettings) {
+      return savedSession.liveAdSettings;
+    }
+    return {
+      enabled: appSettings.liveAdBanner?.enabled !== undefined
+        ? appSettings.liveAdBanner.enabled === true
+        : (appSettings as any).liveBannerActive === true,
+      imageUrl: appSettings.liveAdBanner?.imageUrl || (appSettings as any).liveBannerUrl || '',
+      link: appSettings.liveAdBanner?.link !== undefined ? appSettings.liveAdBanner.link : ((appSettings as any).liveBannerLink || ''),
+      title: appSettings.liveAdBanner?.title || (appSettings as any).liveBannerTitle || ''
+    };
+  });
+
+  const updateLiveAdSettings = (updater: (prev: typeof liveAdSettings) => typeof liveAdSettings) => {
+    setLiveAdDirty(true);
+    setLiveAdSettings(updater);
+  };
 
   useEffect(() => {
-    if (appSettings) {
+    if (appSettings && !liveAdDirty) {
       setLiveAdSettings(prev => ({
         enabled: appSettings.liveAdBanner?.enabled !== undefined
           ? appSettings.liveAdBanner.enabled === true
@@ -790,7 +812,7 @@ export default function Admin() {
         title: appSettings.liveAdBanner?.title || (appSettings as any).liveBannerTitle || prev.title || ''
       }));
     }
-  }, [appSettings?.liveAdBanner, (appSettings as any)?.liveBannerUrl, (appSettings as any)?.liveBannerLink, (appSettings as any)?.liveBannerActive, (appSettings as any)?.liveBannerTitle]);
+  }, [liveAdDirty, appSettings?.liveAdBanner, (appSettings as any)?.liveBannerUrl, (appSettings as any)?.liveBannerLink, (appSettings as any)?.liveBannerActive, (appSettings as any)?.liveBannerTitle]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -802,22 +824,114 @@ export default function Admin() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('adminDraft_showModal', JSON.stringify(showModal));
-        localStorage.setItem('adminDraft_formData', JSON.stringify(formData));
-        localStorage.setItem('adminDraft_isEditing', JSON.stringify(isEditing));
-        if (editingId) localStorage.setItem('adminDraft_editingId', editingId);
-        else localStorage.removeItem('adminDraft_editingId');
-      }
-    } catch (e) {}
-  }, [showModal, formData, isEditing, editingId]);
-  const [baseData, setBaseData] = useState<any>(null);
+  const [baseData, setBaseData] = useState<any>(() => (savedSession.baseData && typeof savedSession.baseData === 'object' ? savedSession.baseData : null));
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    return () => {
+      if (thumbDebounceRef.current) clearTimeout(thumbDebounceRef.current);
+      if (thumbAbortRef.current) thumbAbortRef.current.abort();
+    };
+  }, []);
+
+  const triggerAutoVideoThumbnail = (
+    rawUrl: string,
+    targetField: 'thumbnailUrl' | 'image',
+    options?: { force?: boolean; immediate?: boolean }
+  ) => {
+    const trimmed = (rawUrl || '').trim();
+    const isYt = isYouTubeUrl(trimmed);
+    const isFb = isFacebookUrl(trimmed);
+
+    if (thumbDebounceRef.current) {
+      clearTimeout(thumbDebounceRef.current);
+      thumbDebounceRef.current = null;
+    }
+    if (thumbAbortRef.current) {
+      thumbAbortRef.current.abort();
+      thumbAbortRef.current = null;
+    }
+
+    if (!isYt && !isFb) {
+      setFetchingThumbnail(false);
+      setThumbnailAutoStatus('');
+      return;
+    }
+
+    const canOverwrite = (currentValue: any) => {
+      if (options?.force) return true;
+      const val = typeof currentValue === 'string' ? currentValue.trim() : '';
+      return !val || val === DEFAULT_VIDEO_PLACEHOLDER || (lastAutoThumbRef.current !== '' && val === lastAutoThumbRef.current);
+    };
+
+    const reqId = ++thumbReqSeqRef.current;
+
+    // Instant client-side YouTube thumbnail so it appears immediately without waiting
+    if (isYt) {
+      const instantThumb = getYouTubeThumbnail(trimmed);
+      if (instantThumb) {
+        setFormData((prev: any) => {
+          if (!canOverwrite(prev[targetField])) return prev;
+          lastAutoThumbRef.current = instantThumb;
+          return { ...prev, [targetField]: instantThumb };
+        });
+        setThumbnailAutoStatus('success');
+      }
+    }
+
+    const runFetch = async () => {
+      const controller = new AbortController();
+      thumbAbortRef.current = controller;
+
+      if (isFb || options?.force) {
+        setFetchingThumbnail(true);
+        setThumbnailAutoStatus('loading');
+      }
+
+      try {
+        const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : undefined;
+        const result = await fetchVideoThumbnail(trimmed, idToken, controller.signal);
+
+        if (reqId !== thumbReqSeqRef.current || controller.signal.aborted) return;
+
+        if (result?.thumbnailUrl) {
+          setFormData((prev: any) => {
+            if (!canOverwrite(prev[targetField])) return prev;
+            lastAutoThumbRef.current = result.thumbnailUrl;
+            return { ...prev, [targetField]: result.thumbnailUrl };
+          });
+          setThumbnailAutoStatus('success');
+          if (options?.force) {
+            toast.success('تم توليد الصورة المصغرة للفيديو تلقائياً');
+          }
+        } else if (isFb) {
+          setThumbnailAutoStatus('error');
+          if (options?.force) {
+            toast.error('تعذر استخراج صورة هذا الفيديو من فيسبوك (قد يكون خاصاً أو محمياً)');
+          }
+        }
+      } catch {
+        if (reqId === thumbReqSeqRef.current && isFb) {
+          setThumbnailAutoStatus('error');
+        }
+      } finally {
+        if (reqId === thumbReqSeqRef.current) {
+          setFetchingThumbnail(false);
+        }
+      }
+    };
+
+    if (options?.immediate) {
+      void runFetch();
+    } else {
+      thumbDebounceRef.current = setTimeout(() => {
+        void runFetch();
+      }, isYt ? 300 : 450);
+    }
+  };
 
   useEffect(() => {
     if (showModal) {
@@ -838,7 +952,7 @@ export default function Admin() {
         extraData = { selectedMediaIds };
       } else {
         const vUrl = item.url || item.videoUrl || '';
-        const src = item.source || (vUrl.includes('youtube.com') || vUrl.includes('youtu.be') ? 'youtube' : 'upload');
+        const src = item.source || (isYouTubeUrl(vUrl) ? 'youtube' : isFacebookUrl(vUrl) ? 'facebook' : 'upload');
         extraData = {
           type: item.type || 'video',
           source: src,
@@ -862,6 +976,8 @@ export default function Admin() {
         extraData = { albumId };
       }
     }
+    lastAutoThumbRef.current = '';
+    setThumbnailAutoStatus('');
     setFormData({ ...item, ...extraData });
     setBaseData({ ...item, ...extraData });
     setIsEditing(true);
@@ -892,6 +1008,7 @@ export default function Admin() {
 
       await setDoc(doc(db, 'settings', 'global'), newSettings, { merge: true });
       setSettings(newSettings);
+      setLiveAdDirty(false);
       toast.success('تم حفظ وتحديث إعلان البث المباشر الموحد بنجاح 🎯');
     } catch (err: any) {
       console.error('Save live ad error:', err);
@@ -911,7 +1028,7 @@ export default function Admin() {
         .then(res => uploadImage(res.file, 'live', file.name))
         .catch(() => uploadImage(file, 'live', file.name))
         .then(url => {
-          setLiveAdSettings(prev => ({ ...prev, imageUrl: url }));
+          updateLiveAdSettings(prev => ({ ...prev, imageUrl: url }));
           toast.success('تم رفع صورة بانر البث المباشر بنجاح 🖼️');
         })
         .catch(err => {
@@ -949,12 +1066,102 @@ export default function Admin() {
     }
   }, [activeTab, profile.uid, profile.roles, profile.role, isAuthReady, hasAdminAccess, setSearchParams]);
 
-  const [userSearch, setUserSearch] = useState('');
-  const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'admin' | 'moderator' | 'writer' | 'user'>('all');
-  const [userTierFilter, setUserTierFilter] = useState<string>('all');
-  const [contentSearch, setContentSearch] = useState('');
+  const [userSearch, setUserSearch] = useState<string>(() => savedSession.userSearch || '');
+  const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'admin' | 'moderator' | 'writer' | 'user'>(() => savedSession.userRoleFilter || 'all');
+  const [userTierFilter, setUserTierFilter] = useState<string>(() => savedSession.userTierFilter || 'all');
+  const [contentSearch, setContentSearch] = useState<string>(() => savedSession.contentSearch || '');
   const [newsTags, setNewsTags] = useState<string[]>([]);
   const [featuredMatchId, setFeaturedMatchId] = useState<string | null>(null);
+
+  // Persist complete Admin session state (active tab, sub-tabs, filters, modal & form inputs)
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      const existingRaw = window.sessionStorage.getItem(ADMIN_SESSION_KEY);
+      const existing = existingRaw ? JSON.parse(existingRaw) : {};
+      const snapshot = {
+        ...existing,
+        activeTab,
+        historySubTab,
+        mediaSubTab,
+        musicSubTab,
+        liveSportSubTab,
+        clubSubTab,
+        newsFilterType,
+        orderFilter,
+        userSearch,
+        userRoleFilter,
+        userTierFilter,
+        contentSearch,
+        showModal,
+        formData,
+        baseData,
+        isEditing,
+        editingId,
+        liveAdSettings,
+        liveAdDirty,
+        savedAt: Date.now()
+      };
+      window.sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(snapshot));
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [
+    activeTab,
+    historySubTab,
+    mediaSubTab,
+    musicSubTab,
+    liveSportSubTab,
+    clubSubTab,
+    newsFilterType,
+    orderFilter,
+    userSearch,
+    userRoleFilter,
+    userTierFilter,
+    contentSearch,
+    showModal,
+    formData,
+    baseData,
+    isEditing,
+    editingId,
+    liveAdSettings,
+    liveAdDirty
+  ]);
+
+  // Persist & restore vertical scroll position within the current Admin session
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (typeof savedSession.scrollY === 'number' && savedSession.scrollY > 0) {
+      const targetY = savedSession.scrollY;
+      const raf = window.requestAnimationFrame(() => {
+        window.scrollTo({ top: targetY, behavior: 'instant' as ScrollBehavior });
+      });
+      return () => window.cancelAnimationFrame(raf);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+    const handleScroll = () => {
+      if (scrollTimer) clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => {
+        try {
+          const existingRaw = window.sessionStorage.getItem(ADMIN_SESSION_KEY);
+          const existing = existingRaw ? JSON.parse(existingRaw) : {};
+          window.sessionStorage.setItem(
+            ADMIN_SESSION_KEY,
+            JSON.stringify({ ...existing, scrollY: window.scrollY })
+          );
+        } catch {}
+      }, 150);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimer) clearTimeout(scrollTimer);
+    };
+  }, []);
 
   // Sync featured match and news categories/tags
   useEffect(() => {
@@ -1147,13 +1354,23 @@ export default function Admin() {
             }
           }
         } else {
+          const videoUrlValue = formData.url || '';
+          const detectedSource = isYouTubeUrl(videoUrlValue)
+            ? 'youtube'
+            : isFacebookUrl(videoUrlValue)
+              ? 'facebook'
+              : (formData.source || 'upload');
+          const autoYoutubeThumb = (formData.type || 'video') === 'video' && isYouTubeUrl(videoUrlValue)
+            ? getYouTubeThumbnail(videoUrlValue)
+            : '';
+
           const payload = {
             title: formData.title || 'فيديو جديد',
             type: formData.type || 'video',
-            source: formData.source || (formData.url?.includes('youtube.com') || formData.url?.includes('youtu.be') ? 'youtube' : formData.url?.includes('facebook.com') ? 'facebook' : 'upload'),
-            url: formData.url || '',
-            videoUrl: formData.type === 'video' ? (formData.url || '') : '',
-            thumbnailUrl: formData.thumbnailUrl || (formData.type === 'video' ? 'https://images.unsplash.com/photo-1510563399035-7140409890a5' : (formData.url || 'https://images.unsplash.com/photo-1510563399035-7140409890a5')),
+            source: detectedSource,
+            url: videoUrlValue,
+            videoUrl: (formData.type || 'video') === 'video' ? videoUrlValue : '',
+            thumbnailUrl: formData.thumbnailUrl || autoYoutubeThumb || ((formData.type || 'video') === 'video' ? DEFAULT_VIDEO_PLACEHOLDER : (videoUrlValue || DEFAULT_VIDEO_PLACEHOLDER)),
             date: isEditing ? (formData.date || new Date().toISOString()) : new Date().toISOString(),
             duration: formData.duration || '',
             views: formData.views || '0',
@@ -1882,8 +2099,11 @@ export default function Admin() {
       toast.success('تم الحفظ بنجاح');
       setShowModal(false);
       setFormData({});
+      setBaseData(null);
       setIsEditing(false);
       setEditingId(null);
+      lastAutoThumbRef.current = '';
+      setThumbnailAutoStatus('');
     } catch (err: any) {
       console.error(err);
       toast.error('حدث خطأ أثناء الحفظ: ' + (err?.message || err));
@@ -2365,6 +2585,8 @@ export default function Admin() {
     } else if (activeTab === 'books') {
       initialData = { title: '', author: 'نادي الاتحاد السكندري', coverUrl: '', pdfUrl: '', desc: '', hidden: false };
     }
+    lastAutoThumbRef.current = '';
+    setThumbnailAutoStatus('');
     setFormData(initialData);
     setBaseData(initialData);
     setIsEditing(false);
@@ -5584,71 +5806,71 @@ export default function Admin() {
                      </div>
                    </div>
                    <label className="flex items-center gap-2 cursor-pointer bg-white dark:bg-card-dark px-3 py-1.5 rounded-xl border border-border-light dark:border-border-dark shadow-xs">
-                     <input 
-                       type="checkbox" 
-                       checked={liveAdSettings.enabled} 
-                       onChange={(e) => setLiveAdSettings(prev => ({ ...prev, enabled: e.target.checked }))}
-                       className="ds-form-control w-4 h-4 accent-primary rounded cursor-pointer"
-                     />
-                     <span className="text-xs font-bold">{liveAdSettings.enabled ? '🟢 الإعلان مفعّل' : '⚪ الإعلان معطل'}</span>
-                   </label>
-                 </div>
+                      <input 
+                        type="checkbox" 
+                        checked={liveAdSettings.enabled} 
+                        onChange={(e) => updateLiveAdSettings(prev => ({ ...prev, enabled: e.target.checked }))}
+                        className="ds-form-control w-4 h-4 accent-primary rounded cursor-pointer"
+                      />
+                      <span className="text-xs font-bold">{liveAdSettings.enabled ? '🟢 الإعلان مفعّل' : '⚪ الإعلان معطل'}</span>
+                    </label>
+                  </div>
 
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                   <div>
-                     <label className="text-xs font-bold mb-1.5 flex items-center justify-between">
-                       <span>صورة البانر (Banner Image)</span>
-                       <button
-                         type="button"
-                         onClick={() => setLiveAdSettings(prev => ({ ...prev, imageUrl: '/nada_ad.png' }))}
-                         className="ds-control text-[12px] text-primary hover:underline font-bold"
-                       >
-                         استخدام nada_ad.png 🖼️
-                       </button>
-                     </label>
-                     <div className="flex gap-2">
-                       <input 
-                         type="text" 
-                         value={liveAdSettings.imageUrl} 
-                         onChange={(e) => setLiveAdSettings(prev => ({ ...prev, imageUrl: e.target.value }))}
-                         placeholder="/nada_ad.png أو رابط صورة"
-                         className="ds-form-control flex-1 p-2.5 rounded-xl border border-border-light bg-white dark:bg-card-dark dark:border-border-dark text-xs font-mono text-left dir-ltr"
-                       />
-                       <label className="bg-slate-100 hover:bg-slate-200 dark:bg-surface-dark dark:hover:bg-slate-800 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-border-light dark:border-border-dark transition-all shrink-0">
-                         <Upload size={14} />
-                         <span>رفع صورة</span>
-                         <input 
-                           type="file" 
-                           accept="image/*" 
-                           className="ds-form-control hidden" 
-                           onChange={(e) => handleFileUpload(e, 'liveAdBannerImage', 'image')}
-                         />
-                       </label>
-                     </div>
-                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-xs font-bold mb-1.5 flex items-center justify-between">
+                        <span>صورة البانر (Banner Image)</span>
+                        <button
+                          type="button"
+                          onClick={() => updateLiveAdSettings(prev => ({ ...prev, imageUrl: '/nada_ad.png' }))}
+                          className="ds-control text-[12px] text-primary hover:underline font-bold"
+                        >
+                          استخدام nada_ad.png 🖼️
+                        </button>
+                      </label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          value={liveAdSettings.imageUrl} 
+                          onChange={(e) => updateLiveAdSettings(prev => ({ ...prev, imageUrl: e.target.value }))}
+                          placeholder="/nada_ad.png أو رابط صورة"
+                          className="ds-form-control flex-1 p-2.5 rounded-xl border border-border-light bg-white dark:bg-card-dark dark:border-border-dark text-xs font-mono text-left dir-ltr"
+                        />
+                        <label className="bg-slate-100 hover:bg-slate-200 dark:bg-surface-dark dark:hover:bg-slate-800 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-border-light dark:border-border-dark transition-all shrink-0">
+                          <Upload size={14} />
+                          <span>رفع صورة</span>
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="ds-form-control hidden" 
+                            onChange={(e) => handleFileUpload(e, 'liveAdBannerImage', 'image')}
+                          />
+                        </label>
+                      </div>
+                    </div>
 
-                   <div>
-                     <label className="text-xs font-bold mb-1.5 block">الرابط الموجه عند الضغط (Link URL)</label>
-                     <input 
-                       type="text" 
-                       value={liveAdSettings.link} 
-                       onChange={(e) => setLiveAdSettings(prev => ({ ...prev, link: e.target.value }))}
-                       placeholder="https://..."
-                       className="ds-form-control w-full p-2.5 rounded-xl border border-border-light bg-white dark:bg-card-dark dark:border-border-dark text-xs font-mono text-left dir-ltr"
-                     />
-                   </div>
+                    <div>
+                      <label className="text-xs font-bold mb-1.5 block">الرابط الموجه عند الضغط (Link URL)</label>
+                      <input 
+                        type="text" 
+                        value={liveAdSettings.link} 
+                        onChange={(e) => updateLiveAdSettings(prev => ({ ...prev, link: e.target.value }))}
+                        placeholder="https://..."
+                        className="ds-form-control w-full p-2.5 rounded-xl border border-border-light bg-white dark:bg-card-dark dark:border-border-dark text-xs font-mono text-left dir-ltr"
+                      />
+                    </div>
 
-                   <div className="md:col-span-2">
-                     <label className="text-xs font-bold mb-1.5 block">عنوان أو نص الإعلان (اختياري)</label>
-                     <input 
-                       type="text" 
-                       value={liveAdSettings.title} 
-                       onChange={(e) => setLiveAdSettings(prev => ({ ...prev, title: e.target.value }))}
-                       placeholder="مثال: الراعي الرسمي للبث المباشر - اضغط هنا لزيارة الموقع"
-                       className="ds-form-control w-full p-2.5 rounded-xl border border-border-light bg-white dark:bg-card-dark dark:border-border-dark text-xs font-bold"
-                     />
-                   </div>
-                 </div>
+                    <div className="md:col-span-2">
+                      <label className="text-xs font-bold mb-1.5 block">عنوان أو نص الإعلان (اختياري)</label>
+                      <input 
+                        type="text" 
+                        value={liveAdSettings.title} 
+                        onChange={(e) => updateLiveAdSettings(prev => ({ ...prev, title: e.target.value }))}
+                        placeholder="مثال: الراعي الرسمي للبث المباشر - اضغط هنا لزيارة الموقع"
+                        className="ds-form-control w-full p-2.5 rounded-xl border border-border-light bg-white dark:bg-card-dark dark:border-border-dark text-xs font-bold"
+                      />
+                    </div>
+                  </div>
 
                  {/* Banner Preview */}
                  {liveAdSettings.imageUrl && (
@@ -6226,38 +6448,23 @@ export default function Admin() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="ds-content-card bg-white dark:bg-card-dark w-full max-w-md rounded-xl p-6 shadow-sm max-h-[90vh] overflow-y-auto custom-scrollbar no-pull">
-            <div className="flex items-center justify-between mb-6 sticky top-0 bg-white dark:bg-card-dark z-20 py-2 -mt-2">
-              <h3 className="ds-content-heading text-lg font-bold">
-                {isEditing ? 'تعديل' : 'إضافة'} {
-                  activeTab === 'club_members' ? (clubSubTab === 'committees' ? 'لجنة' : clubSubTab === 'announcements' ? 'إعلان' : clubSubTab === 'services' ? 'خدمة' : 'رحلة') :
-                  activeTab === 'news' ? 'خبر' : 
-                  activeTab === 'media' ? 'ميديا' : 
-                  activeTab === 'matches' ? 'مباراة' : 
-                  activeTab === 'city' ? 'بيانات المدينة' :
-                  activeTab === 'clubs' ? 'نادي' : 
-                  activeTab === 'products' ? 'منتج' :
-                  activeTab === 'history' ? (historySubTab === 'stats' ? 'رقم' : historySubTab === 'titles' ? 'بطولة' : historySubTab === 'timeline' ? 'حدث' : 'ملعب') :
-                  'عنصر'
-                }
-              </h3>
-              <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => {
-                      setShowModal(false);
-                      setIsEditing(false);
-                      setEditingId(null);
-                    }} 
-                    className="ds-control p-2 bg-slate-100 dark:bg-surface-dark text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all border border-border-light dark:border-border-dark"
-                    title="إغلاق"
-                  >
-                    <X size={24} />
-                  </button>
-              </div>
-            </div>
-
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto px-1 no-scrollbar text-right">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => {
+            setShowModal(false);
+            setFormData({});
+            setBaseData(null);
+            setIsEditing(false);
+            setEditingId(null);
+            lastAutoThumbRef.current = '';
+            setThumbnailAutoStatus('');
+          }}
+        >
+          <div
+            className="ds-content-card bg-white dark:bg-card-dark w-full max-w-md rounded-xl p-6 shadow-sm max-h-[90vh] overflow-y-auto custom-scrollbar no-pull"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-4 max-h-[68vh] overflow-y-auto px-1 no-scrollbar text-right">
                 {activeTab === 'ai-studio' && (
                   <>
                     <div>
@@ -6714,7 +6921,11 @@ export default function Admin() {
                               rows={3}
                               className="ds-form-control w-full p-3 pl-10 rounded-xl border border-border-light bg-white dark:bg-card-dark dark:border-border-dark text-slate-800 dark:text-white text-xs font-mono text-left dir-ltr shadow-xs" 
                               value={formData.videoUrl || ''} 
-                              onChange={(e) => setFormData({...formData, videoUrl: e.target.value})} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData((prev: any) => ({ ...prev, videoUrl: val }));
+                                triggerAutoVideoThumbnail(val, 'image');
+                              }} 
                             />
                           ) : (
                             <input 
@@ -6722,7 +6933,11 @@ export default function Admin() {
                               placeholder="ألصق رابط فيديو (YouTube / Facebook) أو كود التضمين <iframe> هنا..." 
                               className="ds-form-control w-full p-3 pl-10 rounded-xl border border-border-light bg-white dark:bg-card-dark dark:border-border-dark text-slate-800 dark:text-white text-xs font-bold text-left dir-ltr shadow-xs" 
                               value={formData.videoUrl || ''} 
-                              onChange={(e) => setFormData({...formData, videoUrl: e.target.value})} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData((prev: any) => ({ ...prev, videoUrl: val }));
+                                triggerAutoVideoThumbnail(val, 'image');
+                              }} 
                             />
                           )}
                           <div className="absolute left-3 top-3.5 pointer-events-none text-slate-400">
@@ -6737,6 +6952,34 @@ export default function Admin() {
                             )}
                           </div>
                         </div>
+                        {(isYouTubeUrl(formData.videoUrl) || isFacebookUrl(formData.videoUrl)) && (
+                          <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                              {fetchingThumbnail ? (
+                                <>
+                                  <Loader2 size={12} className="animate-spin text-primary" />
+                                  <span>جاري استخراج الصورة المصغرة تلقائياً...</span>
+                                </>
+                              ) : thumbnailAutoStatus === 'success' ? (
+                                <>
+                                  <CheckCircle2 size={12} className="text-emerald-500" />
+                                  <span className="text-emerald-600 dark:text-emerald-400">تم تجهيز الصورة المصغرة للفيديو</span>
+                                </>
+                              ) : (
+                                <span>تُضاف الصورة المصغرة تلقائياً عند ترك صورة الخبر فارغة</span>
+                              )}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={fetchingThumbnail}
+                              onClick={() => triggerAutoVideoThumbnail(formData.videoUrl, 'image', { force: true, immediate: true })}
+                              className="ds-control text-[11px] font-bold px-2.5 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-1 disabled:opacity-50"
+                            >
+                              <Sparkles size={12} />
+                              <span>استخدام صورة الفيديو كصورة للخبر</span>
+                            </button>
+                          </div>
+                        )}
                         <p className="text-[12px] text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
                           يدعم: روابط YouTube، روابط Facebook، أكواد التضمين المباشرة (مثل &lt;iframe&gt; من أي منصة أو موقع)، وملفات الفيديو MP4.
                         </p>
@@ -7024,53 +7267,86 @@ export default function Admin() {
                         {(formData.type || 'video') === 'video' && (
                           <div className="grid grid-cols-1 gap-2">
                             <label className="text-[12px] font-bold text-slate-500 mb-1 block">المصدر</label>
-                            <select className="ds-form-control w-full p-3 rounded-xl border border-border-light bg-slate-50 dark:bg-surface-dark dark:border-border-dark text-slate-800 dark:text-white text-sm font-bold" value={formData.source || 'upload'} onChange={(e) => setFormData({...formData, source: e.target.value})}>
-                              <option value="upload">رفع فيديو</option>
+                            <select className="ds-form-control w-full p-3 rounded-xl border border-border-light bg-slate-50 dark:bg-surface-dark dark:border-border-dark text-slate-800 dark:text-white text-sm font-bold" value={formData.source || 'youtube'} onChange={(e) => setFormData({...formData, source: e.target.value})}>
                               <option value="youtube">رابط يوتيوب</option>
+                              <option value="facebook">رابط فيسبوك</option>
+                              <option value="upload">رفع فيديو</option>
                               <option value="embed">تضمين (Embed URL)</option>
                             </select>
                           </div>
                         )}
 
-                        {(formData.type || 'video') === 'video' && (formData.source || 'youtube') === 'youtube' && (
-                          <div>
-                            <label className="text-[12px] font-bold text-slate-500 mb-1 block">رابط يوتيوب</label>
+                        {(formData.type || 'video') === 'video' && ((formData.source || 'youtube') === 'youtube' || (formData.source || 'youtube') === 'facebook' || (formData.source || 'youtube') === 'embed') && (
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-[12px] font-bold text-slate-500 block">
+                                {(formData.source || 'youtube') === 'facebook'
+                                  ? 'رابط فيديو فيسبوك'
+                                  : (formData.source || 'youtube') === 'embed'
+                                    ? 'رابط التضمين (أو رابط يوتيوب / فيسبوك)'
+                                    : 'رابط فيديو يوتيوب (أو فيسبوك)'}
+                              </label>
+                              {formData.url && (isYouTubeUrl(formData.url) || isFacebookUrl(formData.url)) && (
+                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                                  isYouTubeUrl(formData.url)
+                                    ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                                    : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                }`}>
+                                  {isYouTubeUrl(formData.url) ? 'YouTube' : 'Facebook'}
+                                </span>
+                              )}
+                            </div>
                             <input 
                               type="text" 
-                              placeholder="https://www.youtube.com/watch?v=..." 
+                              placeholder={(formData.source || 'youtube') === 'facebook' ? 'https://www.facebook.com/... أو https://fb.watch/...' : 'https://www.youtube.com/watch?v=... أو رابط فيسبوك'} 
                               className="ds-form-control w-full p-3 rounded-xl border border-border-light bg-slate-50 dark:bg-surface-dark dark:border-border-dark text-slate-800 dark:text-white text-sm font-mono text-left dir-ltr" 
                               value={formData.url || ''} 
                               onChange={(e) => {
                                 const url = e.target.value;
-                                let thumb = formData.thumbnailUrl;
-                                if (url.includes('youtube.com/watch?v=')) {
-                                  const id = url.split('v=')[1]?.split('&')[0];
-                                  thumb = `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
-                                } else if (url.includes('youtu.be/')) {
-                                  const id = url.split('youtu.be/')[1]?.split('?')[0];
-                                  thumb = `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
-                                }
-                                setFormData({...formData, url, thumbnailUrl: thumb, source: 'youtube'});
+                                const autoSource = isYouTubeUrl(url)
+                                  ? 'youtube'
+                                  : isFacebookUrl(url)
+                                    ? 'facebook'
+                                    : (formData.source || 'youtube');
+                                setFormData((prev: any) => ({ ...prev, url, videoUrl: url, source: autoSource }));
+                                triggerAutoVideoThumbnail(url, 'thumbnailUrl');
                               }} 
                             />
+                            {(isYouTubeUrl(formData.url) || isFacebookUrl(formData.url)) && (
+                              <div className="flex items-center justify-between gap-2 pt-0.5 flex-wrap">
+                                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                  {fetchingThumbnail ? (
+                                    <>
+                                      <Loader2 size={12} className="animate-spin text-primary" />
+                                      <span>جاري توليد الصورة المصغرة تلقائياً...</span>
+                                    </>
+                                  ) : thumbnailAutoStatus === 'success' ? (
+                                    <>
+                                      <CheckCircle2 size={12} className="text-emerald-500" />
+                                      <span className="text-emerald-600 dark:text-emerald-400">تمت إضافة الصورة المصغرة تلقائياً</span>
+                                    </>
+                                  ) : thumbnailAutoStatus === 'error' ? (
+                                    <span className="text-amber-600 dark:text-amber-400">تعذر استخراج صورة فيسبوك تلقائياً — يمكنك رفع صورة يدوياً</span>
+                                  ) : (
+                                    <span>سيتم توليد الصورة المصغرة تلقائياً من الرابط</span>
+                                  )}
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={fetchingThumbnail}
+                                  onClick={() => triggerAutoVideoThumbnail(formData.url, 'thumbnailUrl', { force: true, immediate: true })}
+                                  className="ds-control text-[11px] font-bold px-2.5 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-1 disabled:opacity-50"
+                                >
+                                  <RefreshCw size={12} className={fetchingThumbnail ? 'animate-spin' : ''} />
+                                  <span>توليد الصورة تلقائياً</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
 
                         {(formData.type || 'video') === 'video' && (formData.source || 'youtube') === 'upload' && (
                           <UploadOrUrlField label="ملف الفيديو" fieldName="url" currentUrl={formData.url || formData.videoUrl} formData={formData} setFormData={(val) => setFormData({...val, videoUrl: val.url})} uploading={uploading} handleFileUpload={handleFileUpload} type="video" />
-                        )}
-
-                        {(formData.type || 'video') === 'video' && (formData.source || 'youtube') === 'embed' && (
-                          <div>
-                            <label className="text-[12px] font-bold text-slate-500 mb-1 block">رابط التضمين (Embed URL)</label>
-                            <input 
-                              type="text" 
-                              placeholder="https://..." 
-                              className="ds-form-control w-full p-3 rounded-xl border border-border-light bg-slate-50 dark:bg-surface-dark dark:border-border-dark text-slate-800 dark:text-white text-sm font-mono text-left dir-ltr" 
-                              value={formData.url || ''} 
-                              onChange={(e) => setFormData({...formData, url: e.target.value})} 
-                            />
-                          </div>
                         )}
 
                         {formData.type === 'photo' && (
@@ -7818,18 +8094,35 @@ export default function Admin() {
                  )}
             </div>
 
-            <button 
-              onClick={() => {
-                if (window.confirm(isEditing ? 'هل أنت متأكد من حفظ التعديلات؟' : 'هل أنت متأكد من الإضافة؟')) {
-                  handleAdd();
-                }
-              }} 
-              disabled={loading}
-              className="ds-control w-full bg-primary text-white py-4 rounded-lg font-bold text-sm mt-6 flex items-center justify-center gap-2"
-            >
-              {loading && <Loader2 className="animate-spin" size={18} />}
-              {isEditing ? 'تعديل وحفظ' : 'إضافة وحفظ'}
-            </button>
+            <div className="flex items-center gap-2.5 mt-6">
+              <button 
+                onClick={() => {
+                  if (window.confirm(isEditing ? 'هل أنت متأكد من حفظ التعديلات؟' : 'هل أنت متأكد من الإضافة؟')) {
+                    handleAdd();
+                  }
+                }} 
+                disabled={loading}
+                className="ds-control flex-1 bg-primary text-white py-4 rounded-lg font-bold text-sm flex items-center justify-center gap-2"
+              >
+                {loading && <Loader2 className="animate-spin" size={18} />}
+                {isEditing ? 'تعديل وحفظ' : 'إضافة وحفظ'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowModal(false);
+                  setFormData({});
+                  setBaseData(null);
+                  setIsEditing(false);
+                  setEditingId(null);
+                  lastAutoThumbRef.current = '';
+                  setThumbnailAutoStatus('');
+                }}
+                className="ds-control px-5 py-4 bg-slate-100 dark:bg-surface-dark text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg font-bold text-sm border border-border-light dark:border-border-dark"
+              >
+                إلغاء
+              </button>
+            </div>
           </div>
         </div>
       )}

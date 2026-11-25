@@ -42,7 +42,7 @@ import { useAppStore } from '../store';
 import { collection, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { getOptimizedImage } from '../lib/cloudinary';
-import { extractYouTubeId, getFacebookEmbedUrl, getTikTokEmbedUrl, isFacebookUrl, isTikTokUrl, isYouTubeUrl } from '../lib/videoUtils';
+import { extractEmbedSrc, extractYouTubeId, getFacebookEmbedUrl, getTikTokEmbedUrl, isFacebookUrl, isTikTokUrl, isYouTubeUrl } from '../lib/videoUtils';
 import type { MediaItem, Song } from '../store';
 import { downloadOfflineSong, removeOfflineSong, listOfflineSongs, formatOfflineSongSize, type OfflineSongSummary } from '../lib/offlineSongs';
 
@@ -50,29 +50,32 @@ type TabType = 'photos' | 'videos' | 'songs' | 'books';
 type VideoOrientation = 'portrait' | 'landscape';
 
 const getLibraryVideoEmbedUrl = (url?: string, source?: MediaItem['source']) => {
-  if (typeof url !== 'string') return null;
+  if (typeof url !== 'string' || !url.trim()) return null;
+  const cleaned = extractEmbedSrc(url).trim();
+  if (!cleaned) return null;
+
+  if (isYouTubeUrl(cleaned)) {
+    if (/^https?:\/\/(?:www\.|m\.)?youtube\.com\/embed\//i.test(cleaned)) {
+      const parsed = new URL(cleaned);
+      parsed.searchParams.set('autoplay', '1');
+      return parsed.href;
+    }
+    const id = extractYouTubeId(cleaned);
+    if (id) return `https://www.youtube.com/embed/${id}?autoplay=1`;
+  }
+  if (isFacebookUrl(cleaned)) return getFacebookEmbedUrl(cleaned);
+  if (isTikTokUrl(cleaned)) {
+    const embedUrl = getTikTokEmbedUrl(cleaned);
+    if (embedUrl.startsWith('https://www.tiktok.com/embed/v2/')) return embedUrl;
+  }
   if (source === 'embed') {
     try {
-      const parsed = new URL(url);
+      const parsed = new URL(cleaned);
       if (parsed.protocol === 'https:' || parsed.protocol === 'http:') return parsed.href;
     } catch {
       return null;
     }
     return null;
-  }
-  if (isYouTubeUrl(url)) {
-    if (/^https?:\/\/(?:www\.|m\.)?youtube\.com\/embed\//i.test(url)) {
-      const parsed = new URL(url);
-      parsed.searchParams.set('autoplay', '1');
-      return parsed.href;
-    }
-    const id = extractYouTubeId(url);
-    if (id) return `https://www.youtube.com/embed/${id}?autoplay=1`;
-  }
-  if (isFacebookUrl(url)) return getFacebookEmbedUrl(url);
-  if (isTikTokUrl(url)) {
-    const embedUrl = getTikTokEmbedUrl(url);
-    if (embedUrl.startsWith('https://www.tiktok.com/embed/v2/')) return embedUrl;
   }
   return null;
 };
@@ -1418,16 +1421,16 @@ export default function Library() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSelectedPhoto(null)}
-            className="fixed inset-0 z-[100] flex flex-col items-center bg-black/95 backdrop-blur-md px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] overflow-y-auto cursor-pointer"
+            className="fixed inset-0 z-[100] flex flex-col items-center bg-black/95 backdrop-blur-md px-4 pb-4 pt-0 overflow-hidden cursor-pointer"
           >
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-5xl min-h-full flex flex-col gap-4 cursor-default"
+              className="relative w-full max-w-5xl h-full flex flex-col cursor-default overflow-hidden"
             >
-              <div className="sticky !top-0 z-20 shrink-0 flex items-center justify-between gap-3 py-3 border-b border-white/10 bg-black/90 backdrop-blur-md text-white">
+              <div className="z-20 shrink-0 flex items-center justify-between gap-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 border-b border-white/10 bg-black/95 backdrop-blur-md text-white">
                 <div className="min-w-0 flex-1">
                   <h2 className="ds-content-heading text-base sm:text-lg md:text-xl font-bold leading-snug break-words">{selectedPhoto.title}</h2>
                   {selectedPhoto.date && (
@@ -1463,13 +1466,15 @@ export default function Library() {
                 </div>
               </div>
 
-              <div className="my-auto max-h-[calc(100dvh-8.5rem)] w-full rounded-xl overflow-hidden bg-slate-900 flex items-center justify-center border border-white/10">
-                <img 
-                  src={selectedPhoto.url || selectedPhoto.thumbnailUrl || (selectedPhoto as any).imageUrl || (selectedPhoto as any).image} 
-                  alt={selectedPhoto.title} 
-                  className="max-h-[calc(100dvh-8.5rem)] w-auto max-w-full object-contain"
-                  referrerPolicy="no-referrer"
-                />
+              <div className="flex-1 min-h-0 py-4 flex items-center justify-center overflow-y-auto">
+                <div className="max-h-full w-full rounded-xl overflow-hidden bg-slate-900 flex items-center justify-center border border-white/10">
+                  <img 
+                    src={selectedPhoto.url || selectedPhoto.thumbnailUrl || (selectedPhoto as any).imageUrl || (selectedPhoto as any).image} 
+                    alt={selectedPhoto.title} 
+                    className="max-h-[calc(100dvh-7.5rem)] w-auto max-w-full object-contain"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
               </div>
             </motion.div>
           </motion.div>
@@ -1484,16 +1489,16 @@ export default function Library() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSelectedVideo(null)}
-            className="fixed inset-0 z-[100] flex flex-col items-center bg-black/95 backdrop-blur-md px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] overflow-y-auto cursor-pointer"
+            className="fixed inset-0 z-[100] flex flex-col items-center bg-black/95 backdrop-blur-md px-4 pb-4 pt-0 overflow-hidden cursor-pointer"
           >
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-5xl min-h-full flex flex-col gap-4 cursor-default"
+              className="relative w-full max-w-5xl h-full flex flex-col cursor-default overflow-hidden"
             >
-              <div className="sticky !top-0 z-20 shrink-0 flex items-center justify-between gap-3 py-3 border-b border-white/10 bg-black/90 backdrop-blur-md text-white">
+              <div className="z-20 shrink-0 flex items-center justify-between gap-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 border-b border-white/10 bg-black/95 backdrop-blur-md text-white">
                 <div className="min-w-0 flex-1">
                   <h2 className="ds-content-heading text-base sm:text-lg md:text-xl font-bold leading-snug break-words">{selectedVideo.title}</h2>
                   <div className="flex items-center gap-3 text-xs text-slate-400 font-bold mt-1">
@@ -1530,43 +1535,45 @@ export default function Library() {
                 </div>
               </div>
 
-              {(() => {
-                const isPortraitModal = modalVideoOrientation
-                  ? modalVideoOrientation === 'portrait'
-                  : isVideoVertical(selectedVideo);
-                return (
-                  <div className={
-                    isPortraitModal
-                      ? selectedVideoEmbedUrl
-                        ? "aspect-[9/16] h-[min(75vh,calc(100dvh-8.5rem))] w-auto max-w-full mx-auto my-auto rounded-xl overflow-hidden bg-slate-900 shadow-sm relative border border-white/10"
-                        : "w-fit max-w-full max-h-[calc(100dvh-8.5rem)] mx-auto my-auto rounded-xl overflow-hidden bg-slate-900 shadow-sm relative border border-white/10 flex items-center justify-center"
-                      : "aspect-video w-full max-h-[calc(100dvh-8.5rem)] my-auto rounded-xl overflow-hidden bg-slate-900 shadow-sm relative border border-white/10"
-                  }>
-                    {selectedVideoEmbedUrl ? (
-                      <iframe 
-                        src={selectedVideoEmbedUrl}
-                        className="w-full h-full border-none"
-                        allow="autoplay; encrypted-media; picture-in-picture"
-                        allowFullScreen
-                        title={selectedVideo.title}
-                      />
-                    ) : (
-                      <video 
-                        src={selectedVideo.source === 'embed' ? undefined : selectedVideoUrl}
-                        controls 
-                        autoPlay 
-                        onLoadedMetadata={(e) => {
-                          const v = e.currentTarget;
-                          if (v.videoWidth > 0 && v.videoHeight > 0) {
-                            setModalVideoOrientation(v.videoHeight > v.videoWidth ? 'portrait' : 'landscape');
-                          }
-                        }}
-                        className={isPortraitModal ? "max-h-[calc(100dvh-8.5rem)] w-auto max-w-full object-contain" : "w-full h-full object-contain"}
-                      />
-                    )}
-                  </div>
-                );
-              })()}
+              <div className="flex-1 min-h-0 py-4 flex items-center justify-center overflow-y-auto">
+                {(() => {
+                  const isPortraitModal = modalVideoOrientation
+                    ? modalVideoOrientation === 'portrait'
+                    : isVideoVertical(selectedVideo);
+                  return (
+                    <div className={
+                      isPortraitModal
+                        ? selectedVideoEmbedUrl
+                          ? "aspect-[9/16] h-[min(75vh,calc(100dvh-7.5rem))] w-auto max-w-full mx-auto rounded-xl overflow-hidden bg-slate-900 shadow-sm relative border border-white/10"
+                          : "w-fit max-w-full max-h-[calc(100dvh-7.5rem)] mx-auto rounded-xl overflow-hidden bg-slate-900 shadow-sm relative border border-white/10 flex items-center justify-center"
+                        : "aspect-video w-full max-h-[calc(100dvh-7.5rem)] rounded-xl overflow-hidden bg-slate-900 shadow-sm relative border border-white/10"
+                    }>
+                      {selectedVideoEmbedUrl ? (
+                        <iframe 
+                          src={selectedVideoEmbedUrl}
+                          className="w-full h-full border-none"
+                          allow="autoplay; encrypted-media; picture-in-picture"
+                          allowFullScreen
+                          title={selectedVideo.title}
+                        />
+                      ) : (
+                        <video 
+                          src={selectedVideo.source === 'embed' ? undefined : selectedVideoUrl}
+                          controls 
+                          autoPlay 
+                          onLoadedMetadata={(e) => {
+                            const v = e.currentTarget;
+                            if (v.videoWidth > 0 && v.videoHeight > 0) {
+                              setModalVideoOrientation(v.videoHeight > v.videoWidth ? 'portrait' : 'landscape');
+                            }
+                          }}
+                          className={isPortraitModal ? "max-h-[calc(100dvh-7.5rem)] w-auto max-w-full object-contain" : "w-full h-full object-contain"}
+                        />
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
             </motion.div>
           </motion.div>
         )}
