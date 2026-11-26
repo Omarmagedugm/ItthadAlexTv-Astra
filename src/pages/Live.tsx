@@ -23,9 +23,7 @@ import {
   Sparkles,
   MessageSquare,
   Maximize2,
-  EyeOff,
-  Gamepad2,
-  Play
+  EyeOff
 } from 'lucide-react';
 import LivePlayer from '../components/live/LivePlayer';
 import { parseLiveStreamUrl } from '../lib/videoUtils';
@@ -607,38 +605,6 @@ export default function Live() {
                 </div>
               </div>
             )}
-
-            {/* 4. Halftime Game Card - العب بين الشوطين */}
-            <div className="ds-content-card relative overflow-hidden rounded-lg lg:rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-primary/10 backdrop-blur-xl p-4 sm:p-5 shadow-lg shadow-black/5 dark:shadow-black/20">
-              <div className="absolute top-0 left-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
-              <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5 text-right w-full sm:w-auto">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/20">
-                    <Gamepad2 size={24} className="animate-bounce" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                        استراحة الشوطين ⏳
-                      </span>
-                    </div>
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-1">
-                      مستني الشوط التاني؟ العب واستمتع بين الشوطين!
-                    </h3>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-                  <Link
-                    to="/game"
-                    className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-amber-500/30 active:scale-95 transition-all"
-                  >
-                    <Play size={15} fill="currentColor" />
-                    <span>العب الآن في التطبيق</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* RIGHT COLUMN: Interactive Live Chat (Sticky on Desktop) */}
