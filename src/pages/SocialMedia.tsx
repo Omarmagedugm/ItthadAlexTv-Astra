@@ -22,12 +22,15 @@ import { getOptimizedImage } from '../lib/cloudinary';
 
 const DEFAULT_FB_PAGE = 'https://www.facebook.com/itthadalexchannel';
 const FB_USERNAME = 'itthadalexchannel';
-const FB_PAGE_PLUGIN_SRC = 'https://connect.facebook.net/ar_AR/sdk.js#xfbml=1&version=v19.0';
+const FB_PAGE_PLUGIN_SRC = 'https://connect.facebook.net/ar_AR/sdk.js#xfbml=1&version=v23.0';
 
 declare global {
   interface Window {
     FB?: {
       init?: (options: { xfbml: boolean; version: string }) => void;
+      XFBML?: {
+        parse?: (node?: HTMLElement | null, callback?: () => void) => void;
+      };
     };
     fbAsyncInit?: () => void;
   }
@@ -59,14 +62,13 @@ export default function SocialMedia() {
       if (!active) return;
       try {
         if (window.FB?.init) {
-          window.FB.init({ xfbml: true, version: 'v19.0' });
+          window.FB.init({ xfbml: true, version: 'v23.0' });
         }
-        // Re-parse XFBML explicitly: React may mount the fb-page div after the
-        // SDK is ready (tab switch, feedVersion remount), and the SDK does not
-        // watch the DOM on its own.
         const target = feedContainer.current;
-        if (target && (window as any).FB?.XFBML?.parse) {
-          (window as any).FB.XFBML.parse(target);
+        if (target && window.FB?.XFBML?.parse) {
+          window.FB.XFBML.parse(target, finishLoading);
+        } else {
+          finishLoading();
         }
       } catch {
         finishLoading();
@@ -74,7 +76,7 @@ export default function SocialMedia() {
     };
 
     window.fbAsyncInit = () => {
-      window.FB?.init?.({ xfbml: true, version: 'v19.0' });
+      window.FB?.init?.({ xfbml: true, version: 'v23.0' });
       if (active && feedContainer.current) {
         initFbPlugin();
       }
@@ -308,7 +310,7 @@ export default function SocialMedia() {
       </div>
 
       {/* Main Content Area */}
-      <div ref={feedContainer} className="w-full">
+      <div className="w-full">
         {activeTab !== 'channels' ? (
           <div className="flex flex-col items-center">
             {/* Embed Container */}
@@ -360,18 +362,21 @@ export default function SocialMedia() {
                     </a>
                   </div>
                 ) : (
-                  <div
-                    key={feedVersion}
-                    className="fb-page w-full"
-                    data-href={fbUrl}
-                    data-tabs="timeline"
-                    data-width="380"
-                    data-height="600"
-                    data-small-header="false"
-                    data-adapt-container-width="true"
-                    data-hide-cover="false"
-                    data-show-facepile="true"
-                  />
+                  <>
+                    <div id="fb-root" />
+                    <div
+                      key={feedVersion}
+                      className="fb-page"
+                      data-href={fbUrl || DEFAULT_FB_PAGE}
+                      data-show-posts="true"
+                      data-width="500"
+                      data-height="650"
+                      data-small-header="false"
+                      data-adapt-container-width="true"
+                      data-hide-cover="false"
+                      data-show-facepile="false"
+                    />
+                  </>
                 )}
               </div>
               <p className="w-full px-2 pt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
