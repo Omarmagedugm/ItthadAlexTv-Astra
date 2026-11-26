@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { 
@@ -7,6 +7,7 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   GoogleAuthProvider,
+  FacebookAuthProvider,
   signInWithPopup,
   sendPasswordResetEmail
 } from 'firebase/auth';
@@ -29,17 +30,6 @@ export default function Auth() {
   const [domainCopied, setDomainCopied] = useState(false);
   const navigate = useNavigate();
   const { updateProfile: updateLocalProfile, appSettings } = useAppStore();
-  const fbLoginRef = useRef<HTMLDivElement>(null);
-
-  // Render the Facebook Login button (XFBML) and let the SDK parse it once loaded
-  useEffect(() => {
-    if (mode === 'forgot' || !fbLoginRef.current) return;
-    const el = fbLoginRef.current;
-    el.innerHTML = '<fb:login-button scope="public_profile,email" onlogin="checkLoginState();"></fb:login-button>';
-    if ((window as any).FB?.XFBML) {
-      (window as any).FB.XFBML.parse(el);
-    }
-  }, [mode]);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +51,74 @@ export default function Auth() {
     }
   };
 
+  const syncSocialUser = async (user: any) => {
+    let userDoc;
+    try {
+      userDoc = await getDoc(doc(db, 'users', user.uid));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, `users/${user.uid}`);
+      throw err;
+    }
+
+    if (!userDoc.exists()) {
+      const userData = {
+        uid: user.uid,
+        name: user.displayName || 'مشجع إتحادي',
+        email: user.email || '',
+        role: 'user' as const,
+        username: user.email?.split('@')[0].toLowerCase() || `user_${user.uid.substring(0, 5)}`,
+        tier: 'new' as const,
+        bio: 'مشجع إتحادي جديد',
+        joinDate: new Date().getFullYear().toString(),
+        avatar: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=random`,
+        stats: { predictions: 0, comments: 0, favorites: 0 }
+      };
+      try {
+        await setDoc(doc(db, 'users', user.uid), userData);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}`);
+      }
+      updateLocalProfile(userData);
+    } else {
+      const existingData = userDoc.data();
+      updateLocalProfile(existingData);
+    }
+    navigate('/profile');
+  };
+
+  const handleSocialAuthError = (err: any, providerLabel: string) => {
+    const code = err?.code || '';
+    const message = err?.message || '';
+    const stack = err?.stack || '';
+    const isUnauthorizedDomain =
+      code === 'auth/unauthorized-domain' ||
+      message.toLowerCase().includes('unauthorized domain') ||
+      message.toLowerCase().includes('auth/unauthorized-domain') ||
+      stack.includes('_validateOrigin');
+
+    if (isUnauthorizedDomain) {
+      console.warn('[Auth] Current domain is not in Firebase Authorized Domains:', window.location.hostname);
+      setUnauthorizedDomain(true);
+      setError('النطاق الحالي غير مضاف في قائمة النطاقات المصرح بها (Authorized Domains) في Firebase Authentication. يرجى نسخه وإضافته أو تسجيل الدخول بالبريد الإلكتروني.');
+    } else if (code === 'auth/account-exists-with-different-credential') {
+      setError('هذا البريد الإلكتروني مسجل مسبقاً بطريقة دخول أخرى (مثل Google أو البريد الإلكتروني). يرجى تسجيل الدخول بها.');
+    } else if (code === 'auth/popup-blocked') {
+      console.warn('[Auth] Popup was blocked by browser');
+      setError('تم حظر النافذة المنبثقة من قبل المتصفح. يرجى السماح بالنوافذ المنبثقة لهذا الموقع وإعادة المحاولة.');
+    } else if (code === 'auth/popup-closed-by-user') {
+      console.warn('[Auth] Popup closed by user');
+      setError('تم إغلاق نافذة تسجيل الدخول قبل إتمام العملية.');
+    } else if (code === 'auth/cancelled-popup-request') {
+      console.warn('[Auth] Cancelled popup request');
+    } else if (code === 'auth/operation-not-allowed') {
+      console.warn(`[Auth] ${providerLabel} provider not enabled in Firebase project`);
+      setError(`تسجيل الدخول عن طريق ${providerLabel} غير مفعل في مشروع Firebase الحالي. يمكنك تفعيله من خلال Sign-in providers أو الدخول بالبريد وكلمة المرور.`);
+    } else {
+      console.warn(`[Auth] ${providerLabel} Auth issue:`, message || code);
+      setError(`فشل تسجيل الدخول بواسطة ${providerLabel}: ${message || code}. يمكنك تسجيل الدخول بالبريد وكلمة المرور في الأعلى.`);
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError('');
@@ -68,69 +126,26 @@ export default function Auth() {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      
-      let userDoc;
-      try {
-        userDoc = await getDoc(doc(db, 'users', user.uid));
-      } catch (err) {
-        handleFirestoreError(err, OperationType.GET, `users/${user.uid}`);
-        throw err;
-      }
-
-      if (!userDoc.exists()) {
-        const userData = {
-          uid: user.uid,
-          name: user.displayName || 'مشجع إتحادي',
-          email: user.email,
-          role: 'user' as const,
-          username: user.email?.split('@')[0].toLowerCase() || `user_${user.uid.substring(0, 5)}`,
-          tier: 'new' as const,
-          bio: 'مشجع إتحادي جديد',
-          joinDate: new Date().getFullYear().toString(),
-          avatar: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=random`,
-          stats: { predictions: 0, comments: 0, favorites: 0 }
-        };
-        try {
-          await setDoc(doc(db, 'users', user.uid), userData);
-        } catch (err) {
-          handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}`);
-        }
-        updateLocalProfile(userData);
-      } else {
-        const existingData = userDoc.data();
-        updateLocalProfile(existingData);
-      }
-      navigate('/profile');
+      await syncSocialUser(result.user);
     } catch (err: any) {
-      const code = err?.code || '';
-      const message = err?.message || '';
-      const stack = err?.stack || '';
-      const isUnauthorizedDomain =
-        code === 'auth/unauthorized-domain' ||
-        message.toLowerCase().includes('unauthorized domain') ||
-        message.toLowerCase().includes('auth/unauthorized-domain') ||
-        stack.includes('_validateOrigin');
+      handleSocialAuthError(err, 'جوجل');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      if (isUnauthorizedDomain) {
-        console.warn('[Auth] Current domain is not in Firebase Authorized Domains:', window.location.hostname);
-        setUnauthorizedDomain(true);
-        setError('النطاق الحالي غير مضاف في قائمة النطاقات المصرح بها (Authorized Domains) في Firebase Authentication. يرجى نسخه وإضافته أو تسجيل الدخول بالبريد الإلكتروني.');
-      } else if (code === 'auth/popup-blocked') {
-        console.warn('[Auth] Popup was blocked by browser');
-        setError('تم حظر النافذة المنبثقة من قبل المتصفح. يرجى السماح بالنوافذ المنبثقة لهذا الموقع وإعادة المحاولة.');
-      } else if (code === 'auth/popup-closed-by-user') {
-        console.warn('[Auth] Popup closed by user');
-        setError('تم إغلاق نافذة تسجيل الدخول قبل إتمام العملية.');
-      } else if (code === 'auth/cancelled-popup-request') {
-        console.warn('[Auth] Cancelled popup request');
-      } else if (code === 'auth/operation-not-allowed') {
-        console.warn('[Auth] Google provider not enabled in Firebase project');
-        setError('تسجيل الدخول عن طريق جوجل غير مفعل في مشروع Firebase الحالي. يمكنك تفعيله من خلال Sign-in providers أو الدخول بالبريد وكلمة المرور.');
-      } else {
-        console.warn('[Auth] Google Auth issue:', message || code);
-        setError(`فشل تسجيل الدخول بجوجل: ${message || code}. يمكنك تسجيل الدخول بالبريد وكلمة المرور في الأعلى.`);
-      }
+  const handleFacebookSignIn = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      const provider = new FacebookAuthProvider();
+      provider.addScope('public_profile');
+      provider.addScope('email');
+      const result = await signInWithPopup(auth, provider);
+      await syncSocialUser(result.user);
+    } catch (err: any) {
+      handleSocialAuthError(err, 'فيسبوك');
     } finally {
       setLoading(false);
     }
@@ -431,8 +446,6 @@ export default function Auth() {
                   </div>
                 </div>
 
-                <div ref={fbLoginRef} className="flex justify-center mb-4" aria-label="Facebook Login" />
-
                 {unauthorizedDomain && (
                   <div className="mb-4 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-right animate-in fade-in">
                     <p className="text-xs font-bold text-amber-900 dark:text-amber-200 mb-1.5 flex items-center gap-1.5 justify-end">
@@ -440,7 +453,7 @@ export default function Auth() {
                       <ShieldCheck size={16} className="text-amber-600" />
                     </p>
                     <p className="text-[11px] font-bold text-amber-800 dark:text-amber-300 mb-3 leading-relaxed">
-                      لتفعيل الدخول بجوجل، أضف هذا النطاق في:
+                      لتفعيل الدخول بجوجل أو فيسبوك، أضف هذا النطاق في:
                       <br />
                       <span className="text-[12px] text-slate-600 dark:text-slate-400">
                         Firebase Console &larr; Authentication &larr; Settings &larr; Authorized Domains
@@ -473,15 +486,29 @@ export default function Auth() {
                   </div>
                 )}
 
-                <button 
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  disabled={loading}
-                  className="ds-control w-full bg-white dark:bg-surface-dark border border-slate-200 dark:border-border-dark text-slate-700 dark:text-white py-4 rounded-lg font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-70"
-                >
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" referrerPolicy="no-referrer" />
-                  الدخول بواسطة Google
-                </button>
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={handleFacebookSignIn}
+                    disabled={loading}
+                    className="ds-control w-full bg-[#1877F2] hover:bg-[#166FE5] text-white py-4 rounded-lg font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-70"
+                  >
+                    <svg className="w-5 h-5 fill-current shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                    </svg>
+                    الدخول بواسطة Facebook
+                  </button>
+
+                  <button 
+                    type="button"
+                    onClick={handleGoogleSignIn}
+                    disabled={loading}
+                    className="ds-control w-full bg-white dark:bg-surface-dark border border-slate-200 dark:border-border-dark text-slate-700 dark:text-white py-4 rounded-lg font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-70"
+                  >
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" referrerPolicy="no-referrer" />
+                    الدخول بواسطة Google
+                  </button>
+                </div>
 
                 <div className="mt-8 text-center px-4">
                   <p className="text-[12px] text-slate-400 dark:text-slate-500 font-medium leading-relaxed">
