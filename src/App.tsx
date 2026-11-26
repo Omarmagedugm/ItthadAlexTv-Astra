@@ -65,6 +65,7 @@ const PublicServices = safeLazy(() => import('./pages/PublicServices'));
 const EducationService = safeLazy(() => import('./pages/EducationService'));
 const PrivacyPolicy = safeLazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfService = safeLazy(() => import('./pages/TermsOfService'));
+const UserDataDeletion = safeLazy(() => import('./pages/UserDataDeletion'));
 
 function safeOptionalLazy<T extends React.ComponentType<any>>(
   factory: () => Promise<{ default: T }>
@@ -614,6 +615,13 @@ function GlobalSEOSynchronizer() {
         canonicalUrl: '/terms',
         type: 'website'
       });
+    } else if (pathname === '/data-deletion') {
+      updateClientSEO({
+        title: 'حذف بيانات المستخدم',
+        description: 'كيفية حذف بيانات حسابك من تطبيق قناة الاتحاد السكندري',
+        canonicalUrl: '/data-deletion',
+        type: 'website'
+      });
     } else {
       updateClientSEO({
         canonicalUrl: pathname
@@ -698,6 +706,8 @@ function GlobalSEOSynchronizer() {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/data-deletion" element={<UserDataDeletion />} />
+            <Route path="/user-data-deletion" element={<UserDataDeletion />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </MainContentWrapper>

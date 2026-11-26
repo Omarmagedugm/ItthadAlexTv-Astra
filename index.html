@@ -73,6 +73,47 @@
     </script>
     <!-- OneSignal Web Push SDK deferred -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <!-- Facebook JS SDK (non-blocking; set VITE_FB_APP_ID to activate) -->
+    <script>
+      window.fbAsyncInit = function() {
+        var appId = '1239815761212492';
+        if (!appId || appId.indexOf('{') === 0) return;
+        FB.init({
+          appId      : appId,
+          cookie     : true,
+          xfbml      : true,
+          version    : 'v21.0'
+        });
+        FB.AppEvents.logPageView();
+        // Check login status on page load (see Facebook Login docs)
+        FB.getLoginStatus(function(response) {
+          window.statusChangeCallback(response);
+        });
+      };
+      // Called by the fb:login-button's onlogin attribute (Facebook Login docs)
+      window.checkLoginState = function() {
+        FB.getLoginStatus(function(response) {
+          window.statusChangeCallback(response);
+        });
+      };
+      // Called with { status: 'connected'|'not_authorized'|'unknown', authResponse?: {...} }
+      window.statusChangeCallback = window.statusChangeCallback || function(response) {
+        if (response && response.status === 'connected' && response.authResponse) {
+          window.fbLoginStatus = response;
+        } else {
+          window.fbLoginStatus = { status: response ? response.status : 'unknown', authResponse: null };
+        }
+      };
+      window.addEventListener('load', function() {
+        (function(d, s, id){
+           var js, fjs = d.getElementsByTagName(s)[0];
+           if (d.getElementById(id)) {return;}
+           js = d.createElement(s); js.id = id;
+           js.src = "https://connect.facebook.net/en_US/sdk.js";
+           fjs.parentNode.insertBefore(js, fjs);
+         }(document, 'script', 'facebook-jssdk'));
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

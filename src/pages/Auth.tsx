@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { 
@@ -29,6 +29,17 @@ export default function Auth() {
   const [domainCopied, setDomainCopied] = useState(false);
   const navigate = useNavigate();
   const { updateProfile: updateLocalProfile, appSettings } = useAppStore();
+  const fbLoginRef = useRef<HTMLDivElement>(null);
+
+  // Render the Facebook Login button (XFBML) and let the SDK parse it once loaded
+  useEffect(() => {
+    if (mode === 'forgot' || !fbLoginRef.current) return;
+    const el = fbLoginRef.current;
+    el.innerHTML = '<fb:login-button scope="public_profile,email" onlogin="checkLoginState();"></fb:login-button>';
+    if ((window as any).FB?.XFBML) {
+      (window as any).FB.XFBML.parse(el);
+    }
+  }, [mode]);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -419,6 +430,8 @@ export default function Auth() {
                     <span className="px-2 bg-white dark:bg-card-dark text-slate-500 font-bold">أو</span>
                   </div>
                 </div>
+
+                <div ref={fbLoginRef} className="flex justify-center mb-4" aria-label="Facebook Login" />
 
                 {unauthorizedDomain && (
                   <div className="mb-4 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-right animate-in fade-in">

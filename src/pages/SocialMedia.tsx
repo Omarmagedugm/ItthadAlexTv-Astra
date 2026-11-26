@@ -27,7 +27,7 @@ const FB_PAGE_PLUGIN_SRC = 'https://connect.facebook.net/ar_AR/sdk.js#xfbml=1&ve
 declare global {
   interface Window {
     FB?: {
-      init?: (options: { xfbml: boolean; version: string }) => void;
+      init?: (options: { appId?: string; xfbml: boolean; version: string }) => void;
       XFBML?: {
         parse?: (node?: HTMLElement | null, callback?: () => void) => void;
       };
@@ -62,7 +62,7 @@ export default function SocialMedia() {
       if (!active) return;
       try {
         if (window.FB?.init) {
-          window.FB.init({ xfbml: true, version: 'v23.0' });
+          window.FB.init({ appId: '1239815761212492', xfbml: true, version: 'v23.0' });
         }
         const target = feedContainer.current;
         if (target && window.FB?.XFBML?.parse) {
@@ -76,7 +76,7 @@ export default function SocialMedia() {
     };
 
     window.fbAsyncInit = () => {
-      window.FB?.init?.({ xfbml: true, version: 'v23.0' });
+      window.FB?.init?.({ appId: '1239815761212492', xfbml: true, version: 'v23.0' });
       if (active && feedContainer.current) {
         initFbPlugin();
       }
