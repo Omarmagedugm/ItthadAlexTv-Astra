@@ -317,7 +317,7 @@ export default function SocialMedia() {
       {/* Header Toolbar: Page identity and primary actions */}
       <div className="ds-toolbar flex-col items-stretch gap-3 sm:flex-row sm:items-center">
         <div className="flex items-center gap-4 min-w-0 flex-1">
-          <div className="relative w-16 h-16 rounded-xl border-2 border-[var(--ds-line)] bg-[var(--ds-surface)] p-1.5 flex items-center justify-center shrink-0">
+          <div className="relative w-[78px] h-[75px] rounded-xl border-2 border-[var(--ds-line)] bg-[var(--ds-surface)] p-1.5 flex items-center justify-center shrink-0">
             <img
               src={logoSrc}
               alt="قناة الاتحاد السكندري"
@@ -334,7 +334,7 @@ export default function SocialMedia() {
               @{FACEBOOK_USERNAME}
             </p>
             <p className="text-[11px] text-[var(--ds-muted)] font-bold leading-snug">
-              أحدث منشورات وتغطيات الصفحة الرسمية لقناة الاتحاد السكندري
+              أحدث منشورات قناة الاتحاد السكندري
             </p>
           </div>
         </div>
