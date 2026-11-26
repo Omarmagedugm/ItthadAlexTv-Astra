@@ -7,7 +7,6 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   GoogleAuthProvider,
-  FacebookAuthProvider,
   signInWithPopup,
   sendPasswordResetEmail
 } from 'firebase/auth';
@@ -129,23 +128,6 @@ export default function Auth() {
       await syncSocialUser(result.user);
     } catch (err: any) {
       handleSocialAuthError(err, 'جوجل');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFacebookSignIn = async () => {
-    setLoading(true);
-    setError('');
-    setSuccess('');
-    try {
-      const provider = new FacebookAuthProvider();
-      provider.addScope('public_profile');
-      provider.addScope('email');
-      const result = await signInWithPopup(auth, provider);
-      await syncSocialUser(result.user);
-    } catch (err: any) {
-      handleSocialAuthError(err, 'فيسبوك');
     } finally {
       setLoading(false);
     }
@@ -453,7 +435,7 @@ export default function Auth() {
                       <ShieldCheck size={16} className="text-amber-600" />
                     </p>
                     <p className="text-[11px] font-bold text-amber-800 dark:text-amber-300 mb-3 leading-relaxed">
-                      لتفعيل الدخول بجوجل أو فيسبوك، أضف هذا النطاق في:
+                      لتفعيل الدخول بجوجل، أضف هذا النطاق في:
                       <br />
                       <span className="text-[12px] text-slate-600 dark:text-slate-400">
                         Firebase Console &larr; Authentication &larr; Settings &larr; Authorized Domains
@@ -486,29 +468,15 @@ export default function Auth() {
                   </div>
                 )}
 
-                <div className="space-y-3">
-                  <button
-                    type="button"
-                    onClick={handleFacebookSignIn}
-                    disabled={loading}
-                    className="ds-control w-full bg-[#1877F2] hover:bg-[#166FE5] text-white py-4 rounded-lg font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-70"
-                  >
-                    <svg className="w-5 h-5 fill-current shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                    </svg>
-                    الدخول بواسطة Facebook
-                  </button>
-
-                  <button 
-                    type="button"
-                    onClick={handleGoogleSignIn}
-                    disabled={loading}
-                    className="ds-control w-full bg-white dark:bg-surface-dark border border-slate-200 dark:border-border-dark text-slate-700 dark:text-white py-4 rounded-lg font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-70"
-                  >
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" referrerPolicy="no-referrer" />
-                    الدخول بواسطة Google
-                  </button>
-                </div>
+                <button 
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                  className="ds-control w-full bg-white dark:bg-surface-dark border border-slate-200 dark:border-border-dark text-slate-700 dark:text-white py-4 rounded-lg font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-70"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" referrerPolicy="no-referrer" />
+                  الدخول بواسطة Google
+                </button>
 
                 <div className="mt-8 text-center px-4">
                   <p className="text-[12px] text-slate-400 dark:text-slate-500 font-medium leading-relaxed">

@@ -4,6 +4,7 @@ import usernameLoginHandler from './api/auth/username-login';
 import { PUBLIC_PAGE_METADATA, injectPageMetadata } from './server/pageMetadata';
 import recordScoreHandler from './api/game/record-score.ts';
 import videoThumbnailHandler from './server/videoThumbnailHandler.ts';
+import facebookPostsHandler from './server/facebookPostsHandler.ts';
 import express from 'express';
 import compression from 'compression';
 import path from 'path';
@@ -696,6 +697,7 @@ OUTPUT: Return ONLY the transformed image.`;
   app.get('/api/group-members', groupMembersHandler);
   app.post('/api/auth/username-login', usernameLoginHandler);
   app.get('/api/video-thumbnail', videoThumbnailHandler);
+  app.get('/api/facebook-posts', facebookPostsHandler);
 
   // Server-Authoritative User Role Assignment Endpoint (Protected: Admins only)
   app.post('/api/admin/set-user-role', requireAdmin, async (req: any, res: any) => {
