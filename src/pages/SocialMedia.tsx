@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Share2,
   ExternalLink,
   RefreshCw,
   Calendar,
@@ -215,22 +214,6 @@ export default function SocialMedia() {
     }
   };
 
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'صفحة قناة الاتحاد السكندري الرسمية على فيسبوك',
-          text: 'تابع أحدث أخبار وتغطيات قناة الاتحاد السكندري عبر الصفحة الرسمية',
-          url: fbUrl,
-        });
-      } catch {
-        // User cancelled native share
-      }
-    } else {
-      handleCopyLink();
-    }
-  };
-
   const socialChannels = [
     {
       name: 'صفحة فيسبوك الرسمية',
@@ -337,27 +320,6 @@ export default function SocialMedia() {
               أحدث منشورات قناة الاتحاد السكندري
             </p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0 max-sm:w-full max-sm:[&>*]:flex-1 max-sm:[&>*]:justify-center">
-          <button
-            type="button"
-            onClick={handleShare}
-            className="ds-primary-button flex items-center gap-1.5"
-            aria-label="مشاركة الصفحة"
-          >
-            <Share2 size={15} />
-            <span>مشاركة</span>
-          </button>
-          <a
-            href={fbUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ds-control flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg border border-[var(--ds-line)] bg-[var(--ds-surface)] text-[12px] font-bold text-[var(--ds-text)] hover:border-[#0B3D2E] dark:hover:border-[#c5e589]/60 transition-colors"
-          >
-            <ExternalLink size={15} />
-            <span>صفحة فيسبوك</span>
-          </a>
         </div>
       </div>
 

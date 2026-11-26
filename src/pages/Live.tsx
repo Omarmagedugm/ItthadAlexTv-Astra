@@ -397,8 +397,8 @@ export default function Live() {
           {/* LEFT / MAIN COLUMN: Video Player & Stream Control Hub */}
           <div className="lg:col-span-8 flex flex-col space-y-3">
 
-            {/* Header bar above video player: Live status badge, Viewers count & Share */}
-            <div className="flex justify-between items-center px-1">
+            {/* Header bar above video player: Live status badge, Viewers count & Quick Actions */}
+            <div className="flex justify-between items-center gap-2 flex-wrap px-1">
               <div className="flex items-center gap-2">
                 {currentStream?.isActive ? (
                   <div className="flex items-center gap-2 bg-red-600/15 dark:bg-red-500/20 text-red-600 dark:text-red-400 px-3 py-1.5 rounded-full border border-red-500/30 text-xs font-bold shadow-sm">
@@ -418,16 +418,27 @@ export default function Live() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleShare}
-                  className="ds-control bg-white dark:bg-card-dark hover:bg-slate-100 dark:hover:bg-surface-dark px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark text-slate-700 dark:text-slate-200 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5 hover:text-primary"
-                  title="مشاركة البث"
-                >
-                  <Share2 size={14} />
-                  <span>مشاركة</span>
-                </button>
-              </div>
+              {visibleChannels.length > 0 && !isCurrentChannelHidden && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={handleReloadPlayer}
+                    className="ds-control p-2.5 sm:px-3 sm:py-2 rounded-xl bg-slate-50/80 dark:bg-surface-dark/80 backdrop-blur-md hover:bg-slate-100 dark:hover:bg-surface-dark text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200/80 dark:border-border-dark flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                    title="إعادة تحميل إشارة البث"
+                  >
+                    <RefreshCw size={15} />
+                    <span className="hidden sm:inline">إعادة تحميل</span>
+                  </button>
+
+                  <button
+                    onClick={handleShare}
+                    className="ds-control p-2.5 sm:px-3 sm:py-2 rounded-xl bg-primary hover:bg-primary-light text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-primary/20 transition-all cursor-pointer active:scale-95"
+                    title="مشاركة رابط البث"
+                  >
+                    <Share2 size={15} />
+                    <span className="hidden sm:inline">مشاركة</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Fixed Live Stream Ad Banner (Universal across all broadcast channels) */}
@@ -584,35 +595,14 @@ export default function Live() {
               </div>
             )}
 
-            {/* 3. Action Toolbar & Stream Meta (Desktop & Mobile optimized) */}
+            {/* 3. Stream Meta */}
             {visibleChannels.length > 0 && !isCurrentChannelHidden && (
-              <div className="ds-content-card bg-white/80 dark:bg-card-dark/80 backdrop-blur-xl rounded-lg lg:rounded-xl p-4 lg:p-5 border border-white/40 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-border-dark/60">
+              <div className="ds-content-card bg-white/80 dark:bg-card-dark/80 backdrop-blur-xl rounded-lg lg:rounded-xl p-4 lg:p-5 border border-white/40 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-1">
                     <h1 className="ds-content-heading text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                       {currentStream?.title || `بث مباشر: ${getSportTitle()}`}
                     </h1>
-                  </div>
-
-                  {/* Quick Action Buttons (Always Visible on Desktop & Mobile) */}
-                  <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
-                    <button
-                      onClick={handleReloadPlayer}
-                      className="ds-control p-2.5 sm:px-3 sm:py-2 rounded-xl bg-slate-50/80 dark:bg-surface-dark/80 backdrop-blur-md hover:bg-slate-100 dark:hover:bg-surface-dark text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200/80 dark:border-border-dark flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-                      title="إعادة تحميل إشارة البث"
-                    >
-                      <RefreshCw size={15} />
-                      <span className="hidden sm:inline">إعادة تحميل</span>
-                    </button>
-
-                    <button
-                      onClick={handleShare}
-                      className="ds-control p-2.5 sm:px-3 sm:py-2 rounded-xl bg-primary hover:bg-primary-light text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-primary/20 transition-all cursor-pointer active:scale-95"
-                      title="مشاركة رابط البث"
-                    >
-                      <Share2 size={15} />
-                      <span className="hidden sm:inline">مشاركة</span>
-                    </button>
                   </div>
                 </div>
               </div>

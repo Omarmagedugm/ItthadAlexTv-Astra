@@ -8,9 +8,10 @@ import { requestNotificationPermission as requestOneSignalPermission } from './o
 import { compressImageIfNeeded, saveImageToFirestore } from './firestoreImageStorage';
 import { autoCompressImageForUpload } from './imageCompressor';
 
-// Suppress benign internal timestamp drift warnings
+// Suppress benign internal IndexedDB lease timestamp drift logs emitted at SDK error level;
+// all application Firestore operation errors are handled and surfaced via handleFirestoreError.
 try {
-  setLogLevel('error');
+  setLogLevel('silent');
 } catch (e) {
   // Ignore if already configured
 }
