@@ -228,6 +228,16 @@ export function useFirestoreSync() {
       if (snap.exists()) getStore().updateLiveStreams({ custom: snap.data() as any });
     }, 'settings/liveStream_custom', OperationType.GET);
 
+    subscribeSnapshot(doc(db, 'settings', 'liveStream_customTabs'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as any;
+        const tabs = Array.isArray(data?.tabs) ? data.tabs : [];
+        getStore().updateLiveStreams({ customTabs: tabs });
+      } else if (!snap.metadata.fromCache) {
+        getStore().updateLiveStreams({ customTabs: [] });
+      }
+    }, 'settings/liveStream_customTabs', OperationType.GET);
+
     // 5. Matches (Fetch up to 50 real matches)
     subscribeSnapshot(
       query(collection(db, 'matches'), orderBy('date', 'desc'), limit(50)), 

@@ -302,12 +302,50 @@ export interface LiveStream {
   bannerTitle?: string;
 }
 
+export interface CustomLiveStreamTab extends LiveStream {
+  id: string;
+  customName: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export const isStreamHidden = (stream?: LiveStream | null): boolean => {
   if (!stream) return false;
   return stream.hidden === true || 
          (stream.hidden as any) === 'true' || 
          (stream.hidden as any) === '1' || 
          (stream.hidden as any) === 1;
+};
+
+export const getLiveStreamByChannel = (
+  liveStreams: {
+    football: LiveStream;
+    basketball: LiveStream;
+    programs: LiveStream;
+    custom: LiveStream;
+    customTabs?: CustomLiveStreamTab[];
+  },
+  channelId: string
+): LiveStream | undefined => {
+  if (channelId === 'football') return liveStreams.football;
+  if (channelId === 'basketball') return liveStreams.basketball;
+  if (channelId === 'programs') return liveStreams.programs;
+  if (channelId === 'custom') return liveStreams.custom;
+  return (liveStreams.customTabs || []).find((tab) => tab.id === channelId);
+};
+
+export const hasAnyActiveLiveStream = (liveStreams: {
+  football: LiveStream;
+  basketball: LiveStream;
+  programs: LiveStream;
+  custom: LiveStream;
+  customTabs?: CustomLiveStreamTab[];
+}): boolean => {
+  if (!isStreamHidden(liveStreams.football) && liveStreams.football?.isActive) return true;
+  if (!isStreamHidden(liveStreams.basketball) && liveStreams.basketball?.isActive) return true;
+  if (!isStreamHidden(liveStreams.programs) && liveStreams.programs?.isActive) return true;
+  if (!isStreamHidden(liveStreams.custom) && liveStreams.custom?.isActive) return true;
+  return (liveStreams.customTabs || []).some((tab) => !isStreamHidden(tab) && tab.isActive);
 };
 
 export interface ClubTitle {
@@ -337,6 +375,130 @@ export interface HistoryEvent {
   order?: number;
   hidden?: boolean;
 }
+
+const ARABIC_HISTORY_MONTHS: Array<[string, number]> = [
+  ['كانون الثاني', 1],
+  ['يناير', 1],
+  ['شباط', 2],
+  ['فبراير', 2],
+  ['آذار', 3],
+  ['اذار', 3],
+  ['مارس', 3],
+  ['نيسان', 4],
+  ['أبريل', 4],
+  ['ابريل', 4],
+  ['إبريل', 4],
+  ['أيار', 5],
+  ['ايار', 5],
+  ['مايو', 5],
+  ['حزيران', 6],
+  ['يونيو', 6],
+  ['يونيه', 6],
+  ['تموز', 7],
+  ['يوليو', 7],
+  ['يوليه', 7],
+  ['أغسطس', 8],
+  ['اغسطس', 8],
+  ['آب', 8],
+  ['أيلول', 9],
+  ['ايلول', 9],
+  ['سبتمبر', 9],
+  ['تشرين الأول', 10],
+  ['تشرين الاول', 10],
+  ['أكتوبر', 10],
+  ['اكتوبر', 10],
+  ['تشرين الثاني', 11],
+  ['نوفمبر', 11],
+  ['كانون الأول', 12],
+  ['كانون الاول', 12],
+  ['ديسمبر', 12],
+];
+
+const normalizeHistoryDigits = (value: string): string =>
+  value
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
+
+const parseHistoryEventDateKey = (rawYear?: string): { primary: number; secondary: number } => {
+  const normalized = normalizeHistoryDigits(String(rawYear || '')).trim();
+  if (!normalized) {
+    return { primary: Number.POSITIVE_INFINITY, secondary: Number.POSITIVE_INFINITY };
+  }
+
+  // Full ISO-like date: YYYY-MM-DD or YYYY/MM/DD
+  const ymdMatch = normalized.match(/(?:^|\D)((?:18|19|20)\d{2})\s*[-/.]\s*(0?[1-9]|1[0-2])\s*[-/.]\s*(0?[1-9]|[12]\d|3[01])(?:\D|$)/);
+  if (ymdMatch) {
+    const year = Number(ymdMatch[1]);
+    const month = Number(ymdMatch[2]);
+    const day = Number(ymdMatch[3]);
+    return { primary: year * 10000 + month * 100 + day, secondary: year };
+  }
+
+  // Day-first date: DD/MM/YYYY or DD-MM-YYYY
+  const dmyMatch = normalized.match(/(?:^|\D)(0?[1-9]|[12]\d|3[01])\s*[-/.]\s*(0?[1-9]|1[0-2])\s*[-/.]\s*((?:18|19|20)\d{2})(?:\D|$)/);
+  if (dmyMatch) {
+    const day = Number(dmyMatch[1]);
+    const month = Number(dmyMatch[2]);
+    const year = Number(dmyMatch[3]);
+    return { primary: year * 10000 + month * 100 + day, secondary: year };
+  }
+
+  // Extract 4-digit years (e.g., 1906, 1914, 1973 - 1976)
+  const years = [...normalized.matchAll(/(?:^|\D)((?:18|19|20)\d{2})(?=\D|$)/g)].map((m) => Number(m[1]));
+  if (years.length > 0) {
+    const firstYear = years[0];
+    const secondYear = years.length > 1 ? years[1] : firstYear;
+    let month = 0;
+    let day = 0;
+
+    // Check MM/YYYY or YYYY/MM (only when month is 1..12 and not another 4-digit year)
+    const myMatch = normalized.match(/(?:^|\D)(0?[1-9]|1[0-2])\s*[-/.]\s*((?:18|19|20)\d{2})(?:\D|$)/);
+    const ymMatch = normalized.match(/(?:^|\D)((?:18|19|20)\d{2})\s*[-/.]\s*(0?[1-9]|1[0-2])(?:\D|$)/);
+    if (myMatch) {
+      month = Number(myMatch[1]);
+    } else if (ymMatch && years.length === 1) {
+      month = Number(ymMatch[2]);
+    } else {
+      for (const [monthName, monthNum] of ARABIC_HISTORY_MONTHS) {
+        if (normalized.includes(monthName)) {
+          month = monthNum;
+          const dayBeforeMonth = normalized.match(new RegExp(`(?:^|\\D)(0?[1-9]|[12]\\d|3[01])\\s+${monthName}`));
+          if (dayBeforeMonth) {
+            day = Number(dayBeforeMonth[1]);
+          }
+          break;
+        }
+      }
+    }
+
+    return { primary: firstYear * 10000 + month * 100 + day, secondary: secondYear };
+  }
+
+  // Fallback to any leading number if non-standard year format
+  const fallbackNum = normalized.match(/\d+/);
+  if (fallbackNum) {
+    const n = Number(fallbackNum[0]);
+    return { primary: n * 10000, secondary: n };
+  }
+
+  return { primary: Number.POSITIVE_INFINITY, secondary: Number.POSITIVE_INFINITY };
+};
+
+export const sortHistoryEventsChronologically = <T extends Pick<HistoryEvent, 'year' | 'title' | 'order'>>(
+  events: T[]
+): T[] =>
+  [...events].sort((a, b) => {
+    const keyA = parseHistoryEventDateKey(a.year);
+    const keyB = parseHistoryEventDateKey(b.year);
+    if (keyA.primary !== keyB.primary) return keyA.primary - keyB.primary;
+    if (keyA.secondary !== keyB.secondary) return keyA.secondary - keyB.secondary;
+    const hasOrderA = typeof a.order === 'number';
+    const hasOrderB = typeof b.order === 'number';
+    if (hasOrderA && hasOrderB && a.order !== b.order) return (a.order as number) - (b.order as number);
+    const yearCmp = normalizeHistoryDigits(a.year || '').localeCompare(normalizeHistoryDigits(b.year || ''), 'ar');
+    if (yearCmp !== 0) return yearCmp;
+    return (a.title || '').localeCompare(b.title || '', 'ar');
+  });
 
 export interface Song {
   id: string;
@@ -627,6 +789,7 @@ interface AppState {
     basketball: LiveStream;
     programs: LiveStream;
     custom: LiveStream;
+    customTabs: CustomLiveStreamTab[];
   };
   theme: 'dark' | 'light';
   profile: UserProfile;
@@ -697,7 +860,7 @@ interface AppState {
   setSectionFlags: (flags: Partial<SectionFlags>) => void;
   setSettings: (settings: any) => void;
   updateLiveStream: (stream: Partial<LiveStream>) => void;
-  updateLiveStreams: (streams: { football?: Partial<LiveStream>; basketball?: Partial<LiveStream>; programs?: Partial<LiveStream>; custom?: Partial<LiveStream> }) => void;
+  updateLiveStreams: (streams: { football?: Partial<LiveStream>; basketball?: Partial<LiveStream>; programs?: Partial<LiveStream>; custom?: Partial<LiveStream>; customTabs?: CustomLiveStreamTab[] }) => void;
   toggleTheme: () => void;
   updateProfile: (profile: Partial<UserProfile>) => void;
   setClubTitles: (titles: ClubTitle[]) => void;
@@ -774,6 +937,7 @@ const defaultLiveStreams = {
   basketball: { ...defaultLiveStream, sport: 'basketball' as const },
   programs: { ...defaultLiveStream, title: 'برامج واستوديو الاتحاد', sport: 'programs' as const },
   custom: { ...defaultLiveStream, title: 'بث خاص ومباشر', sport: 'custom' as const, customName: 'بث خاص' },
+  customTabs: [] as CustomLiveStreamTab[],
 };
 
 const defaultProfile: UserProfile = {
@@ -1049,6 +1213,9 @@ export const useAppStore = create<AppState>()(
           custom: streams.custom
             ? { ...(state.liveStreams?.custom || defaultLiveStreams.custom), ...streams.custom, hidden: streams.custom.hidden !== undefined ? streams.custom.hidden : state.liveStreams?.custom?.hidden }
             : state.liveStreams?.custom,
+          customTabs: streams.customTabs !== undefined
+            ? streams.customTabs
+            : (state.liveStreams?.customTabs || []),
         },
         // Also update legacy liveStream if football is updated
         ...(streams.football ? { liveStream: { ...state.liveStream, ...streams.football, hidden: streams.football.hidden !== undefined ? streams.football.hidden : state.liveStream?.hidden } } : {})

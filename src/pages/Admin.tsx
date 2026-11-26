@@ -9,7 +9,7 @@ import { BOOTSTRAP_ADMIN_UIDS, canAccessAdmin, isSuperAdminProfile } from '../li
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { useAppStore, AppRole, isStreamHidden } from '../store';
+import { useAppStore, AppRole, isStreamHidden, getLiveStreamByChannel, CustomLiveStreamTab, sortHistoryEventsChronologically } from '../store';
 import { v4 as uuidv4 } from 'uuid';
 import { toDate, formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { db, auth, uploadImage, handleFirestoreError, OperationType } from '../lib/firebase';
@@ -570,7 +570,7 @@ export default function Admin() {
   const [historySubTab, setHistorySubTab] = useState<'stats' | 'titles' | 'timeline' | 'stadiums'>(() => savedSession.historySubTab || 'stats');
   const [mediaSubTab, setMediaSubTab] = useState<'items' | 'playlists' | 'banner'>(() => savedSession.mediaSubTab || 'items');
   const [musicSubTab, setMusicSubTab] = useState<'songs' | 'albums' | 'playlists'>(() => savedSession.musicSubTab || 'songs');
-  const [liveSportSubTab, setLiveSportSubTab] = useState<'football' | 'basketball' | 'programs' | 'custom'>(() => savedSession.liveSportSubTab || 'football');
+  const [liveSportSubTab, setLiveSportSubTab] = useState<string>(() => savedSession.liveSportSubTab || 'football');
   const [clubSubTab, setClubSubTab] = useState<'committees' | 'announcements' | 'services' | 'trips' | 'discounts' | 'settings'>(() => savedSession.clubSubTab || 'committees');
   const [isExporting, setIsExporting] = useState(false);
   const [aiUsage, setAiUsage] = useState<any[]>([]);
@@ -1221,12 +1221,43 @@ export default function Admin() {
     setLoading(false);
   };
 
-  const handleToggleChannelVisibility = async (sportKey: 'football' | 'basketball' | 'programs' | 'custom', e?: React.MouseEvent) => {
+  const handleToggleChannelVisibility = async (sportKey: string, e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
     try {
+      const cleanPayload = (obj: any) => JSON.parse(JSON.stringify(obj));
+
+      if (sportKey.startsWith('custom_')) {
+        const existingTabs = liveStreams.customTabs || [];
+        const targetTab = existingTabs.find((t) => t.id === sportKey);
+        if (!targetTab) return;
+        const newHiddenState = !isStreamHidden(targetTab);
+        const nowIso = new Date().toISOString();
+        const updatedTabs = existingTabs.map((t) =>
+          t.id === sportKey ? { ...t, hidden: newHiddenState, updatedAt: nowIso } : t
+        );
+        await setDoc(
+          doc(db, 'settings', 'liveStream_customTabs'),
+          cleanPayload({ tabs: updatedTabs, updatedAt: nowIso }),
+          { merge: true }
+        );
+        const { updateLiveStreams } = useAppStore.getState();
+        updateLiveStreams({ customTabs: updatedTabs });
+
+        if (liveSportSubTab === sportKey) {
+          setFormData((prev) => ({ ...prev, hidden: newHiddenState }));
+        }
+        const label = targetTab.customName?.trim() || 'البث المخصص';
+        toast.success(
+          newHiddenState
+            ? `تم إخفاء خانة (${label}) عن المشاهدين 👁️‍🗨️`
+            : `تم إظهار خانة (${label}) للجمهور بنجاح 👁️`
+        );
+        return;
+      }
+
       const docName = sportKey === 'custom'
         ? 'liveStream_custom'
         : sportKey === 'programs'
@@ -1234,7 +1265,7 @@ export default function Admin() {
           : sportKey === 'basketball'
             ? 'liveStream_basketball'
             : 'liveStream';
-      const targetStream = liveStreams[sportKey] || {
+      const targetStream = getLiveStreamByChannel(liveStreams, sportKey) || {
         isActive: false,
         url: '',
         rawUrl: '',
@@ -1259,7 +1290,6 @@ export default function Admin() {
         updatedAt: new Date().toISOString()
       };
 
-      const cleanPayload = (obj: any) => JSON.parse(JSON.stringify(obj));
       await setDoc(doc(db, 'settings', docName), cleanPayload(payload), { merge: true });
       if (sportKey === 'football') {
         await setDoc(doc(db, 'settings', 'liveStream_football'), cleanPayload(payload), { merge: true });
@@ -1282,6 +1312,86 @@ export default function Admin() {
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, `settings/liveStream_${sportKey}`);
       toast.error('حدث خطأ أثناء تحديث حالة الظهور');
+    }
+  };
+
+  const handleAddCustomLiveTab = async () => {
+    try {
+      const existingTabs = liveStreams.customTabs || [];
+      const nowIso = new Date().toISOString();
+      const newId = `custom_${Date.now()}`;
+      const tabNumber = existingTabs.length + 2;
+      const newTab: CustomLiveStreamTab = {
+        id: newId,
+        customName: `بث مخصص ${tabNumber}`,
+        title: 'بث خاص ومباشر',
+        url: '',
+        rawUrl: '',
+        embedUrl: '',
+        isActive: false,
+        hidden: false,
+        useProxy: false,
+        isWebView: false,
+        viewers: 0,
+        sport: newId,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+      const updatedTabs = [...existingTabs, newTab];
+      const cleanPayload = (obj: any) => JSON.parse(JSON.stringify(obj));
+      await setDoc(
+        doc(db, 'settings', 'liveStream_customTabs'),
+        cleanPayload({ tabs: updatedTabs, updatedAt: nowIso }),
+        { merge: true }
+      );
+      const { updateLiveStreams } = useAppStore.getState();
+      updateLiveStreams({ customTabs: updatedTabs });
+      setLiveSportSubTab(newId);
+      setFormData({});
+      toast.success(`تمت إضافة تاب (${newTab.customName}) بنجاح ✅`);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'settings/liveStream_customTabs');
+      toast.error('حدث خطأ أثناء إضافة تاب بث مخصص جديد');
+    }
+  };
+
+  const handleDeleteCustomLiveTab = async (tabId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    try {
+      const existingTabs = liveStreams.customTabs || [];
+      const targetTab = existingTabs.find((t) => t.id === tabId);
+      if (!targetTab) return;
+      const updatedTabs = existingTabs.filter((t) => t.id !== tabId);
+      const nowIso = new Date().toISOString();
+      const cleanPayload = (obj: any) => JSON.parse(JSON.stringify(obj));
+      await setDoc(
+        doc(db, 'settings', 'liveStream_customTabs'),
+        cleanPayload({ tabs: updatedTabs, updatedAt: nowIso }),
+        { merge: true }
+      );
+      const { updateLiveStreams } = useAppStore.getState();
+      updateLiveStreams({ customTabs: updatedTabs });
+
+      if (appSettings.liveViewMode === tabId) {
+        try {
+          await updateDoc(doc(db, 'settings', 'global'), { liveViewMode: 'both' });
+          setSettings({ ...appSettings, liveViewMode: 'both' });
+        } catch {
+          // Non-blocking fallback
+        }
+      }
+
+      if (liveSportSubTab === tabId) {
+        setLiveSportSubTab('football');
+        setFormData({});
+      }
+      toast.success(`تم حذف تاب (${targetTab.customName || 'البث المخصص'}) بنجاح`);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'settings/liveStream_customTabs');
+      toast.error('حدث خطأ أثناء حذف تاب البث المخصص');
     }
   };
 
@@ -1506,28 +1616,18 @@ export default function Admin() {
         }
       } else if (activeTab === 'live') {
         try {
-          const docName = liveSportSubTab === 'custom'
-            ? 'liveStream_custom'
-            : liveSportSubTab === 'programs' 
-              ? 'liveStream_programs' 
-              : liveSportSubTab === 'basketball' 
-                ? 'liveStream_basketball' 
-                : 'liveStream';
-          const currentStream = liveSportSubTab === 'custom'
-            ? liveStreams.custom
-            : liveSportSubTab === 'programs' 
-              ? liveStreams.programs 
-              : liveSportSubTab === 'basketball' 
-                ? liveStreams.basketball 
-                : liveStreams.football;
+          const isExtraCustomTab = liveSportSubTab.startsWith('custom_');
+          const isCustomTab = liveSportSubTab === 'custom' || isExtraCustomTab;
+          const currentStream = getLiveStreamByChannel(liveStreams, liveSportSubTab);
           const rawUrl = (formData.url !== undefined ? formData.url : (currentStream?.url || currentStream?.rawUrl || '')).trim();
           const parsed = parseLiveStreamUrl(rawUrl);
-          
-          const customName = liveSportSubTab === 'custom'
+
+          const customName = isCustomTab
             ? (formData.customName !== undefined ? formData.customName.trim() : (currentStream?.customName || 'بث خاص'))
             : undefined;
 
           const isHiddenValue = formData.hidden !== undefined ? !!formData.hidden : isStreamHidden(currentStream);
+          const nowIso = new Date().toISOString();
 
           const payload = {
             isActive: formData.isActive !== undefined ? formData.isActive : (currentStream?.isActive ?? false),
@@ -1542,28 +1642,61 @@ export default function Admin() {
             sport: liveSportSubTab,
             streamType: parsed.type,
             ...(customName ? { customName } : {}),
-            updatedAt: new Date().toISOString()
+            updatedAt: nowIso
           };
 
-          await setDoc(doc(db, 'settings', docName), cleanPayload(payload), { merge: true });
-          if (liveSportSubTab === 'football') {
-            await setDoc(doc(db, 'settings', 'liveStream_football'), cleanPayload(payload), { merge: true });
+          if (isExtraCustomTab) {
+            const existingTabs = liveStreams.customTabs || [];
+            const updatedTab: CustomLiveStreamTab = {
+              ...(currentStream as CustomLiveStreamTab),
+              ...payload,
+              id: liveSportSubTab,
+              customName: customName || currentStream?.customName || 'بث مخصص',
+              createdAt: (currentStream as CustomLiveStreamTab)?.createdAt || nowIso,
+            };
+            const exists = existingTabs.some((t) => t.id === liveSportSubTab);
+            const updatedTabs = exists
+              ? existingTabs.map((t) => (t.id === liveSportSubTab ? updatedTab : t))
+              : [...existingTabs, updatedTab];
+
+            await setDoc(
+              doc(db, 'settings', 'liveStream_customTabs'),
+              cleanPayload({ tabs: updatedTabs, updatedAt: nowIso }),
+              { merge: true }
+            );
+
+            const { updateLiveStreams } = useAppStore.getState();
+            updateLiveStreams({ customTabs: updatedTabs });
+            toast.success(`تم تحديث وحفظ بث ${updatedTab.customName} بنجاح ✅`);
+          } else {
+            const docName = liveSportSubTab === 'custom'
+              ? 'liveStream_custom'
+              : liveSportSubTab === 'programs'
+                ? 'liveStream_programs'
+                : liveSportSubTab === 'basketball'
+                  ? 'liveStream_basketball'
+                  : 'liveStream';
+
+            await setDoc(doc(db, 'settings', docName), cleanPayload(payload), { merge: true });
+            if (liveSportSubTab === 'football') {
+              await setDoc(doc(db, 'settings', 'liveStream_football'), cleanPayload(payload), { merge: true });
+            }
+
+            // Immediately update local store
+            const { updateLiveStreams } = useAppStore.getState();
+            updateLiveStreams({
+              [liveSportSubTab]: payload
+            });
+
+            const sportLabel = liveSportSubTab === 'custom'
+              ? (customName || 'البث المخصص')
+              : liveSportSubTab === 'programs'
+                ? 'البرامج'
+                : liveSportSubTab === 'basketball'
+                  ? 'كرة السلة'
+                  : 'كرة القدم';
+            toast.success(`تم تحديث وحفظ بث ${sportLabel} بنجاح ✅`);
           }
-
-          // Immediately update local store
-          const { updateLiveStreams } = useAppStore.getState();
-          updateLiveStreams({
-            [liveSportSubTab]: payload
-          });
-
-          const sportLabel = liveSportSubTab === 'custom'
-            ? (customName || 'البث المخصص')
-            : liveSportSubTab === 'programs' 
-              ? 'البرامج' 
-              : liveSportSubTab === 'basketball' 
-                ? 'كرة السلة' 
-                : 'كرة القدم';
-          toast.success(`تم تحديث وحفظ بث ${sportLabel} بنجاح ✅`);
         } catch (err) {
           handleFirestoreError(err, OperationType.WRITE, `settings/liveStream_${liveSportSubTab}`);
         }
@@ -2498,7 +2631,7 @@ export default function Admin() {
       colName = 'club_titles';
       setter = setClubTitles;
     } else if (sub === 'timeline') {
-      list = sortHistoryList(historyEvents, (a, b) => (a.year || '').localeCompare(b.year || ''));
+      list = sortHistoryEventsChronologically(historyEvents);
       colName = 'club_timeline';
       setter = setHistoryEvents;
     } else if (sub === 'stadiums') {
@@ -5670,7 +5803,7 @@ export default function Admin() {
                   </div>
                 ))}
 
-                {historySubTab === 'timeline' && sortHistoryList(historyEvents, (a, b) => (a.year || '').localeCompare(b.year || '')).map((item, idx, arr) => (
+                {historySubTab === 'timeline' && sortHistoryEventsChronologically(historyEvents).map((item, idx, arr) => (
                   <div key={item.id} className={`ds-content-card bg-white dark:bg-card-dark p-3 rounded-xl border border-border-light dark:border-border-dark flex items-center justify-between gap-2 ${item.hidden ? 'opacity-50 grayscale' : ''}`}>
                     <div className="flex items-center gap-3 overflow-hidden">
                       <div className="ds-content-card flex items-center gap-1 bg-slate-50 dark:bg-surface-dark px-2 py-1 rounded-xl border border-border-light dark:border-border-dark flex-shrink-0">
@@ -5921,30 +6054,31 @@ export default function Admin() {
                      <option value="basketball">كرة سلة فقط</option>
                      <option value="programs">برامج فقط</option>
                      <option value="custom">الخانة المخصصة ({liveStreams.custom?.customName || 'بث خاص'})</option>
+                     {(liveStreams.customTabs || []).map((tab, idx) => (
+                       <option key={tab.id} value={tab.id}>
+                         بث مخصص: {tab.customName?.trim() || `بث مخصص ${idx + 2}`}
+                       </option>
+                     ))}
                   </select>
                </div>
 
                {(() => {
-                 const currentStream = liveSportSubTab === 'custom'
-                   ? liveStreams.custom
-                   : liveSportSubTab === 'programs' 
-                     ? liveStreams.programs 
-                     : liveSportSubTab === 'basketball' 
-                       ? liveStreams.basketball 
-                       : liveStreams.football;
+                 const isExtraCustomTab = liveSportSubTab.startsWith('custom_');
+                 const isCustomTab = liveSportSubTab === 'custom' || isExtraCustomTab;
+                 const currentStream = getLiveStreamByChannel(liveStreams, liveSportSubTab) || liveStreams.football;
                  const currentUrl = formData.url !== undefined ? formData.url : (currentStream?.url || '');
                  const parsedStream = parseLiveStreamUrl(currentUrl);
 
-                 const getIsChannelHidden = (channelKey: any) => {
+                 const getIsChannelHidden = (channelKey: string) => {
                    if (liveSportSubTab === channelKey && formData.hidden !== undefined) {
                      return !!formData.hidden;
                    }
-                   return isStreamHidden(liveStreams[channelKey]);
+                   return isStreamHidden(getLiveStreamByChannel(liveStreams, channelKey));
                  };
 
                  return (
                    <>
-                     <div className="ds-content-card flex bg-slate-100 dark:bg-surface-dark p-1 rounded-xl w-fit flex-wrap items-center gap-1.5">
+                     <div className="ds-content-card flex bg-slate-100 dark:bg-surface-dark p-1 rounded-xl w-fit max-w-full flex-wrap items-center gap-1.5">
                         {/* Football */}
                         <div className={`ds-content-card flex items-center rounded-lg transition-all ${liveSportSubTab === 'football' ? 'bg-white dark:bg-card-dark shadow-sm' : 'hover:bg-slate-200 dark:hover:bg-slate-800/50'}`}>
                           <button 
@@ -6020,7 +6154,7 @@ export default function Admin() {
                           </button>
                         </div>
 
-                        {/* Custom Channel */}
+                        {/* Primary Custom Channel */}
                         <div className={`ds-content-card flex items-center rounded-lg transition-all ${liveSportSubTab === 'custom' ? 'bg-white dark:bg-card-dark shadow-sm' : 'hover:bg-slate-200 dark:hover:bg-slate-800/50'}`}>
                           <button 
                             onClick={() => {
@@ -6030,7 +6164,7 @@ export default function Admin() {
                             className={`ds-control px-3 py-2 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${liveSportSubTab === 'custom' ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
                           >
                             <Radio size={14} />
-                            <span>{liveStreams.custom?.customName?.trim() ? `بث مخصص (${liveStreams.custom.customName})` : 'خانة بث مخصصة +'}</span>
+                            <span>{liveStreams.custom?.customName?.trim() ? `بث مخصص (${liveStreams.custom.customName})` : 'بث مخصص 1'}</span>
                             {liveStreams.custom?.isActive && (
                               <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
                             )}
@@ -6044,19 +6178,80 @@ export default function Admin() {
                             {getIsChannelHidden('custom') ? <EyeOff size={13} /> : <Eye size={13} />}
                           </button>
                         </div>
+
+                        {/* Additional Custom Live Stream Tabs */}
+                        {(liveStreams.customTabs || []).map((tab, idx) => (
+                          <div
+                            key={tab.id}
+                            className={`ds-content-card flex items-center rounded-lg transition-all ${liveSportSubTab === tab.id ? 'bg-white dark:bg-card-dark shadow-sm' : 'hover:bg-slate-200 dark:hover:bg-slate-800/50'}`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLiveSportSubTab(tab.id);
+                                setFormData({});
+                              }}
+                              className={`ds-control px-3 py-2 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${liveSportSubTab === tab.id ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                              <Radio size={14} />
+                              <span>{tab.customName?.trim() || `بث مخصص ${idx + 2}`}</span>
+                              {tab.isActive && (
+                                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleToggleChannelVisibility(tab.id, e)}
+                              title={getIsChannelHidden(tab.id) ? 'التاب مخفي (اضغط للإظهار)' : 'التاب ظاهر (اضغط للإخفاء)'}
+                              className={`ds-control p-1.5 rounded-md transition-all cursor-pointer ${getIsChannelHidden(tab.id) ? 'bg-rose-500/10 text-rose-600 hover:bg-rose-500/20' : 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'}`}
+                            >
+                              {getIsChannelHidden(tab.id) ? <EyeOff size={13} /> : <Eye size={13} />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteCustomLiveTab(tab.id, e)}
+                              title="حذف تاب البث المخصص"
+                              className="ds-control p-1.5 mx-1 rounded-md bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 transition-all cursor-pointer"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* Add New Custom Live Stream Tab Button */}
+                        <button
+                          type="button"
+                          onClick={handleAddCustomLiveTab}
+                          className="ds-control px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95"
+                        >
+                          <Plus size={14} />
+                          <span>إضافة تاب بث مخصص</span>
+                        </button>
                      </div>
 
                      {/* Custom Channel Name Customizer */}
-                     {liveSportSubTab === 'custom' && (
+                     {isCustomTab && (
                        <div className="p-4 bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 rounded-lg flex flex-col gap-2.5">
-                         <div className="flex items-center gap-2">
-                           <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-sm">
-                             <Radio size={16} />
+                         <div className="flex items-center justify-between gap-2 flex-wrap">
+                           <div className="flex items-center gap-2">
+                             <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-sm">
+                               <Radio size={16} />
+                             </div>
+                             <div>
+                               <h4 className="text-xs font-bold text-slate-800 dark:text-white">تخصيص اسم خانة البث (يظهر للمشاهدين بجوار البرامج والكرة والسلة)</h4>
+                               <p className="text-[12px] text-slate-500 dark:text-slate-400">حدد الاسم الذي تريده أن يظهر للجمهور في صفحة البث المباشر (مثل: كرة اليد، ألعاب صالات، مؤتمر صحفي، تغطية خاصة)</p>
+                             </div>
                            </div>
-                           <div>
-                             <h4 className="text-xs font-bold text-slate-800 dark:text-white">تخصيص اسم خانة البث (يظهر للمشاهدين بجوار البرامج والكرة والسلة)</h4>
-                             <p className="text-[12px] text-slate-500 dark:text-slate-400">حدد الاسم الذي تريده أن يظهر للجمهور في صفحة البث المباشر (مثل: كرة اليد، ألعاب صالات، مؤتمر صحفي، تغطية خاصة)</p>
-                           </div>
+                           {isExtraCustomTab && (
+                             <button
+                               type="button"
+                               onClick={(e) => handleDeleteCustomLiveTab(liveSportSubTab, e)}
+                               className="ds-control px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
+                             >
+                               <Trash2 size={13} />
+                               <span>حذف هذا التاب</span>
+                             </button>
+                           )}
                          </div>
                          <input 
                            type="text" 
@@ -6104,7 +6299,7 @@ export default function Admin() {
 
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                        <div>
-                          <label className="text-xs font-bold mb-1.5 block">حالة بث {liveSportSubTab === 'custom' ? (formData.customName || currentStream?.customName || 'الخانة المخصصة') : liveSportSubTab === 'programs' ? 'البرامج' : liveSportSubTab === 'basketball' ? 'كرة السلة' : 'كرة القدم'}</label>
+                          <label className="text-xs font-bold mb-1.5 block">حالة بث {isCustomTab ? (formData.customName || currentStream?.customName || 'الخانة المخصصة') : liveSportSubTab === 'programs' ? 'البرامج' : liveSportSubTab === 'basketball' ? 'كرة السلة' : 'كرة القدم'}</label>
                           <select 
                             className="ds-form-control w-full p-3 rounded-xl border border-border-light bg-slate-50 dark:bg-surface-dark dark:border-border-dark text-sm font-bold" 
                             value={formData.isActive !== undefined ? (formData.isActive ? '1' : '0') : (currentStream?.isActive ? '1' : '0')} 
@@ -6136,7 +6331,7 @@ export default function Admin() {
                             type="text" 
                             className="ds-form-control w-full p-3 rounded-xl border border-border-light bg-slate-50 dark:bg-surface-dark dark:border-border-dark text-sm font-bold" 
                             value={formData.title !== undefined ? formData.title : (currentStream?.title || '')} 
-                            placeholder={liveSportSubTab === 'custom' ? 'مثال: تغطية خاصة - البث المباشر الحصري' : liveSportSubTab === 'programs' ? 'مثال: استوديو قلعة الشاطبي - تحليل ما بعد المباراة' : 'مثال: الاتحاد السكندري vs الأهلي - بث مباشر'}
+                            placeholder={isCustomTab ? 'مثال: تغطية خاصة - البث المباشر الحصري' : liveSportSubTab === 'programs' ? 'مثال: استوديو قلعة الشاطبي - تحليل ما بعد المباراة' : 'مثال: الاتحاد السكندري vs الأهلي - بث مباشر'}
                             onChange={(e) => setFormData({...formData, title: e.target.value})}
                           />
                        </div>

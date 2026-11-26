@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useAppStore, isStreamHidden } from '../store';
+import { useAppStore, isStreamHidden, getLiveStreamByChannel } from '../store';
 import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { db, auth } from '../lib/firebase';
@@ -39,7 +39,14 @@ interface Comment {
   role: string;
 }
 
-type SportChannel = 'football' | 'basketball' | 'programs' | 'custom';
+type SportChannel = string;
+
+const CUSTOM_TAB_STYLES = [
+  'bg-emerald-600 text-white shadow-md shadow-emerald-600/20',
+  'bg-teal-600 text-white shadow-md shadow-teal-600/20',
+  'bg-cyan-600 text-white shadow-md shadow-cyan-600/20',
+  'bg-violet-600 text-white shadow-md shadow-violet-600/20',
+];
 
 export default function Live() {
   const { liveStream, liveStreams, profile, users, appSettings } = useAppStore();
@@ -47,12 +54,23 @@ export default function Live() {
   // Track whether the user has manually picked a channel in this session
   const userSelectedRef = useRef(false);
 
+  const extraCustomTabs = liveStreams.customTabs || [];
+  const allChannelOrder: SportChannel[] = [
+    'football',
+    'basketball',
+    'programs',
+    'custom',
+    ...extraCustomTabs.map((t) => t.id),
+  ];
+
   // Helper to find which stream is active and not hidden
   const getFirstActiveSport = (): SportChannel | null => {
-    if (!isStreamHidden(liveStreams.football) && liveStreams.football?.isActive) return 'football';
-    if (!isStreamHidden(liveStreams.basketball) && liveStreams.basketball?.isActive) return 'basketball';
-    if (!isStreamHidden(liveStreams.programs) && liveStreams.programs?.isActive) return 'programs';
-    if (!isStreamHidden(liveStreams.custom) && liveStreams.custom?.isActive) return 'custom';
+    for (const id of allChannelOrder) {
+      const stream = getLiveStreamByChannel(liveStreams, id);
+      if (stream && !isStreamHidden(stream) && stream.isActive) {
+        return id;
+      }
+    }
     return null;
   };
 
@@ -61,12 +79,15 @@ export default function Live() {
     if (active && (!appSettings.liveViewMode || appSettings.liveViewMode === 'both' || appSettings.liveViewMode === active)) {
       return active;
     }
-    if (appSettings.liveViewMode && ['football', 'basketball', 'programs', 'custom'].includes(appSettings.liveViewMode)) {
+    if (appSettings.liveViewMode && allChannelOrder.includes(appSettings.liveViewMode)) {
       const mode = appSettings.liveViewMode as SportChannel;
-      if (!isStreamHidden(liveStreams[mode])) return mode;
+      if (!isStreamHidden(getLiveStreamByChannel(liveStreams, mode))) return mode;
     }
-    const order: SportChannel[] = ['football', 'basketball', 'programs', 'custom'];
-    const nonHidden = order.find(s => !isStreamHidden(liveStreams[s]) && (appSettings.liveViewMode === 'both' || !appSettings.liveViewMode || appSettings.liveViewMode === s));
+    const nonHidden = allChannelOrder.find(
+      (s) =>
+        !isStreamHidden(getLiveStreamByChannel(liveStreams, s)) &&
+        (appSettings.liveViewMode === 'both' || !appSettings.liveViewMode || appSettings.liveViewMode === s)
+    );
     return nonHidden || 'football';
   };
 
@@ -75,10 +96,15 @@ export default function Live() {
 
   const [playerReloadKey, setPlayerReloadKey] = useState(0);
 
+  const customTabsSignature = extraCustomTabs
+    .map((t) => `${t.id}:${t.isActive ? 1 : 0}:${isStreamHidden(t) ? 1 : 0}`)
+    .join('|');
+
   // Auto-switch to active stream whenever liveStreams state loads or updates
   useEffect(() => {
     const active = getFirstActiveSport();
-    if (active && (!userSelectedRef.current || !liveStreams[selectedSport]?.isActive || isStreamHidden(liveStreams[selectedSport]))) {
+    const selectedStream = getLiveStreamByChannel(liveStreams, selectedSport);
+    if (active && (!userSelectedRef.current || !selectedStream?.isActive || isStreamHidden(selectedStream))) {
       setSelectedSport(active);
     }
   }, [
@@ -89,14 +115,19 @@ export default function Live() {
     liveStreams.programs?.isActive,
     liveStreams.programs?.hidden,
     liveStreams.custom?.isActive,
-    liveStreams.custom?.hidden
+    liveStreams.custom?.hidden,
+    customTabsSignature
   ]);
 
-  // If current sport becomes hidden, switch to another non-hidden sport
+  // If current sport becomes hidden or deleted, switch to another non-hidden sport
   useEffect(() => {
-    if (isStreamHidden(liveStreams[selectedSport])) {
-      const order: SportChannel[] = ['football', 'basketball', 'programs', 'custom'];
-      const nonHidden = order.find(s => !isStreamHidden(liveStreams[s]) && (appSettings.liveViewMode === 'both' || !appSettings.liveViewMode || appSettings.liveViewMode === s));
+    const selectedStream = getLiveStreamByChannel(liveStreams, selectedSport);
+    if (!selectedStream || isStreamHidden(selectedStream)) {
+      const nonHidden = allChannelOrder.find(
+        (s) =>
+          !isStreamHidden(getLiveStreamByChannel(liveStreams, s)) &&
+          (appSettings.liveViewMode === 'both' || !appSettings.liveViewMode || appSettings.liveViewMode === s)
+      );
       if (nonHidden && nonHidden !== selectedSport) {
         setSelectedSport(nonHidden);
       }
@@ -106,6 +137,7 @@ export default function Live() {
     liveStreams.basketball?.hidden,
     liveStreams.programs?.hidden,
     liveStreams.custom?.hidden,
+    customTabsSignature,
     appSettings.liveViewMode,
     selectedSport
   ]);
@@ -113,16 +145,16 @@ export default function Live() {
   // Handle liveViewMode changes from app settings
   useEffect(() => {
     if (appSettings.liveViewMode && appSettings.liveViewMode !== 'both') {
-      if (['football', 'basketball', 'programs', 'custom'].includes(appSettings.liveViewMode)) {
+      if (allChannelOrder.includes(appSettings.liveViewMode)) {
         const mode = appSettings.liveViewMode as SportChannel;
-        if (!getFirstActiveSport() && !isStreamHidden(liveStreams[mode])) {
+        if (!getFirstActiveSport() && !isStreamHidden(getLiveStreamByChannel(liveStreams, mode))) {
           setSelectedSport(mode);
         }
       }
     }
-  }, [appSettings.liveViewMode]);
+  }, [appSettings.liveViewMode, customTabsSignature]);
   
-  // Define channels: Football, Basketball, Programs, and Custom Channel
+  // Define channels: Football, Basketball, Programs, Legacy Custom Channel, and Additional Custom Tabs
   const customChannelName = liveStreams.custom?.customName?.trim() || 'بث خاص';
   const isCustomAvailable = !!(liveStreams.custom?.isActive || liveStreams.custom?.url || liveStreams.custom?.customName);
 
@@ -161,10 +193,20 @@ export default function Live() {
       id: 'custom',
       label: customChannelName,
       icon: 'sensors',
-      activeStyle: 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20',
+      activeStyle: CUSTOM_TAB_STYLES[0],
       isActive: !!liveStreams.custom?.isActive
     });
   }
+
+  extraCustomTabs.forEach((tab, index) => {
+    channelsConfig.push({
+      id: tab.id,
+      label: tab.customName?.trim() || `بث مخصص ${index + 2}`,
+      icon: 'sensors',
+      activeStyle: CUSTOM_TAB_STYLES[(index + 1) % CUSTOM_TAB_STYLES.length],
+      isActive: !!tab.isActive
+    });
+  });
 
   // 1. Filter by liveViewMode if admin configured a single mode
   const channelsByMode = channelsConfig.filter(c => {
@@ -175,7 +217,7 @@ export default function Live() {
   });
 
   // 2. Filter out channels marked as hidden by admin
-  const visibleChannels = channelsByMode.filter(c => !isStreamHidden(liveStreams[c.id]));
+  const visibleChannels = channelsByMode.filter(c => !isStreamHidden(getLiveStreamByChannel(liveStreams, c.id)));
 
   // Auto-switch to first non-hidden available channel if current selection is hidden
   useEffect(() => {
@@ -184,13 +226,7 @@ export default function Live() {
     }
   }, [visibleChannels, selectedSport]);
 
-  const currentStream = selectedSport === 'custom'
-    ? liveStreams.custom
-    : selectedSport === 'programs' 
-      ? liveStreams.programs 
-      : selectedSport === 'basketball' 
-        ? liveStreams.basketball 
-        : liveStreams.football;
+  const currentStream = getLiveStreamByChannel(liveStreams, selectedSport) || liveStreams.football;
 
   const parsedUrl = parseLiveStreamUrl(currentStream?.url);
 
@@ -376,7 +412,9 @@ export default function Live() {
     if (selectedSport === 'custom') return liveStreams.custom?.customName?.trim() || 'بث خاص';
     if (selectedSport === 'programs') return 'برامج واستوديو الاتحاد';
     if (selectedSport === 'basketball') return 'كرة السلة';
-    return 'كرة القدم';
+    if (selectedSport === 'football') return 'كرة القدم';
+    const customTab = extraCustomTabs.find((t) => t.id === selectedSport);
+    return customTab?.customName?.trim() || 'بث مخصص';
   };
 
   // Reorder channels to display LIVE broadcasting channels first
@@ -563,32 +601,30 @@ export default function Live() {
             {/* 2. Stream Channel Selector Tabs (Hidden when no visible channels exist) */}
             {sortedChannels.length > 0 && (
               <div className="ds-content-card bg-white/80 dark:bg-card-dark/80 backdrop-blur-xl rounded-lg p-2.5 border border-white/40 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
-                <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
-                  <div className="flex flex-1 items-center gap-2 w-full">
-                    {sortedChannels.map((channel) => (
-                      <button 
-                        key={channel.id}
-                        onClick={() => {
-                          userSelectedRef.current = true;
-                          setSelectedSport(channel.id);
-                        }}
-                        className={`ds-control flex-1 h-11 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer relative ${
-                          selectedSport === channel.id 
-                            ? channel.activeStyle 
-                            : 'bg-slate-50/80 dark:bg-surface-dark/80 backdrop-blur-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-surface-dark border border-transparent hover:border-white/10'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined !text-[20px]">{channel.icon}</span>
-                        <span>{channel.label}</span>
-                        {channel.isActive && (
-                          <span className="relative flex h-2.5 w-2.5 mr-1">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex flex-wrap items-center gap-2 w-full">
+                  {sortedChannels.map((channel) => (
+                    <button 
+                      key={channel.id}
+                      onClick={() => {
+                        userSelectedRef.current = true;
+                        setSelectedSport(channel.id);
+                      }}
+                      className={`ds-control flex-1 min-w-[130px] h-11 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer relative ${
+                        selectedSport === channel.id 
+                          ? channel.activeStyle 
+                          : 'bg-slate-50/80 dark:bg-surface-dark/80 backdrop-blur-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-surface-dark border border-transparent hover:border-white/10'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined !text-[20px]">{channel.icon}</span>
+                      <span className="truncate">{channel.label}</span>
+                      {channel.isActive && (
+                        <span className="relative flex h-2.5 w-2.5 mr-1 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                        </span>
+                      )}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}

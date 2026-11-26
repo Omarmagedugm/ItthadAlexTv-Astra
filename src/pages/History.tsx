@@ -1,7 +1,7 @@
 import { motion, useInView, useMotionValue, useTransform, animate } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trophy, History as HistoryIcon, MapPin, Calendar, Star, Award, Shield, ChevronRight, Search, X } from 'lucide-react';
-import { useAppStore } from '../store';
+import { useAppStore, sortHistoryEventsChronologically } from '../store';
 
 const AnimatedCounter = ({ value, duration = 1.4 }: { value: number; duration?: number }) => {
   const count = useMotionValue(0);
@@ -43,9 +43,9 @@ export default function History() {
     (storeTitles || []).filter(item => !item.hidden),
     (a, b) => b.count - a.count
   );
-  const historyEvents = sortHistoryItems(
-    (storeEvents || []).filter(item => !item.hidden),
-    (a, b) => (a.year || '').localeCompare(b.year || '')
+  const historyEvents = useMemo(
+    () => sortHistoryEventsChronologically((storeEvents || []).filter(item => !item.hidden)),
+    [storeEvents]
   );
   const stadiums = sortHistoryItems((storeStadiums || []).filter(item => !item.hidden));
   const loading = !dataLoaded && clubTitles.length === 0 && historyEvents.length === 0 && stadiums.length === 0;

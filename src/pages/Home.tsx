@@ -4,7 +4,7 @@ import HomeNewsSlider from "../components/HomeNewsSlider";
 import ClubWelcome from "../components/ClubWelcome";
 import { Link, useNavigate } from "react-router-dom";
 import { updateDoc, serverTimestamp } from "firebase/firestore";
-import { useAppStore, HomeSection, isStreamHidden } from "../store";
+import { useAppStore, HomeSection, isStreamHidden, hasAnyActiveLiveStream } from "../store";
 import { auth, db, handleFirestoreError, OperationType } from "../lib/firebase";
 import toast from "react-hot-toast";
 import { formatDistanceToNow, format } from "date-fns";
@@ -849,30 +849,18 @@ export default function Home() {
                       <div className="mt-8 grid grid-cols-2 gap-4 relative z-20">
                         <Link
                           to={
-                            heroMatch.status === "live" ||
-                            (!isStreamHidden(liveStreams.football) && liveStreams.football?.isActive) ||
-                            (!isStreamHidden(liveStreams.basketball) && liveStreams.basketball?.isActive) ||
-                            (!isStreamHidden(liveStreams.programs) && liveStreams.programs?.isActive) ||
-                            (!isStreamHidden(liveStreams.custom) && liveStreams.custom?.isActive)
+                            heroMatch.status === "live" || hasAnyActiveLiveStream(liveStreams)
                               ? "/live"
                               : "/matches"
                           }
                           className="ds-content-card h-14 rounded-lg bg-white text-primary-dark hover:bg-primary-light hover:text-white transition-all duration-300 font-bold text-[12px] flex items-center justify-center gap-3 shadow-sm group/btn relative z-30 cursor-pointer stream-cta-attention"
                         >
                           <span className="material-symbols-outlined !text-[20px] group-hover/btn:translate-x-1 transition-transform">
-                            {heroMatch.status === "live" ||
-                            (!isStreamHidden(liveStreams.football) && liveStreams.football?.isActive) ||
-                            (!isStreamHidden(liveStreams.basketball) && liveStreams.basketball?.isActive) ||
-                            (!isStreamHidden(liveStreams.programs) && liveStreams.programs?.isActive) ||
-                            (!isStreamHidden(liveStreams.custom) && liveStreams.custom?.isActive)
+                            {heroMatch.status === "live" || hasAnyActiveLiveStream(liveStreams)
                               ? "sensors"
                               : "event"}
                           </span>
-                          {heroMatch.status === "live" ||
-                          (!isStreamHidden(liveStreams.football) && liveStreams.football?.isActive) ||
-                          (!isStreamHidden(liveStreams.basketball) && liveStreams.basketball?.isActive) ||
-                          (!isStreamHidden(liveStreams.programs) && liveStreams.programs?.isActive) ||
-                          (!isStreamHidden(liveStreams.custom) && liveStreams.custom?.isActive)
+                          {heroMatch.status === "live" || hasAnyActiveLiveStream(liveStreams)
                             ? "دخول البث"
                             : "التفاصيل"}
                         </Link>
@@ -910,12 +898,7 @@ export default function Home() {
       }
 
       case "live":
-        if (
-          (!isStreamHidden(liveStreams.football) && liveStreams.football?.isActive) ||
-          (!isStreamHidden(liveStreams.basketball) && liveStreams.basketball?.isActive) ||
-          (!isStreamHidden(liveStreams.programs) && liveStreams.programs?.isActive) ||
-          (!isStreamHidden(liveStreams.custom) && liveStreams.custom?.isActive)
-        ) {
+        if (hasAnyActiveLiveStream(liveStreams)) {
           return (
             <motion.section
               key={section.id}
@@ -961,6 +944,14 @@ export default function Home() {
                           {liveStreams.custom?.customName?.trim() || 'بث خاص'}
                         </span>
                       )}
+                      {(liveStreams.customTabs || [])
+                        .filter((tab) => !isStreamHidden(tab) && tab.isActive)
+                        .map((tab) => (
+                          <span key={tab.id} className="text-[12px] font-bold bg-emerald-600 text-white px-1.5 py-0.5 rounded uppercase flex items-center gap-1">
+                            <span className="material-symbols-outlined !text-[12px]">sensors</span>
+                            {tab.customName?.trim() || 'بث مخصص'}
+                          </span>
+                        ))}
                     </div>
                   </div>
                 </div>
