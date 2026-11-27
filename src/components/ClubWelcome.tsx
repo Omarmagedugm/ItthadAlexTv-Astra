@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowUpLeft, Radio, Trophy, Newspaper, Users, Play, BookOpen, ShoppingBag, Globe2, CalendarDays, Gamepad2 } from 'lucide-react';
-import { useAppStore } from '../store';
+import { useAppStore, MATCH_TIME_TBD_LABEL, isMatchTimeTbd } from '../store';
 
 const destinations = [
   { to: '/news', title: 'أخبار زعيم الثغر', text: 'كل جديد عن نادينا', Icon: Newspaper, section: 'news' },
@@ -18,7 +18,7 @@ export default function ClubWelcome({ part }: { part: string }) {
     </>}
     {part === 'welcome_matches' && <div className="club-feature-grid">
       <aside className="club-match-panel"><div className="club-panel-heading"><span><CalendarDays size={18}/> على موعد مع الاتحاد</span><Link to="/matches" aria-label="كل المباريات"><ArrowUpLeft size={20}/></Link></div>
-      {featured.length ? featured.map(m=><Link to="/matches" key={m.id} className="club-match"><div className="club-match-meta">{m.competition}<span>{m.status === 'live' ? '● مباشر الآن' : 'قادم'}</span></div><div className="club-teams"><div><img src={m.homeLogo || '/icon.png'} alt=""/><strong>{m.homeTeam}</strong></div><b>{m.status === 'live' ? `${m.homeScore} : ${m.awayScore}` : 'VS'}</b><div><img src={m.awayLogo || '/icon.png'} alt=""/><strong>{m.awayTeam}</strong></div></div><p>{Number.isNaN(Date.parse(m.date)) ? m.date : new Date(m.date).toLocaleDateString('ar-EG', {day:'numeric',month:'long'})}{m.stadium ? ` · ${m.stadium}` : ''}</p></Link>) : <div className="club-match-empty"><Trophy size={38}/><h3>الموعد الجاي يجمعنا</h3><p>تابع جدول المباريات لمعرفة المواعيد والنتائج فور نشرها.</p><Link to="/matches">مركز المباريات <ArrowUpLeft size={16}/></Link></div>}
+      {featured.length ? featured.map(m=><Link to="/matches" key={m.id} className="club-match"><div className="club-match-meta">{m.competition}<span>{m.status === 'live' ? '● مباشر الآن' : 'قادم'}</span></div><div className="club-teams"><div><img src={m.homeLogo || '/icon.png'} alt=""/><strong>{m.homeTeam}</strong></div><b>{m.status === 'live' ? `${m.homeScore} : ${m.awayScore}` : 'VS'}</b><div><img src={m.awayLogo || '/icon.png'} alt=""/><strong>{m.awayTeam}</strong></div></div><p>{isMatchTimeTbd(m) ? MATCH_TIME_TBD_LABEL : new Date(m.date).toLocaleDateString('ar-EG', {day:'numeric',month:'long'})}{m.stadium ? ` · ${m.stadium}` : ''}</p></Link>) : <div className="club-match-empty"><Trophy size={38}/><h3>الموعد الجاي يجمعنا</h3><p>تابع جدول المباريات لمعرفة المواعيد والنتائج فور نشرها.</p><Link to="/matches">مركز المباريات <ArrowUpLeft size={16}/></Link></div>}
       <Link to="/live" className="club-watch"><span className="club-play"><Play size={17}/></span><div><strong>قناتك. في أي مكان.</strong><small>انتقل إلى البث المباشر</small></div><ArrowUpLeft size={20}/></Link></aside>
     </div>
     }

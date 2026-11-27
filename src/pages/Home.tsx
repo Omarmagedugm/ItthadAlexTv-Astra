@@ -4,7 +4,7 @@ import HomeNewsSlider from "../components/HomeNewsSlider";
 import ClubWelcome from "../components/ClubWelcome";
 import { Link, useNavigate } from "react-router-dom";
 import { updateDoc, serverTimestamp } from "firebase/firestore";
-import { useAppStore, HomeSection, isStreamHidden, hasAnyActiveLiveStream } from "../store";
+import { useAppStore, HomeSection, isStreamHidden, hasAnyActiveLiveStream, MATCH_TIME_TBD_LABEL, isMatchTimeTbd, getMatchSortTimestamp } from "../store";
 import { auth, db, handleFirestoreError, OperationType } from "../lib/firebase";
 import toast from "react-hot-toast";
 import { formatDistanceToNow, format } from "date-fns";
@@ -379,7 +379,7 @@ export default function Home() {
     const checkUpcoming = () => {
       const now = new Date();
       matches.forEach(m => {
-        if (m.status === 'upcoming' && m.date) {
+        if (m.status === 'upcoming' && !isMatchTimeTbd(m)) {
           const matchDate = new Date(m.date);
           if (now >= matchDate) {
             // Auto-trigger live status
@@ -416,12 +416,12 @@ export default function Home() {
 
   const allFeatured = useMemo(() => matches
     .filter((m) => m.featured === true)
-    .sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime()), [matches]);
+    .sort((a, b) => getMatchSortTimestamp(a) - getMatchSortTimestamp(b)), [matches]);
 
   const allLive = useMemo(() => matches.filter((m) => m.status === "live"), [matches]);
 
   const defaultSport = useMemo(() => {
-    const byDate = (a: any, b: any) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime();
+    const byDate = (a: any, b: any) => getMatchSortTimestamp(a) - getMatchSortTimestamp(b);
     const nearestLive = [...allLive].sort(byDate)[0];
     const nearestUpcoming = matches.filter((m) => m.status === "upcoming").sort(byDate)[0];
     const defaultMatch = nearestLive || allFeatured[0] || nearestUpcoming;
@@ -436,8 +436,8 @@ export default function Home() {
   const sportMatches = useMemo(() => {
     const filtered = matches.filter((match) => matchesSport(match, effectiveSport));
     return filtered.sort((a, b) => {
-      const timeA = new Date(a.date || 0).getTime();
-      const timeB = new Date(b.date || 0).getTime();
+      const timeA = getMatchSortTimestamp(a);
+      const timeB = getMatchSortTimestamp(b);
       if (a.status === "live" && b.status !== "live") return -1;
       if (a.status !== "live" && b.status === "live") return 1;
       if (a.status === "upcoming" && b.status === "finished") return -1;
@@ -463,10 +463,10 @@ export default function Home() {
         match.id !== heroMatch?.id &&
         matchesSport(match, effectiveSport),
     )
-    .sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime())
+    .sort((a, b) => getMatchSortTimestamp(a) - getMatchSortTimestamp(b))
     .slice(0, 4);
 
-  const isUpcoming = heroMatch?.status === "upcoming" && !!heroMatch.date
+  const isUpcoming = heroMatch?.status === "upcoming" && !isMatchTimeTbd(heroMatch)
     && new Date(heroMatch.date).getTime() > Date.now();
 
   const renderSection = (section: any) => {
@@ -702,7 +702,7 @@ export default function Home() {
                               <div className="flex flex-col items-center w-full justify-center gap-1 sm:gap-2">
                                 <div className="text-xl sm:text-3xl opacity-60">VS</div>
                                 <div className="w-fit max-w-full mx-auto text-center font-light text-white/90 bg-black/40 px-3 py-1.5 sm:py-2 rounded-xl sm:rounded-lg border border-white/10 leading-tight overflow-hidden">
-                                  {heroMatch.date && !isNaN(new Date(heroMatch.date).getTime()) ? (
+                                  {!isMatchTimeTbd(heroMatch) ? (
                                     <div className="flex flex-col items-center justify-center gap-0.5 max-w-full text-[11px] sm:text-xs">
                                       <span className="text-slate-200 whitespace-nowrap max-w-full">{format(new Date(heroMatch.date), "d MMMM yyyy", { locale: ar })}</span>
                                       <div className="flex items-center gap-1.5 whitespace-nowrap max-w-full">
@@ -711,7 +711,9 @@ export default function Home() {
                                         <span className="text-white/90">{format(new Date(heroMatch.date), "EEEE", { locale: ar })}</span>
                                       </div>
                                     </div>
-                                  ) : "غير محدد"}
+                                  ) : (
+                                    <span className="text-[11px] sm:text-xs font-bold text-amber-300 whitespace-nowrap">{MATCH_TIME_TBD_LABEL}</span>
+                                  )}
                                 </div>
                               </div>
                             ) : (

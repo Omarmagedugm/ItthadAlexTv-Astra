@@ -3,7 +3,7 @@ import { applyPollVote } from '../lib/pollVote';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAppStore } from '../store';
+import { useAppStore, MATCH_TIME_TBD_LABEL, isMatchTimeTbd, getMatchSortTimestamp } from '../store';
 import { 
   Trophy, 
   MessageCircle, 
@@ -100,8 +100,9 @@ export default function FanZone() {
   const isDev = auth.currentUser?.email === 'copyrightofficialco@gmail.com';
   const isAdmin = profile.role === 'admin' || isOmar || isDev;
 
-  const isPastPredictionDeadline = (matchDate: string) => {
-    const matchTime = new Date(matchDate).getTime();
+  const isPastPredictionDeadline = (match?: { timeTbd?: boolean; date?: string } | null) => {
+    if (isMatchTimeTbd(match)) return false;
+    const matchTime = new Date(match!.date!).getTime();
     const now = new Date().getTime();
     return (matchTime - now) < (24 * 60 * 60 * 1000);
   };
@@ -208,8 +209,8 @@ export default function FanZone() {
   const [chatRooms, setChatRooms] = useState<any[]>([]);
 
   const sortedMatches = [...matches].sort((a, b) => {
-    const timeA = new Date(a.date || 0).getTime();
-    const timeB = new Date(b.date || 0).getTime();
+    const timeA = getMatchSortTimestamp(a);
+    const timeB = getMatchSortTimestamp(b);
     if (a.status === 'live' && b.status !== 'live') return -1;
     if (a.status !== 'live' && b.status === 'live') return 1;
     if (a.status === 'upcoming' && b.status === 'finished') return -1;
@@ -547,7 +548,7 @@ export default function FanZone() {
     const match = matches.find(m => m.id === selectedPrediction.matchId);
     if (!match) return;
 
-    if (isPastPredictionDeadline(match.date)) {
+    if (isPastPredictionDeadline(match)) {
       toast.error('عذراً، انتهت مهلة تغيير التوقع (قبل المباراة بـ 24 ساعة)');
       return;
     }
@@ -1519,7 +1520,7 @@ export default function FanZone() {
                   // Prioritize matchday
                   if (a.isMatchDay && !b.isMatchDay) return -1;
                   if (!a.isMatchDay && b.isMatchDay) return 1;
-                  return new Date(a.date).getTime() - new Date(b.date).getTime();
+                  return getMatchSortTimestamp(a) - getMatchSortTimestamp(b);
                 }) || [];
 
                 if (availableMatches.length === 0) return null;
@@ -1528,7 +1529,7 @@ export default function FanZone() {
                   <div className="space-y-4">
                     {availableMatches.map(match => {
                       const userPred = predictions.find(p => p.matchId === match.id && p.userId === auth.currentUser?.uid);
-                      const isPastDeadline = isPastPredictionDeadline(match.date);
+                      const isPastDeadline = isPastPredictionDeadline(match);
                       
                       return (
                       <div key={match.id} className={`prediction-match-card ds-content-card ds-surface rounded-xl p-8 border border-primary/20 shadow-sm relative overflow-hidden group ${isPastDeadline ? 'opacity-75 grayscale-[0.3]' : ''}`}>
@@ -1541,12 +1542,18 @@ export default function FanZone() {
                                </span>
                              </div>
                              <div className="ds-content-card text-[12px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-surface-dark px-2.5 py-1 rounded-xl max-w-full w-fit flex flex-col items-end leading-tight shrink-0">
-                               <span>{format(new Date(match.date), 'd MMMM yyyy', { locale: ar })}</span>
-                               <div className="flex items-center gap-1">
-                                 <span className="text-amber-500 dark:text-amber-400 font-bold">{format(new Date(match.date), 'h:mm a', { locale: ar })}</span>
-                                 <span>-</span>
-                                 <span>{format(new Date(match.date), 'EEEE', { locale: ar })}</span>
-                               </div>
+                               {isMatchTimeTbd(match) ? (
+                                 <span className="text-amber-600 dark:text-amber-400">{MATCH_TIME_TBD_LABEL}</span>
+                               ) : (
+                                 <>
+                                   <span>{format(new Date(match.date), 'd MMMM yyyy', { locale: ar })}</span>
+                                   <div className="flex items-center gap-1">
+                                     <span className="text-amber-500 dark:text-amber-400 font-bold">{format(new Date(match.date), 'h:mm a', { locale: ar })}</span>
+                                     <span>-</span>
+                                     <span>{format(new Date(match.date), 'EEEE', { locale: ar })}</span>
+                                   </div>
+                                 </>
+                               )}
                              </div>
                           </div>
                           
@@ -1910,7 +1917,9 @@ export default function FanZone() {
                           </div>
                         )}
                         {nextMatch.status === 'upcoming' && (
-                           <span className="text-[11px] font-bold tracking-[0.3em] opacity-80 uppercase bg-white/10 px-3 py-1 rounded-full">{format(new Date(nextMatch.date), 'HH:mm', { locale: ar })}</span>
+                           <span className={`text-[11px] font-bold opacity-80 bg-white/10 px-3 py-1 rounded-full ${isMatchTimeTbd(nextMatch) ? 'tracking-normal' : 'tracking-[0.3em] uppercase'}`}>
+                             {isMatchTimeTbd(nextMatch) ? MATCH_TIME_TBD_LABEL : format(new Date(nextMatch.date), 'HH:mm', { locale: ar })}
+                           </span>
                         )}
                       </div>
 

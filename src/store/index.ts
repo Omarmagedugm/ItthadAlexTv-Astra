@@ -141,6 +141,7 @@ export interface MatchItem {
   homeScore: string;
   awayScore: string;
   date: string;
+  timeTbd?: boolean;
   status: 'live' | 'upcoming' | 'finished';
   competition: string;
   stadium?: string;
@@ -153,6 +154,23 @@ export interface MatchItem {
   featured?: boolean;
   stadiumOpacity?: number;
 }
+
+export const MATCH_TIME_TBD_LABEL = 'لم يحدد التوقيت بعد';
+
+export const isMatchTimeTbd = (match?: { timeTbd?: boolean; date?: string } | null): boolean => {
+  if (!match) return true;
+  if (match.timeTbd === true) return true;
+  if (!match.date) return true;
+  return Number.isNaN(new Date(match.date).getTime());
+};
+
+export const getMatchSortTimestamp = (match?: { timeTbd?: boolean; date?: string; status?: string } | null): number => {
+  if (!match || isMatchTimeTbd(match)) {
+    return match?.status === 'finished' ? 0 : Number.MAX_SAFE_INTEGER;
+  }
+  const parsed = new Date(match.date as string).getTime();
+  return Number.isNaN(parsed) ? (match.status === 'finished' ? 0 : Number.MAX_SAFE_INTEGER) : parsed;
+};
 
 export interface BusinessItem {
   id: string;

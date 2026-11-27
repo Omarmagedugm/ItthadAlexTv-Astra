@@ -1,6 +1,6 @@
 import { calculateMatchStatistics } from '../lib/matchStatistics';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAppStore } from '../store';
+import { useAppStore, MATCH_TIME_TBD_LABEL, isMatchTimeTbd, getMatchSortTimestamp } from '../store';
 import { ar } from 'date-fns/locale';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
@@ -27,8 +27,9 @@ export default function Matches() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [userPredictions, setUserPredictions] = useState<Record<string, any>>({});
 
-  const isPastPredictionDeadline = (matchDate: string) => {
-    const matchTime = new Date(matchDate).getTime();
+  const isPastPredictionDeadline = (match?: { timeTbd?: boolean; date?: string } | null) => {
+    if (isMatchTimeTbd(match)) return false;
+    const matchTime = new Date(match!.date!).getTime();
     const now = new Date().getTime();
     return (matchTime - now) < (24 * 60 * 60 * 1000);
   };
@@ -80,7 +81,7 @@ export default function Matches() {
     
     try {
       const match = matches.find(m => m.id === predictionMatchId);
-      if (match && isPastPredictionDeadline(match.date)) {
+      if (match && isPastPredictionDeadline(match)) {
         setSubmitError('عذراً، لا يمكن تغيير التوقع قبل المباراة بأقل من 24 ساعة');
         setIsSubmitting(false);
         return;
@@ -156,8 +157,8 @@ export default function Matches() {
   };
 
   const sortedMatches = [...matches].sort((a, b) => {
-    const timeA = new Date(a.date || 0).getTime();
-    const timeB = new Date(b.date || 0).getTime();
+    const timeA = getMatchSortTimestamp(a);
+    const timeB = getMatchSortTimestamp(b);
 
     // 1. Live matches first
     if (a.status === 'live' && b.status !== 'live') return -1;
@@ -233,10 +234,10 @@ export default function Matches() {
       <div className="ds-match-overview" aria-live="polite"><div><span>فوز</span><strong>{seasonStats.wins}</strong><small>{statsCaption}</small></div><div><span>تعادل</span><strong>{seasonStats.draws}</strong><small>{statsCaption}</small></div><div><span>خسارة</span><strong>{seasonStats.losses}</strong><small>{statsCaption}</small></div><Link to="/fan-zone"><Trophy size={30}/><div><strong>توقّع.. وشجّع</strong><span>شارك في منطقة الجماهير</span></div><ChevronRight size={18} className="rotate-180"/></Link></div>
       {sportSections.map(section=>{const shown=section.matches.filter(m=>selectedStatus==='all'||m.status===selectedStatus);return <section className="ds-match-sport" key={section.id}><div className="ds-section-bar"><h2>{section.icon}{section.id==='football'?'كرة القدم':'كرة السلة'}</h2><span>{shown.length} مباراة</span></div>{shown.length?<div className="ds-fixture-grid">{shown.slice(0,visibleCount[section.id]||6).map(match=><article className={`ds-fixture ${match.status==='live'?'is-live':''}`} key={match.id}>
         <div className="ds-fixture-head"><span>{match.competition}</span><span className={`ds-match-status status-${match.status}`}>{match.status==='live'?'● مباشر':match.status==='finished'?'انتهت المباراة':'المباراة القادمة'}</span></div>
-        <div className="ds-fixture-teams"><div><SafeImage teamName={match.homeTeam} src={match.homeLogo} width={100} className="ds-team-logo object-contain"/><strong>{match.homeTeam}</strong></div><div className="ds-fixture-score">{match.status==='upcoming'?<><strong className="ds-vs">VS</strong><small>{Number.isNaN(Date.parse(match.date))?'':format(new Date(match.date),'h:mm a',{locale:ar})}</small></>:<><strong><span>{match.homeScore}</span><i>:</i><span>{match.awayScore}</span></strong><small>{match.status==='live'?calculateCurrentTimeFormat(match):'النتيجة النهائية'}</small></>}</div><div><SafeImage teamName={match.awayTeam} src={match.awayLogo} width={100} className="ds-team-logo object-contain"/><strong>{match.awayTeam}</strong></div></div>
-        <div className="ds-fixture-meta"><span><Calendar size={13}/>{Number.isNaN(Date.parse(match.date))?match.date:format(new Date(match.date),'d MMMM yyyy',{locale:ar})}</span>{match.stadium&&<span><MapPin size={13}/>{match.stadium}</span>}</div>
+        <div className="ds-fixture-teams"><div><SafeImage teamName={match.homeTeam} src={match.homeLogo} width={100} className="ds-team-logo object-contain"/><strong>{match.homeTeam}</strong></div><div className="ds-fixture-score">{match.status==='upcoming'?<><strong className="ds-vs">VS</strong><small>{isMatchTimeTbd(match)?'':format(new Date(match.date),'h:mm a',{locale:ar})}</small></>:<><strong><span>{match.homeScore}</span><i>:</i><span>{match.awayScore}</span></strong><small>{match.status==='live'?calculateCurrentTimeFormat(match):'النتيجة النهائية'}</small></>}</div><div><SafeImage teamName={match.awayTeam} src={match.awayLogo} width={100} className="ds-team-logo object-contain"/><strong>{match.awayTeam}</strong></div></div>
+        <div className="ds-fixture-meta"><span><Calendar size={13}/>{isMatchTimeTbd(match)?MATCH_TIME_TBD_LABEL:format(new Date(match.date),'d MMMM yyyy',{locale:ar})}</span>{match.stadium&&<span><MapPin size={13}/>{match.stadium}</span>}</div>
         <div className="ds-fixture-actions">{match.status==='live'&&<Link to="/live" className="ds-live-action"><Play size={14}/>شاهد البث</Link>}<Link to="/news"><FileText size={14}/>التغطية</Link>{auth.currentUser&&<button onClick={()=>setShowPredictionsList(match.id)}><Users size={14}/>توقعات الجمهور</button>}{profile.role==='admin'&&<button aria-label="تعديل المباراة" onClick={()=>navigate('/admin',{state:{editCategory:'matches',editId:match.id}})}><Edit2 size={14}/></button>}</div>
-        {auth.currentUser&&match.status==='upcoming'&&<button disabled={isPastPredictionDeadline(match.date)} className="ds-predict-action" onClick={()=>{setPredictionMatchId(match.id);const existing=userPredictions[match.id];setHomePrediction(existing?String(existing.homeScore):'0');setAwayPrediction(existing?String(existing.awayScore):'0');setSubmitError(null);}}><Target size={16}/>{isPastPredictionDeadline(match.date)?'انتهت مهلة التوقع':userPredictions[match.id]?'عدّل توقعك للمباراة':'توقّع نتيجة المباراة'}</button>}
+        {auth.currentUser&&match.status==='upcoming'&&<button disabled={isPastPredictionDeadline(match)} className="ds-predict-action" onClick={()=>{setPredictionMatchId(match.id);const existing=userPredictions[match.id];setHomePrediction(existing?String(existing.homeScore):'0');setAwayPrediction(existing?String(existing.awayScore):'0');setSubmitError(null);}}><Target size={16}/>{isPastPredictionDeadline(match)?'انتهت مهلة التوقع':userPredictions[match.id]?'عدّل توقعك للمباراة':'توقّع نتيجة المباراة'}</button>}
       </article>)}</div>:<div className="ds-empty-state ds-empty-compact"><Trophy size={35}/><h2>لا توجد مباريات في هذا التصنيف</h2><p>المواعيد والنتائج هتظهر هنا عند نشرها.</p></div>}{shown.length>(visibleCount[section.id]||6)&&<button className="ds-load-more" onClick={()=>setVisibleCount(prev=>({...prev,[section.id]:(prev[section.id]||6)+6}))}>عرض المزيد من المباريات</button>}</section>})}
       <AnimatePresence>
         {predictionMatchId && (
@@ -284,7 +285,7 @@ export default function Matches() {
                         home={Number(homePrediction) || 0}
                         away={Number(awayPrediction) || 0}
                         hasPrediction={Boolean(userPredictions[match.id]) || homePrediction !== '0' || awayPrediction !== '0'}
-                        disabled={isSubmitting || isPastPredictionDeadline(match.date)}
+                        disabled={isSubmitting || isPastPredictionDeadline(match)}
                         onChange={(home, away) => { setHomePrediction(String(home)); setAwayPrediction(String(away)); }}
                       />
 

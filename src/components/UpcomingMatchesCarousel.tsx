@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import type { MatchItem } from '../store';
+import { MATCH_TIME_TBD_LABEL, isMatchTimeTbd, type MatchItem } from '../store';
 import { SafeImage } from './SafeImage';
 
 export default function UpcomingMatchesCarousel({ matches, title }: { matches: MatchItem[]; title?: string }) {
@@ -38,7 +38,7 @@ export default function UpcomingMatchesCarousel({ matches, title }: { matches: M
     <div id={id} className="fixture-carousel-track" ref={track} tabIndex={0} aria-label="اسحب لعرض المباريات المرتقبة" onKeyDown={event => { if (event.key === 'ArrowLeft') { event.preventDefault(); move(1); } else if (event.key === 'ArrowRight') { event.preventDefault(); move(-1); } }}>
       {matches.map((match, index) => <article key={match.id} className="fixture-carousel-card" role="group" aria-roledescription="شريحة" aria-label={`مباراة ${index + 1} من ${matches.length}`}><Link to="/matches">
         <div className="fixture-carousel-teams">{[{ name: match.homeTeam, logo: match.homeLogo }, { name: match.awayTeam, logo: match.awayLogo }].map((team, teamIndex) => <div className="fixture-carousel-team" key={teamIndex}><SafeImage teamName={team.name} src={team.logo} alt="" className="fixture-carousel-logo"/><span>{team.name}</span></div>)}</div>
-        <div className="fixture-carousel-details"><strong>{match.competition?.replace(/الممتاز/g, '').replace(/\s+/g, ' ').trim()}</strong><span><CalendarDays size={12} aria-hidden="true"/>{format(new Date(match.date), 'd MMMM yyyy', { locale: ar })}</span><span><Clock3 size={12} aria-hidden="true"/>{format(new Date(match.date), 'h:mm a', { locale: ar })}</span></div>
+        <div className="fixture-carousel-details"><strong>{match.competition?.replace(/الممتاز/g, '').replace(/\s+/g, ' ').trim()}</strong>{isMatchTimeTbd(match) ? <span><CalendarDays size={12} aria-hidden="true"/>{MATCH_TIME_TBD_LABEL}</span> : <><span><CalendarDays size={12} aria-hidden="true"/>{format(new Date(match.date), 'd MMMM yyyy', { locale: ar })}</span><span><Clock3 size={12} aria-hidden="true"/>{format(new Date(match.date), 'h:mm a', { locale: ar })}</span></>}</div>
       </Link></article>)}
     </div>
   </div>;

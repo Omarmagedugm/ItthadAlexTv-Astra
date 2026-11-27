@@ -9,7 +9,7 @@ import { BOOTSTRAP_ADMIN_UIDS, canAccessAdmin, isSuperAdminProfile } from '../li
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { useAppStore, AppRole, isStreamHidden, getLiveStreamByChannel, CustomLiveStreamTab, sortHistoryEventsChronologically } from '../store';
+import { useAppStore, AppRole, isStreamHidden, getLiveStreamByChannel, CustomLiveStreamTab, sortHistoryEventsChronologically, MATCH_TIME_TBD_LABEL, isMatchTimeTbd } from '../store';
 import { v4 as uuidv4 } from 'uuid';
 import { toDate, formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { db, auth, uploadImage, handleFirestoreError, OperationType } from '../lib/firebase';
@@ -92,6 +92,7 @@ import {
   Minus,
   Search,
   Calendar,
+  Clock,
   Zap,
   Sparkles,
   Image as ImageIcon,
@@ -1522,7 +1523,8 @@ export default function Admin() {
           awayLogo: formData.awayLogo || '/icon.png',
           homeScore: formData.homeScore !== undefined && formData.homeScore !== null ? String(formData.homeScore) : (formData.status === 'upcoming' ? '-' : '0'),
           awayScore: formData.awayScore !== undefined && formData.awayScore !== null ? String(formData.awayScore) : (formData.status === 'upcoming' ? '-' : '0'),
-          date: formData.date || new Date().toISOString(),
+          date: formData.date && !isNaN(new Date(formData.date).getTime()) ? formData.date : new Date().toISOString(),
+          timeTbd: Boolean(formData.timeTbd),
           competition: formData.competition || 'الدوري المصري',
           status: formData.status || 'upcoming',
           stadium: formData.stadium || '',
@@ -4504,10 +4506,15 @@ export default function Admin() {
                 <div className="flex items-center gap-2">
                   <div className="flex flex-col">
                     <span className="font-bold text-xs text-right whitespace-nowrap">{item.homeTeam} × {item.awayTeam}</span>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <span className={`text-[12px] font-bold text-right ${item.status === 'live' ? 'text-red-500' : 'text-slate-500'}`}>
                         {item.status === 'live' ? 'مباشر' : item.status === 'finished' ? 'منتهية' : 'قادمة'}
                       </span>
+                      {isMatchTimeTbd(item) && (
+                        <span className="text-[11px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full">
+                          {MATCH_TIME_TBD_LABEL}
+                        </span>
+                      )}
                       {item.isMatchDay && (
                         <span className="text-[12px] font-bold bg-accent/20 text-accent px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Match Day</span>
                       )}
@@ -7910,7 +7917,27 @@ export default function Admin() {
                    </div>
                    <div>
                      <label className="text-[12px] font-bold text-slate-500 mb-1 block">تاريخ ووقت المباراة (بتوقيت مصر)</label>
-                     <input type="datetime-local" className="ds-form-control w-full p-3 rounded-xl border border-border-light bg-slate-50 dark:bg-surface-dark dark:border-border-dark text-slate-800 dark:text-white text-sm" value={formData.date && !isNaN(new Date(formData.date).getTime()) ? formatInTimeZone(new Date(formData.date), 'Africa/Cairo', 'yyyy-MM-dd\'T\'HH:mm') : ''} onChange={(e) => setFormData({...formData, date: e.target.value ? fromZonedTime(e.target.value, 'Africa/Cairo').toISOString() : ''})} />
+                     <input
+                       type="datetime-local"
+                       disabled={Boolean(formData.timeTbd)}
+                       className={`ds-form-control w-full p-3 rounded-xl border border-border-light bg-slate-50 dark:bg-surface-dark dark:border-border-dark text-slate-800 dark:text-white text-sm transition-opacity ${formData.timeTbd ? 'opacity-50 cursor-not-allowed' : ''}`}
+                       value={!formData.timeTbd && formData.date && !isNaN(new Date(formData.date).getTime()) ? formatInTimeZone(new Date(formData.date), 'Africa/Cairo', 'yyyy-MM-dd\'T\'HH:mm') : ''}
+                       onChange={(e) => setFormData({...formData, date: e.target.value ? fromZonedTime(e.target.value, 'Africa/Cairo').toISOString() : '', timeTbd: false})}
+                     />
+                     <div className="ds-content-card flex items-center gap-3 p-3.5 mt-3 bg-slate-100/50 dark:bg-surface-dark rounded-lg border border-slate-200 dark:border-border-dark cursor-pointer hover:bg-amber-500/5 hover:border-amber-500/30 transition-all">
+                       <input
+                         type="checkbox"
+                         id="matchTimeTbd"
+                         className="ds-form-control w-5 h-5 rounded-lg border-border-light text-amber-500 focus:ring-amber-500"
+                         checked={Boolean(formData.timeTbd)}
+                         onChange={(e) => setFormData({...formData, timeTbd: e.target.checked})}
+                       />
+                       <label htmlFor="matchTimeTbd" className="flex-1 cursor-pointer">
+                         <p className="text-xs font-bold text-slate-800 dark:text-white">{MATCH_TIME_TBD_LABEL}</p>
+                         <p className="text-[11px] text-slate-500 font-bold">تظهر بدلاً من التاريخ والموعد في جميع صفحات التطبيق</p>
+                       </label>
+                       <Clock size={18} className={formData.timeTbd ? 'text-amber-500' : 'text-slate-300'} />
+                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                        <div className="ds-content-card flex items-center gap-3 p-4 bg-slate-100/50 dark:bg-surface-dark rounded-lg border border-slate-200 dark:border-border-dark group cursor-pointer hover:bg-primary/5 hover:border-primary/20 transition-all">
                           <input 
@@ -8271,7 +8298,7 @@ export default function Admin() {
                        >
                          <option value="">اختر المباراة</option>
                          {matches.map(m => (
-                           <option key={m.id} value={m.id}>{m.homeTeam} × {m.awayTeam} ({new Date(m.date).toLocaleDateString('ar-EG')})</option>
+                           <option key={m.id} value={m.id}>{m.homeTeam} × {m.awayTeam} ({isMatchTimeTbd(m) ? MATCH_TIME_TBD_LABEL : new Date(m.date).toLocaleDateString('ar-EG')})</option>
                          ))}
                        </select>
                      </div>
