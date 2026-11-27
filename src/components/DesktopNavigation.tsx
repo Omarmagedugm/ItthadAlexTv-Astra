@@ -1,4 +1,4 @@
-import { useEffect, useRef, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
 import { NavigationIcon, useNavigation } from './design/navigation';
@@ -16,11 +16,45 @@ const PRIMARY_DESKTOP_ITEMS: { path: string; label: string }[] = [
 export default function DesktopNavigation() {
   const { items, pages } = useNavigation();
   const { pathname } = useLocation();
+  const navRef = useRef<HTMLElement>(null);
   const moreRef = useRef<HTMLDetailsElement>(null);
+  const [maxPrimaryCount, setMaxPrimaryCount] = useState<number>(PRIMARY_DESKTOP_ITEMS.length);
 
   useEffect(() => {
     if (moreRef.current) moreRef.current.open = false;
   }, [pathname]);
+
+  useEffect(() => {
+    const navEl = navRef.current;
+    if (!navEl) return;
+
+    const updateVisibleCount = () => {
+      const width = navEl.clientWidth;
+      if (width <= 0) return;
+      if (width >= 740) {
+        setMaxPrimaryCount(PRIMARY_DESKTOP_ITEMS.length);
+      } else if (width >= 600) {
+        setMaxPrimaryCount(5);
+      } else if (width >= 485) {
+        setMaxPrimaryCount(4);
+      } else if (width >= 375) {
+        setMaxPrimaryCount(3);
+      } else {
+        setMaxPrimaryCount(2);
+      }
+    };
+
+    updateVisibleCount();
+
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateVisibleCount) : null;
+    observer?.observe(navEl);
+    window.addEventListener('resize', updateVisibleCount);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', updateVisibleCount);
+    };
+  }, []);
 
   useEffect(() => {
     const handleOutsideClick = (event: globalThis.MouseEvent) => {
@@ -74,15 +108,20 @@ export default function DesktopNavigation() {
     return { item: found, label };
   }).filter((entry): entry is { item: (typeof internal)[number]; label: string } => Boolean(entry));
 
-  const moreInternal = internal.filter((item) => !primaryPaths.has(item.path));
+  const visiblePrimaryItems = primaryItems.slice(0, maxPrimaryCount);
+  const overflowPrimaryItems = primaryItems.slice(maxPrimaryCount).map(({ item }) => item);
+  const moreInternal = [
+    ...overflowPrimaryItems,
+    ...internal.filter((item) => !primaryPaths.has(item.path)),
+  ];
   const hasMoreItems = moreInternal.length > 0 || external.length > 0 || pages.length > 0;
   const hasActiveMore =
     moreInternal.some((item) => active(item.path)) ||
     pages.some((page) => active('/page/' + page.slug));
 
   return (
-    <nav className="ds-desktop-navigation" dir="rtl" aria-label="التنقل الرئيسي">
-      {primaryItems.map(({ item, label }) => renderLink(item, label, false, 16))}
+    <nav ref={navRef} className="ds-desktop-navigation" dir="rtl" aria-label="التنقل الرئيسي">
+      {visiblePrimaryItems.map(({ item, label }) => renderLink(item, label, false, 16))}
       {hasMoreItems && (
         <details ref={moreRef}>
           <summary className={hasActiveMore ? 'is-active' : undefined}>
