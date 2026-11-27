@@ -4,8 +4,15 @@
 
 export const SITE_ORIGIN = 'https://itthadalextv.com';
 export const SITE_NAME = 'قناة الاتحاد السكندري';
-export const DEFAULT_DESCRIPTION = 'تطبيق قناة الاتحاد السكندري - زعيم الثغر وسيد البلد، كل ما يخص نادي الاتحاد السكندري وجماهيره';
+export const DEFAULT_DESCRIPTION = 'المنصة الرسمية لجماهير نادي الاتحاد السكندري (سيد البلد): أخبار النادي العاجلة، جدول ونتائج المباريات، البث المباشر، المكتبة الإعلامية وتاريخ زعيم الثغر.';
 export const DEFAULT_OG_IMAGE = 'https://itthadalextv.com/icon.png';
+
+function safeJsonLdStringify(data: unknown): string {
+  return JSON.stringify(data)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+}
 
 /**
  * Normalizes an Arabic string into a URL slug, or cleans it for comparison.
@@ -76,6 +83,7 @@ export interface SEOMetadata {
   description?: string;
   canonicalUrl?: string;
   imageUrl?: string;
+  imageAlt?: string;
   type?: 'website' | 'article';
   noindex?: boolean;
   publishedTime?: string;
@@ -91,7 +99,9 @@ export interface SEOMetadata {
 export function updateClientSEO(meta: SEOMetadata) {
   if (typeof document === 'undefined') return;
 
-  const title = meta.title ? `${meta.title} | ${SITE_NAME}` : `${SITE_NAME} - زعيم الثغر وسيد البلد`;
+  const title = meta.title
+    ? (meta.title.includes(SITE_NAME) ? meta.title : `${meta.title} | ${SITE_NAME}`)
+    : `${SITE_NAME} – أخبار ومباريات وبث مباشر زعيم الثغر`;
   const description = meta.description || DEFAULT_DESCRIPTION;
   const canonicalUrl = meta.canonicalUrl ? buildCanonicalUrl(meta.canonicalUrl) : buildCanonicalUrl(window.location.pathname);
   let imageUrl = meta.imageUrl || DEFAULT_OG_IMAGE;
@@ -100,10 +110,12 @@ export function updateClientSEO(meta: SEOMetadata) {
     imageUrl = `${SITE_ORIGIN}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
   }
 
+  const imageAlt = meta.imageAlt || title;
+
   // 1. Update Title
   document.title = title;
 
-  // 2. Helper to set/create meta element
+  // 2. Helper to set/create or remove meta element
   const setMeta = (selector: string, attrName: string, attrVal: string, content: string) => {
     let tag = document.querySelector(selector) as HTMLMetaElement | null;
     if (!tag) {
@@ -112,6 +124,10 @@ export function updateClientSEO(meta: SEOMetadata) {
       document.head.appendChild(tag);
     }
     tag.setAttribute('content', content);
+  };
+
+  const removeMeta = (selector: string) => {
+    document.querySelectorAll(selector).forEach((el) => el.remove());
   };
 
   // 3. Update or create Canonical link
@@ -132,6 +148,7 @@ export function updateClientSEO(meta: SEOMetadata) {
   setMeta('meta[property="og:url"]', 'property', 'og:url', canonicalUrl);
   setMeta('meta[property="og:image"]', 'property', 'og:image', imageUrl);
   setMeta('meta[property="og:image:secure_url"]', 'property', 'og:image:secure_url', imageUrl);
+  setMeta('meta[property="og:image:alt"]', 'property', 'og:image:alt', imageAlt);
   setMeta('meta[property="og:type"]', 'property', 'og:type', meta.type || 'website');
   setMeta('meta[property="og:site_name"]', 'property', 'og:site_name', SITE_NAME);
   setMeta('meta[property="og:locale"]', 'property', 'og:locale', 'ar_EG');
@@ -141,21 +158,35 @@ export function updateClientSEO(meta: SEOMetadata) {
   setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', title);
   setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', description);
   setMeta('meta[name="twitter:image"]', 'name', 'twitter:image', imageUrl);
+  setMeta('meta[name="twitter:image:alt"]', 'name', 'twitter:image:alt', imageAlt);
 
-  // 7. Article specific tags
+  // 7. Article specific tags (clean up stale tags on non-article pages)
   if (meta.type === 'article') {
     if (meta.publishedTime) {
       setMeta('meta[property="article:published_time"]', 'property', 'article:published_time', meta.publishedTime);
+    } else {
+      removeMeta('meta[property="article:published_time"]');
     }
     if (meta.modifiedTime) {
       setMeta('meta[property="article:modified_time"]', 'property', 'article:modified_time', meta.modifiedTime);
+    } else {
+      removeMeta('meta[property="article:modified_time"]');
     }
     if (meta.author) {
       setMeta('meta[property="article:author"]', 'property', 'article:author', meta.author);
+    } else {
+      removeMeta('meta[property="article:author"]');
     }
     if (meta.section) {
       setMeta('meta[property="article:section"]', 'property', 'article:section', meta.section);
+    } else {
+      removeMeta('meta[property="article:section"]');
     }
+  } else {
+    removeMeta('meta[property="article:published_time"]');
+    removeMeta('meta[property="article:modified_time"]');
+    removeMeta('meta[property="article:author"]');
+    removeMeta('meta[property="article:section"]');
   }
 
   // 8. Robots meta
@@ -166,15 +197,25 @@ export function updateClientSEO(meta: SEOMetadata) {
   }
 
   // 9. Structured Data (JSON-LD)
-  if (meta.structuredData) {
-    let scriptTag = document.getElementById('app-structured-data') as HTMLScriptElement | null;
+  const resolvedStructuredData = meta.noindex
+    ? null
+    : (meta.structuredData || buildPageSchema({
+        title: meta.title || SITE_NAME,
+        description,
+        path: canonicalUrl,
+      }));
+
+  let scriptTag = document.getElementById('app-structured-data') as HTMLScriptElement | null;
+  if (resolvedStructuredData) {
     if (!scriptTag) {
       scriptTag = document.createElement('script');
       scriptTag.id = 'app-structured-data';
       scriptTag.type = 'application/ld+json';
       document.head.appendChild(scriptTag);
     }
-    scriptTag.textContent = JSON.stringify(meta.structuredData);
+    scriptTag.textContent = safeJsonLdStringify(resolvedStructuredData);
+  } else if (scriptTag) {
+    scriptTag.remove();
   }
 }
 
@@ -204,8 +245,8 @@ export function buildNewsArticleSchema(article: {
 
   const datePublished = article.date || article.createdAt || new Date().toISOString();
   const dateModified = article.createdAt || article.date || datePublished;
-  const authorName = article.newsType === 'article' 
-    ? (article.author || article.editorName || 'كاتب ومحلل رياضي') 
+  const authorName = article.newsType === 'article'
+    ? (article.author || article.editorName || 'كاتب ومحلل رياضي')
     : (article.author || 'المحرر الصحفي');
 
   return {
@@ -236,7 +277,7 @@ export function buildNewsArticleSchema(article: {
       }
     },
     "articleSection": article.category || "أخبار النادي",
-    "inLanguage": "ar"
+    "inLanguage": "ar-EG"
   };
 }
 
@@ -257,7 +298,51 @@ export function buildBreadcrumbSchema(items: { name: string; url: string }[]) {
 }
 
 /**
- * Builds Website + Organization schema for home page.
+ * Builds standard WebPage/CollectionPage + BreadcrumbList schema for inner pages.
+ */
+export function buildPageSchema(opts: {
+  title: string;
+  description: string;
+  path: string;
+  pageType?: 'WebPage' | 'CollectionPage' | 'AboutPage' | 'ProfilePage';
+  breadcrumbName?: string;
+}) {
+  const url = buildCanonicalUrl(opts.path);
+  const crumbs = url === `${SITE_ORIGIN}/`
+    ? [{ name: 'الرئيسية', url: '/' }]
+    : [
+        { name: 'الرئيسية', url: '/' },
+        { name: opts.breadcrumbName || opts.title, url }
+      ];
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": opts.pageType || "WebPage",
+        "@id": `${url}#webpage`,
+        "url": url,
+        "name": opts.title,
+        "description": opts.description,
+        "inLanguage": "ar-EG",
+        "isPartOf": { "@id": `${SITE_ORIGIN}/#website` }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${url}#breadcrumb`,
+        "itemListElement": crumbs.map((item, index) => ({
+          "@type": "ListItem",
+          "position": index + 1,
+          "name": item.name,
+          "item": item.url.startsWith('http') ? item.url : `${SITE_ORIGIN}${item.url}`
+        }))
+      }
+    ]
+  };
+}
+
+/**
+ * Builds Website + Organization + SportsTeam + WebApplication schema for home page.
  */
 export function buildWebsiteSchema() {
   return {
@@ -268,16 +353,62 @@ export function buildWebsiteSchema() {
         "@id": `${SITE_ORIGIN}/#website`,
         "url": `${SITE_ORIGIN}/`,
         "name": SITE_NAME,
+        "alternateName": ["Ittihad Alex TV", "زعيم الثغر", "سيد البلد"],
         "description": DEFAULT_DESCRIPTION,
-        "inLanguage": "ar"
+        "inLanguage": "ar-EG",
+        "publisher": { "@id": `${SITE_ORIGIN}/#organization` },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": `${SITE_ORIGIN}/news?q={search_term_string}`
+          },
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": `${SITE_ORIGIN}/#organization`,
+        "name": SITE_NAME,
+        "url": `${SITE_ORIGIN}/`,
+        "logo": {
+          "@type": "ImageObject",
+          "url": `${SITE_ORIGIN}/icon.png`,
+          "width": 512,
+          "height": 512
+        },
+        "sameAs": [
+          "https://www.facebook.com/itthadalexchannel"
+        ]
       },
       {
         "@type": "SportsTeam",
-        "@id": `${SITE_ORIGIN}/#organization`,
+        "@id": `${SITE_ORIGIN}/#team`,
         "name": "نادي الاتحاد السكندري",
-        "alternateName": ["Ittihad Alexandria SC", "زعيم الثغر", "سيد البلد"],
+        "alternateName": ["Al Ittihad Alexandria Club", "Ittihad Alexandria SC", "زعيم الثغر", "سيد البلد"],
+        "sport": ["Football", "Basketball"],
+        "foundingDate": "1906",
         "url": `${SITE_ORIGIN}/`,
-        "logo": `${SITE_ORIGIN}/icon.png`
+        "logo": `${SITE_ORIGIN}/icon.png`,
+        "location": {
+          "@type": "Place",
+          "name": "الإسكندرية، مصر"
+        }
+      },
+      {
+        "@type": "WebApplication",
+        "@id": `${SITE_ORIGIN}/#app`,
+        "name": SITE_NAME,
+        "url": `${SITE_ORIGIN}/`,
+        "applicationCategory": "SportsApplication",
+        "operatingSystem": "All",
+        "inLanguage": "ar",
+        "description": DEFAULT_DESCRIPTION,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "EGP"
+        }
       }
     ]
   };

@@ -1,8 +1,21 @@
 export interface CompressOptions {
-  quality?: number; // 0.1 to 1.0 (default 0.88 - ultra high detail)
+  quality?: number; // 0.1 to 1.0 (default 0.80 - fast & crisp)
   maxDimension?: number | 'original'; // max width or height, or 'original' to keep exact resolution
   format?: 'auto' | 'webp' | 'png' | 'jpeg';
   preserveTransparency?: boolean; // ensure alpha channel is never lost
+  folderName?: string; // optional upload folder/field name for logo & avatar detection
+}
+
+const LOGO_ASSET_REGEX = /(logo|homelogo|awaylogo|teamlogo|clublogo|crest|badge|icon|shield|emblem|favicon|شعار|لوجو|لوقو)/i;
+const AVATAR_FOLDER_REGEX = /(avatar|profile|user_photo|avatars)/i;
+
+/**
+ * Returns true if the filename or target folder/field identifies a logo, emblem, badge, or app icon.
+ * Logos are strictly excluded from automatic compression and resizing to preserve crisp edges & original fidelity.
+ */
+export function isLogoAsset(fileName?: string, folderOrField?: string): boolean {
+  const combined = `${fileName || ''} ${folderOrField || ''}`;
+  return LOGO_ASSET_REGEX.test(combined);
 }
 
 export interface CompressedResult {
@@ -228,11 +241,10 @@ export async function compressImage(
 }
 
 /**
- * Automatically compresses an image file before upload.
- * - Detects transparent logos and preserves 100% transparency.
- * - Compresses high-res photos to high-efficiency WebP/JPEG.
- * - Skips already-compressed small images (< 75KB).
- * - Returns an optimized File or original if compression isn't beneficial.
+ * Automatically compresses non-logo image files before upload.
+ * - Strictly SKIPS all logos, team crests, badges, icons, and SVGs (returned untouched).
+ * - Skips already-compressed files (`*_compressed.webp`) to prevent double compression.
+ * - Compresses non-logo photos & avatars to lightweight WebP for faster page loads.
  */
 export async function autoCompressImageForUpload(
   file: File | Blob,
@@ -248,10 +260,10 @@ export async function autoCompressImageForUpload(
   const fileName = (file instanceof File ? file.name : 'image.jpg') || 'image.jpg';
   const fileType = file.type || 'image/jpeg';
   const fileSize = file.size || 0;
+  const fileObj = file instanceof File ? file : new File([file], fileName, { type: fileType });
 
-  // If file is SVG, don't compress (SVGs are vector code and already transparent)
+  // 1. Never compress SVGs
   if (fileType === 'image/svg+xml' || fileName.toLowerCase().endsWith('.svg')) {
-    const fileObj = file instanceof File ? file : new File([file], fileName, { type: 'image/svg+xml' });
     return {
       file: fileObj,
       wasCompressed: false,
@@ -262,9 +274,8 @@ export async function autoCompressImageForUpload(
     };
   }
 
-  // If already very small (< 75KB) and not a huge uncompressed PNG, keep as is
-  if (fileSize > 0 && fileSize < 75 * 1024 && !fileName.toLowerCase().endsWith('.png')) {
-    const fileObj = file instanceof File ? file : new File([file], fileName, { type: fileType });
+  // 2. Strictly skip compression for ALL logos, crests, badges, and icons
+  if (isLogoAsset(fileName, options.folderName)) {
     return {
       file: fileObj,
       wasCompressed: false,
@@ -275,21 +286,44 @@ export async function autoCompressImageForUpload(
     };
   }
 
+  // 3. Prevent double compression if already processed by ImageUploader/compressImage
+  if (/_compressed\.(webp|jpg|jpeg|png)$/i.test(fileName)) {
+    return {
+      file: fileObj,
+      wasCompressed: false,
+      hasAlpha: fileType === 'image/png' || fileType === 'image/webp',
+      originalSize: fileSize,
+      compressedSize: fileSize,
+      savingsPercent: 0
+    };
+  }
+
+  // 4. Skip already lightweight WebP/JPEG files (< 60KB)
+  if (fileSize > 0 && fileSize < 60 * 1024 && !fileName.toLowerCase().endsWith('.png')) {
+    return {
+      file: fileObj,
+      wasCompressed: false,
+      hasAlpha: fileType === 'image/webp',
+      originalSize: fileSize,
+      compressedSize: fileSize,
+      savingsPercent: 0
+    };
+  }
+
   try {
-    const fileObj = file instanceof File ? file : new File([file], fileName, { type: fileType });
-    const isLogo = /(logo|crest|badge|icon|shield|emblem|شعار|لوجو|لوقو)/i.test(fileName);
-    
-    // For logos, maintain maximum detail and 100% transparency
+    const isAvatar = AVATAR_FOLDER_REGEX.test(`${fileName} ${options.folderName || ''}`);
+    const defaultMaxDim = isAvatar ? 512 : 1440;
+
     const result = await compressImage(fileObj, {
-      quality: isLogo ? 0.95 : 0.88,
-      maxDimension: isLogo ? 'original' : (options.maxDimension || 1920),
+      quality: 0.80,
+      maxDimension: options.maxDimension ?? defaultMaxDim,
       format: options.format || 'auto',
       preserveTransparency: true,
       ...options
     });
 
-    // If compression yielded actual savings or converted a bloated PNG to transparent WebP:
-    if (result.compressedSize < fileSize || (result.hasAlpha && result.outputFormat === 'image/webp')) {
+    // Only replace if compressed file is genuinely smaller (or converts bloated PNG to WebP)
+    if (result.compressedSize < fileSize) {
       return {
         file: result.file,
         wasCompressed: true,
@@ -310,7 +344,6 @@ export async function autoCompressImageForUpload(
     };
   } catch (err) {
     console.warn('Auto compression encountered issue, falling back to original file:', err);
-    const fileObj = file instanceof File ? file : new File([file], fileName, { type: fileType });
     return {
       file: fileObj,
       wasCompressed: false,

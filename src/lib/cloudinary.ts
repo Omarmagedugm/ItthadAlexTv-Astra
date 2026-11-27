@@ -1,9 +1,19 @@
 import { CLOUDINARY_TO_FIRESTORE_MAP } from './cloudinaryToFirestoreMap';
 
+const LOGO_URL_REGEX = /(?:^|\/)(?:icon\.png|favicon\.[^/?#]+|admin_(?:home)?logo\/|(?:7[0-9]|8[0-9])_)|(?:logo|crest|badge|emblem|shield)/i;
+
+/**
+ * Identifies whether an image URL points to a club/team/app logo so it is never compressed or downscaled.
+ */
+export const isLogoUrl = (url: string | undefined | null): boolean => {
+  if (!url) return false;
+  return LOGO_URL_REGEX.test(url);
+};
+
 /**
  * Image URL resolution utility.
- * Prioritizes Firestore image storage (/storage/migrated/...) over Cloudinary.
- * Converts any legacy Cloudinary URLs directly to Firestore storage paths.
+ * Prioritizes local/Firestore storage (/storage/migrated/...) over Cloudinary.
+ * Strictly preserves logos untouched while optimizing non-logo images for fast delivery.
  */
 export const getOptimizedImage = (url: string | undefined | null, width?: number) => {
   if (!url) return '';
@@ -13,7 +23,7 @@ export const getOptimizedImage = (url: string | undefined | null, width?: number
     return url;
   }
 
-  // 2. Pass-through for data URLs, blobs, and relative assets
+  // 2. Pass-through for data URLs, blobs, and non-Cloudinary assets
   if (
     url.startsWith('/') ||
     url.startsWith('data:') || 
@@ -29,7 +39,7 @@ export const getOptimizedImage = (url: string | undefined | null, width?: number
     return url;
   }
 
-  // 3. If it's a legacy Cloudinary URL, resolve it to its Firestore storage equivalent
+  // 3. If it's a legacy Cloudinary URL, resolve it to its local/Firestore storage equivalent
   if (url.includes('cloudinary.com')) {
     // Exact match check
     if (CLOUDINARY_TO_FIRESTORE_MAP[url]) {
@@ -51,8 +61,13 @@ export const getOptimizedImage = (url: string | undefined | null, width?: number
         return CLOUDINARY_TO_FIRESTORE_MAP[withoutV];
       }
 
-      // Automatically add smart high-fidelity compression & transparency-preserving WebP/Auto
-      const transforms = ['f_auto', 'q_auto:best'];
+      // Never compress or downscale logos
+      if (isLogoUrl(url) || isLogoUrl(withoutV)) {
+        return url;
+      }
+
+      // Fast WebP/AVIF auto-format + responsive width for non-logo images
+      const transforms = ['f_auto', 'q_auto:good', 'dpr_auto'];
       if (width && width > 0) {
         transforms.push(`w_${width}`, 'c_limit');
       }

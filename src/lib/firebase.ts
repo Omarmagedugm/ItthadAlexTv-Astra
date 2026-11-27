@@ -6,7 +6,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 import { requestNotificationPermission as requestOneSignalPermission } from './onesignal';
 import { compressImageIfNeeded, saveImageToFirestore } from './firestoreImageStorage';
-import { autoCompressImageForUpload } from './imageCompressor';
+import { autoCompressImageForUpload, isLogoAsset } from './imageCompressor';
 
 // Suppress benign internal IndexedDB lease timestamp drift logs emitted at SDK error level;
 // all application Firestore operation errors are handled and surfaced via handleFirestoreError.
@@ -156,14 +156,18 @@ export const uploadImage = async (file: File | Blob, folder: string, customName?
   const originalName = customName || (file instanceof File ? file.name : `img_${Date.now()}.jpg`);
   let contentType = file.type || 'image/jpeg';
 
-  // Automatic smart compression on upload: preserves 100% logo transparency and reduces size by 70-90%
-  if (typeof window !== 'undefined') {
+  const isLogo = isLogoAsset(originalName, folder);
+
+  // Automatic smart compression on upload for non-logo images only (strictly skips logos & already-compressed files)
+  if (typeof window !== 'undefined' && !isLogo) {
     try {
+      const isAvatar = /(avatar|profile)/i.test(folder);
       const compResult = await autoCompressImageForUpload(fileToUpload, {
-        quality: 0.90,
-        maxDimension: 1920,
+        quality: 0.80,
+        maxDimension: isAvatar ? 512 : 1440,
         format: 'auto',
-        preserveTransparency: true
+        preserveTransparency: true,
+        folderName: folder
       });
       if (compResult.wasCompressed) {
         fileToUpload = compResult.file;
@@ -232,9 +236,19 @@ export const uploadImage = async (file: File | Blob, folder: string, customName?
     console.warn('Server storage upload fallback failed:', serverErr);
   }
 
-  // 3. Fallback: Firestore compressed storage
+  // 3. Fallback: Firestore storage (preserve logos untouched without re-encoding)
   try {
-    const compressed = await compressImageIfNeeded(fileToUpload);
+    if (isLogo) {
+      const rawDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to read logo file'));
+        reader.readAsDataURL(fileToUpload);
+      });
+      const result = await saveImageToFirestore(finalFilename, rawDataUrl, contentType);
+      return result.url;
+    }
+    const compressed = await compressImageIfNeeded(fileToUpload, 1440, 0.80);
     const result = await saveImageToFirestore(finalFilename, compressed.dataUrl, compressed.contentType);
     return result.url;
   } catch (error) {

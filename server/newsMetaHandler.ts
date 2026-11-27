@@ -121,9 +121,13 @@ export function injectNewsMetaTags(html: string, meta: NewsMeta, canonicalUrl?: 
     { prop: 'og:url', val: effectiveCanonical },
     { prop: 'og:image', val: image },
     { prop: 'og:image:secure_url', val: image },
+    { prop: 'og:image:alt', val: title },
     { prop: 'og:type', val: 'article' },
     { prop: 'og:site_name', val: siteName },
-    { prop: 'og:locale', val: 'ar_EG' }
+    { prop: 'og:locale', val: 'ar_EG' },
+    ...(meta.date ? [{ prop: 'article:published_time', val: meta.date }] : []),
+    ...(meta.category ? [{ prop: 'article:section', val: meta.category }] : []),
+    ...(meta.author ? [{ prop: 'article:author', val: meta.author }] : [])
   ];
 
   for (const tag of ogTags) {
@@ -140,7 +144,8 @@ export function injectNewsMetaTags(html: string, meta: NewsMeta, canonicalUrl?: 
     { name: 'twitter:card', val: 'summary_large_image' },
     { name: 'twitter:title', val: title },
     { name: 'twitter:description', val: desc },
-    { name: 'twitter:image', val: image }
+    { name: 'twitter:image', val: image },
+    { name: 'twitter:image:alt', val: title }
   ];
 
   for (const tag of twitterTags) {
@@ -152,38 +157,52 @@ export function injectNewsMetaTags(html: string, meta: NewsMeta, canonicalUrl?: 
     }
   }
 
-  // 6. Schema.org NewsArticle JSON-LD
+  // 6. Schema.org NewsArticle + BreadcrumbList JSON-LD
   const schema = {
     "@context": "https://schema.org",
-    "@type": "NewsArticle",
-    "mainEntityOfPage": {
-      "@type": "WebPage",
-      "@id": effectiveCanonical
-    },
-    "headline": title,
-    "description": desc,
-    "image": [image],
-    "datePublished": meta.date || new Date().toISOString(),
-    "dateModified": meta.date || new Date().toISOString(),
-    "author": {
-      "@type": meta.newsType === 'article' ? "Person" : "Organization",
-      "name": meta.author || "المحرر الصحفي",
-      "url": siteOrigin
-    },
-    "publisher": {
-      "@type": "Organization",
-      "name": siteName,
-      "logo": {
-        "@type": "ImageObject",
-        "url": `${siteOrigin}/icon.png`,
-        "width": 512,
-        "height": 512
+    "@graph": [
+      {
+        "@type": "NewsArticle",
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": effectiveCanonical
+        },
+        "headline": title,
+        "description": desc,
+        "image": [image],
+        "datePublished": meta.date || new Date().toISOString(),
+        "dateModified": meta.date || new Date().toISOString(),
+        "author": {
+          "@type": meta.newsType === 'article' ? "Person" : "Organization",
+          "name": meta.author || "المحرر الصحفي",
+          "url": siteOrigin
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": siteName,
+          "logo": {
+            "@type": "ImageObject",
+            "url": `${siteOrigin}/icon.png`,
+            "width": 512,
+            "height": 512
+          }
+        },
+        "articleSection": meta.category || "أخبار النادي",
+        "inLanguage": "ar-EG"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "الرئيسية", "item": `${siteOrigin}/` },
+          { "@type": "ListItem", "position": 2, "name": "أخبار النادي", "item": `${siteOrigin}/news` },
+          { "@type": "ListItem", "position": 3, "name": title, "item": effectiveCanonical }
+        ]
       }
-    },
-    "articleSection": meta.category || "أخبار النادي"
+    ]
   };
 
-  const schemaTag = `\n  <script type="application/ld+json">\n${serializeJsonLd(schema)}\n  </script>\n`;
+  result = result.replace(/<script\b[^>]*id=["']app-structured-data["'][^>]*>[\s\S]*?<\/script>/gi, '');
+  const schemaTag = `\n  <script id="app-structured-data" type="application/ld+json">\n${serializeJsonLd(schema)}\n  </script>\n`;
   result = result.replace('</head>', () => `${schemaTag}</head>`);
 
   return result;

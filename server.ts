@@ -359,10 +359,11 @@ OUTPUT: Return ONLY the transformed image.`;
   // Serve robots.txt and llms.txt as plain text explicitly
   app.get('/robots.txt', (req, res) => {
     const robotsPath = path.join(process.cwd(), 'public', 'robots.txt');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
     if (fs.existsSync(robotsPath)) {
-      res.type('text/plain').sendFile(robotsPath);
+      res.type('text/plain; charset=utf-8').sendFile(robotsPath);
     } else {
-      res.type('text/plain').send("User-agent: *\nAllow: /\n\nSitemap: https://itthadalextv.com/sitemap.xml\nSitemap: https://itthadalextv.com/news-sitemap.xml\n");
+      res.type('text/plain; charset=utf-8').send("User-agent: *\nAllow: /\n\nSitemap: https://itthadalextv.com/sitemap.xml\nSitemap: https://itthadalextv.com/news-sitemap.xml\n");
     }
   });
 
@@ -423,18 +424,39 @@ OUTPUT: Return ONLY the transformed image.`;
     fs.mkdirSync(migratedDir, { recursive: true });
   }
 
-  const serveFirestoreImage = async (filename: string, res: any, next: any) => {
-    const localFile = path.join(migratedDir, filename);
+  // Strictly exclude all club/team/app logos from WebP substitution or re-encoding
+  const isLogoFilename = (filename: string) =>
+    /^(7[0-9]|8[0-9])_/.test(filename) ||
+    /(logo|icon|badge|crest|emblem|shield|favicon)/i.test(filename);
 
-    // 1. Fast path: check local disk cache
+  const serveFirestoreImage = async (filename: string, req: any, res: any, next: any) => {
+    const safeName = path.basename(filename);
+    const localFile = path.join(migratedDir, safeName);
+    const isLogo = isLogoFilename(safeName);
+    const acceptsWebp = String(req?.headers?.accept || '').includes('image/webp');
+
+    // 1. Fast path: check local disk cache (serve WebP sibling for non-logo images when supported)
+    if (!isLogo && acceptsWebp && !safeName.toLowerCase().endsWith('.webp')) {
+      const webpFile = `${localFile}.webp`;
+      if (fs.existsSync(webpFile)) {
+        res.setHeader('Content-Type', 'image/webp');
+        res.setHeader('Vary', 'Accept');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        return res.sendFile(webpFile);
+      }
+    }
+
     if (fs.existsSync(localFile)) {
+      if (!isLogo) {
+        res.setHeader('Vary', 'Accept');
+      }
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       return res.sendFile(localFile);
     }
 
     // 2. Fetch directly from Firestore app_images collection
     try {
-      const firestoreImg = await fetchImageFromFirestore(filename);
+      const firestoreImg = await fetchImageFromFirestore(safeName);
       if (firestoreImg) {
         if (firestoreImg.redirectUrl) {
           return res.redirect(302, firestoreImg.redirectUrl);
@@ -451,23 +473,42 @@ OUTPUT: Return ONLY the transformed image.`;
         return res.send(firestoreImg.buffer);
       }
     } catch (fsErr) {
-      console.warn(`Firestore image fetch error for ${filename}:`, fsErr);
+      console.warn(`Firestore image fetch error for ${safeName}:`, fsErr);
     }
 
     // 3. Fallback to Cloudinary URL if available
-    const cUrl = MIGRATED_IMAGES_MAP[filename];
+    const cUrl = MIGRATED_IMAGES_MAP[safeName];
     if (cUrl) {
       return res.redirect(302, cUrl);
     }
     next();
   };
 
+  // Serve compressed WebP siblings for non-logo ad banners when supported (never touches /icon.png)
+  app.get(['/nada_ad.png', '/ads/:filename'], (req, res, next) => {
+    const acceptsWebp = String(req.headers.accept || '').includes('image/webp');
+    if (!acceptsWebp) return next();
+    const relPath = req.path.replace(/^\/+/, '');
+    if (isLogoFilename(relPath)) return next();
+    const candidateDirs = [path.join(process.cwd(), 'public'), distPath];
+    for (const baseDir of candidateDirs) {
+      const webpFile = path.join(baseDir, `${relPath}.webp`);
+      if (fs.existsSync(webpFile)) {
+        res.setHeader('Content-Type', 'image/webp');
+        res.setHeader('Vary', 'Accept');
+        res.setHeader('Cache-Control', 'public, max-age=2592000');
+        return res.sendFile(webpFile);
+      }
+    }
+    return next();
+  });
+
   app.get('/storage/migrated/:filename', (req, res, next) => {
-    serveFirestoreImage(req.params.filename, res, next);
+    serveFirestoreImage(req.params.filename, req, res, next);
   });
 
   app.get('/api/images/:filename', (req, res, next) => {
-    serveFirestoreImage(req.params.filename, res, next);
+    serveFirestoreImage(req.params.filename, req, res, next);
   });
 
   app.use('/storage', express.static(storageDir, {

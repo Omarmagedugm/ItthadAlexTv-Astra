@@ -246,20 +246,25 @@ export async function generateSitemapXml(): Promise<string> {
 
   // Core public indexable pages on the website
   const staticPages = [
-    { path: '', priority: '1.0', changefreq: 'hourly', lastmod: latestNewsDate },
+    { path: '/', priority: '1.0', changefreq: 'hourly', lastmod: latestNewsDate },
     { path: '/news', priority: '0.9', changefreq: 'hourly', lastmod: latestNewsDate },
     { path: '/matches', priority: '0.8', changefreq: 'daily', lastmod: latestNewsDate },
     { path: '/media', priority: '0.8', changefreq: 'daily', lastmod: latestNewsDate },
     { path: '/live', priority: '0.8', changefreq: 'hourly', lastmod: latestNewsDate },
     { path: '/history', priority: '0.7', changefreq: 'monthly', lastmod: '2026-09-01T00:00:00Z' },
     { path: '/fanzone', priority: '0.7', changefreq: 'daily', lastmod: latestNewsDate },
+    { path: '/social', priority: '0.7', changefreq: 'daily', lastmod: latestNewsDate },
+    { path: '/library', priority: '0.7', changefreq: 'weekly', lastmod: latestNewsDate },
+    { path: '/game', priority: '0.7', changefreq: 'weekly', lastmod: latestNewsDate },
+    { path: '/store', priority: '0.6', changefreq: 'weekly', lastmod: latestNewsDate },
     { path: '/club-members', priority: '0.6', changefreq: 'weekly', lastmod: latestNewsDate },
     { path: '/discounts', priority: '0.6', changefreq: 'weekly', lastmod: latestNewsDate },
     { path: '/business', priority: '0.6', changefreq: 'weekly', lastmod: latestNewsDate },
     { path: '/world-fans', priority: '0.6', changefreq: 'weekly', lastmod: latestNewsDate },
     { path: '/services', priority: '0.6', changefreq: 'weekly', lastmod: latestNewsDate },
     { path: '/privacy-policy', priority: '0.3', changefreq: 'monthly', lastmod: '2026-08-01T00:00:00Z' },
-    { path: '/terms', priority: '0.3', changefreq: 'monthly', lastmod: '2026-08-01T00:00:00Z' }
+    { path: '/terms', priority: '0.3', changefreq: 'monthly', lastmod: '2026-08-01T00:00:00Z' },
+    { path: '/data-deletion', priority: '0.2', changefreq: 'monthly', lastmod: '2026-08-01T00:00:00Z' }
   ];
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Loader2, Image as ImageIcon, Sparkles, CheckCircle2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { uploadImage } from '../lib/firebase';
-import { compressImage } from '../lib/imageCompressor';
+import { compressImage, isLogoAsset } from '../lib/imageCompressor';
 
 interface ImageUploaderProps {
   folderName: string;
@@ -49,23 +49,29 @@ export default function ImageUploader({
     }
 
     setIsUploading(true);
+    setCompressionInfo(null);
 
     try {
-      // Smart high-detail compression preserving 100% transparency for logos
+      // Strictly skip compression for logos; compress regular photos/avatars to fast WebP
       let fileToUpload: File | Blob = file;
-      if (!skipResize) {
+      const isLogo = isLogoAsset(file.name, folderName);
+      if (!skipResize && !isLogo) {
         try {
+          const isAvatar = /(avatar|profile)/i.test(folderName);
           const compressed = await compressImage(file, {
-            quality: 0.90,
-            maxDimension: 1920,
+            quality: 0.80,
+            maxDimension: isAvatar ? 512 : 1440,
             format: 'auto',
-            preserveTransparency: true
+            preserveTransparency: true,
+            folderName
           });
-          fileToUpload = compressed.file;
-          setCompressionInfo({
-            savingsPercent: compressed.savingsPercent,
-            hasAlpha: compressed.hasAlpha
-          });
+          if (compressed.compressedSize < file.size) {
+            fileToUpload = compressed.file;
+            setCompressionInfo({
+              savingsPercent: compressed.savingsPercent,
+              hasAlpha: compressed.hasAlpha
+            });
+          }
         } catch (compErr) {
           console.warn('Smart compression fallback to direct file:', compErr);
           fileToUpload = file;

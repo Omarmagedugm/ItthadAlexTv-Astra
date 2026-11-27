@@ -5,6 +5,7 @@ User-agent: *
 Allow: /
 Allow: /sitemap.xml
 Allow: /news-sitemap.xml
+Allow: /news
 Allow: /news/
 Allow: /matches
 Allow: /media
@@ -16,13 +17,21 @@ Allow: /discounts
 Allow: /business
 Allow: /world-fans
 Allow: /services
+Allow: /library
+Allow: /social
+Allow: /store
+Allow: /game
 Allow: /privacy-policy
 Allow: /terms
+Allow: /data-deletion
 Allow: /assets/
+Allow: /storage/migrated/
 Allow: /icon.png
 Allow: /manifest.json
 
-# Block private, authenticated, administrative and utility paths from indexing
+# Block private, authenticated, administrative, API and utility paths from indexing
+Disallow: /api/
+Disallow: /seo/
 Disallow: /admin
 Disallow: /admin/
 Disallow: /auth
@@ -35,6 +44,7 @@ Disallow: /jersey-tryon
 Disallow: /compress-images
 Disallow: /image-compressor
 Disallow: /compress
+Disallow: /user-data-deletion
 
 # Sitemaps declaration
 Sitemap: https://itthadalextv.com/sitemap.xml

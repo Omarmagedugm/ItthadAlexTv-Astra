@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getOptimizedImage } from '../lib/cloudinary';
+import { getOptimizedImage, isLogoUrl } from '../lib/cloudinary';
 import { isImageInMemory, markImageLoaded } from '../lib/imageCache';
 
 const ITTIHAD_DEFAULT_LOGO = '/icon.png';
@@ -57,6 +57,7 @@ interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   width?: number;
   fallback?: string;
   teamName?: string;
+  isLogo?: boolean;
   fetchPriority?: 'high' | 'low' | 'auto';
   showIconPlaceholder?: boolean;
 }
@@ -68,6 +69,7 @@ export const SafeImage: React.FC<SafeImageProps> = ({
   width, 
   fallback,
   teamName,
+  isLogo,
   fetchPriority,
   loading = 'lazy',
   showIconPlaceholder = true,
@@ -76,10 +78,12 @@ export const SafeImage: React.FC<SafeImageProps> = ({
   const [hasError, setHasError] = useState(false);
   const effectiveSrc = teamName ? getTeamLogoWithFallback(teamName, src as string) : (src || fallback || ITTIHAD_DEFAULT_LOGO);
   const fallbackSrc = fallback || (teamName ? getTeamLogoWithFallback(teamName) : ITTIHAD_DEFAULT_LOGO);
-  const optimizedSrc = getOptimizedImage(hasError ? fallbackSrc : effectiveSrc, width);
+  const treatAsLogo = Boolean(isLogo || teamName || isLogoUrl(effectiveSrc));
+  const optimizedSrc = getOptimizedImage(hasError ? fallbackSrc : effectiveSrc, treatAsLogo ? undefined : width);
+  const isPriorityImage = loading === 'eager' || fetchPriority === 'high';
 
   // Check if image was already cached/loaded in memory to prevent layout shift or loading flicker
-  const [isLoaded, setIsLoaded] = useState(() => isImageInMemory(optimizedSrc));
+  const [isLoaded, setIsLoaded] = useState(() => isPriorityImage || isImageInMemory(optimizedSrc));
   const imgRef = useRef<HTMLImageElement>(null);
 
   // Only reset error if the actual prop sources change, preventing render loops
@@ -116,8 +120,8 @@ export const SafeImage: React.FC<SafeImageProps> = ({
 
   return (
     <div className={`relative overflow-hidden ${className} flex items-center justify-center shrink-0`}>
-      {/* Lightweight placeholder during initial download */}
-      {!isLoaded && (
+      {/* Lightweight placeholder during initial download (skipped for high-priority LCP images) */}
+      {!isLoaded && !isPriorityImage && (
         <div className="absolute inset-0 flex items-center justify-center bg-slate-100/40 dark:bg-surface-dark/40 z-0 animate-pulse pointer-events-none">
           {showIconPlaceholder ? (
             <span className="material-symbols-outlined text-emerald-500/40 text-[1.3em] select-none">
@@ -139,7 +143,7 @@ export const SafeImage: React.FC<SafeImageProps> = ({
         fetchPriority={fetchPriority}
         onLoad={handleLoad}
         onError={handleError}
-        className={`relative z-10 w-full h-full ${fitClass} transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-90'}`}
+        className={`relative z-10 w-full h-full ${fitClass} transition-opacity duration-150 ${isLoaded || isPriorityImage ? 'opacity-100' : 'opacity-90'}`}
         referrerPolicy="no-referrer"
       />
     </div>

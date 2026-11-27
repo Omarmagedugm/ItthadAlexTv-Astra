@@ -131,7 +131,7 @@ import CsvMatchesImporter from '../components/CsvMatchesImporter';
 import CsvVideosImporter from '../components/admin/CsvVideosImporter';
 import { getOptimizedImage } from '../lib/cloudinary';
 import { logAdminActivity } from '../lib/auditLogger';
-import { compressImage } from '../lib/imageCompressor';
+import { compressImage, isLogoAsset } from '../lib/imageCompressor';
 
 const handleFileUploadFn = async (
   e: React.ChangeEvent<HTMLInputElement>, 
@@ -147,22 +147,27 @@ const handleFileUploadFn = async (
   setUploading(true);
   try {
     let fileToUpload: File | Blob = file;
-    if (type === 'image') {
+    const isLogo = isLogoAsset(file.name, `${activeTab}_${fieldName}`);
+    if (type === 'image' && !isLogo) {
       try {
         const compressed = await compressImage(file, {
-          quality: 0.90,
-          maxDimension: 1920,
+          quality: 0.80,
+          maxDimension: 1440,
           format: 'auto',
-          preserveTransparency: true
+          preserveTransparency: true,
+          folderName: `${activeTab}_${fieldName}`
         });
-        fileToUpload = compressed.file;
+        if (compressed.compressedSize < file.size) {
+          fileToUpload = compressed.file;
+        }
       } catch (err) {
         console.warn('Smart compression fallback to direct file:', err);
       }
     }
-    const url = await uploadImage(fileToUpload, activeTab, file.name);
+    const uploadFolder = isLogo ? `${activeTab}_${fieldName}` : activeTab;
+    const url = await uploadImage(fileToUpload, uploadFolder, file.name);
     if (type === 'image') {
-      toast.success('تم رفع الصورة بنجاح (تم تحسين الحجم والشفافية تلقائياً ⚡)');
+      toast.success(isLogo ? 'تم رفع الشعار بجودته الأصلية بنجاح ✨' : 'تم رفع الصورة وضغطها لتسريع الظهور بنجاح ⚡');
     }
     if (type === 'video' && activeTab === 'media') {
       // Try to capture a frame or use a default thumbnail
@@ -1024,9 +1029,12 @@ export default function Admin() {
       const file = e.target.files?.[0];
       if (!file) return;
       setUploading(true);
-      compressImage(file, { quality: 0.90, maxDimension: 1920, format: 'auto', preserveTransparency: true })
-        .then(res => uploadImage(res.file, 'live', file.name))
-        .catch(() => uploadImage(file, 'live', file.name))
+      const isLogo = isLogoAsset(file.name, 'liveAdBannerImage');
+      (isLogo
+        ? uploadImage(file, 'live_logo', file.name)
+        : compressImage(file, { quality: 0.80, maxDimension: 1440, format: 'auto', preserveTransparency: true })
+            .then(res => uploadImage(res.compressedSize < file.size ? res.file : file, 'live', file.name))
+            .catch(() => uploadImage(file, 'live', file.name)))
         .then(url => {
           updateLiveAdSettings(prev => ({ ...prev, imageUrl: url }));
           toast.success('تم رفع صورة بانر البث المباشر بنجاح 🖼️');

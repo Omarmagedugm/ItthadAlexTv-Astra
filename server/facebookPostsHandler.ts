@@ -4,6 +4,7 @@ import {
   FACEBOOK_PAGE_URL,
   FACEBOOK_POSTS_FIELDS,
   FACEBOOK_POSTS_LIMIT,
+  resolveFacebookPostUrl,
   type FacebookPost,
 } from '../src/lib/socialConfig.js';
 
@@ -48,7 +49,8 @@ function sanitizePost(raw: any): FacebookPost | null {
   const message = typeof raw.message === 'string' ? raw.message.trim() : undefined;
   const story = typeof raw.story === 'string' ? raw.story.trim() : undefined;
   const fullPicture = sanitizeHttpsUrl(raw.full_picture, false);
-  const permalinkUrl = sanitizeHttpsUrl(raw.permalink_url, true) || FACEBOOK_PAGE_URL;
+  const sanitizedPermalink = sanitizeHttpsUrl(raw.permalink_url, true);
+  const permalinkUrl = resolveFacebookPostUrl(id, sanitizedPermalink, FACEBOOK_PAGE_URL);
 
   if (!message && !story && !fullPicture) {
     return null;

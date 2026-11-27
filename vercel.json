@@ -120,6 +120,33 @@
       ]
     },
     {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/storage/migrated/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/ads/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
       "source": "/firebase-messaging-sw.js",
       "headers": [
         {
@@ -147,8 +174,52 @@
       "destination": "/seo/media.html"
     },
     {
+      "source": "/live",
+      "destination": "/seo/live.html"
+    },
+    {
       "source": "/history",
       "destination": "/seo/history.html"
+    },
+    {
+      "source": "/fanzone",
+      "destination": "/seo/fanzone.html"
+    },
+    {
+      "source": "/club-members",
+      "destination": "/seo/club-members.html"
+    },
+    {
+      "source": "/discounts",
+      "destination": "/seo/discounts.html"
+    },
+    {
+      "source": "/business",
+      "destination": "/seo/business.html"
+    },
+    {
+      "source": "/world-fans",
+      "destination": "/seo/world-fans.html"
+    },
+    {
+      "source": "/services",
+      "destination": "/seo/services.html"
+    },
+    {
+      "source": "/library",
+      "destination": "/seo/library.html"
+    },
+    {
+      "source": "/social",
+      "destination": "/seo/social.html"
+    },
+    {
+      "source": "/store",
+      "destination": "/seo/store.html"
+    },
+    {
+      "source": "/game",
+      "destination": "/seo/game.html"
     },
     {
       "source": "/privacy",
@@ -161,6 +232,10 @@
     {
       "source": "/privacy-policy",
       "destination": "/seo/privacy-policy.html"
+    },
+    {
+      "source": "/data-deletion",
+      "destination": "/seo/data-deletion.html"
     },
     {
       "source": "/sitemap.xml",

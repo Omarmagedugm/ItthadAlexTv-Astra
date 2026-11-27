@@ -206,6 +206,7 @@ export default function NewsDetail() {
       description,
       canonicalUrl,
       imageUrl,
+      imageAlt: article.title,
       type: 'article',
       publishedTime: article.date || article.createdAt,
       modifiedTime: article.createdAt || article.date,

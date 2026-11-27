@@ -20,6 +20,7 @@ import {
   FACEBOOK_POSTS_API_ENDPOINT,
   FACEBOOK_POSTS_LIMIT,
   FACEBOOK_USERNAME,
+  resolveFacebookPostUrl,
   type FacebookPost,
   type FacebookPostsResponse,
 } from '../lib/socialConfig';
@@ -475,7 +476,10 @@ export default function SocialMedia() {
                   const isImageOnly = hasImage && !postText;
                   const isTextOnly = !hasImage && Boolean(postText);
                   const formattedDate = formatArabicDate(post.created_time);
-                  const postLink = getSafeExternalUrl(post.permalink_url, fbUrl);
+                  const postLink = getSafeExternalUrl(
+                    resolveFacebookPostUrl(post.id, post.permalink_url, fbUrl),
+                    fbUrl
+                  );
 
                   return (
                     <a

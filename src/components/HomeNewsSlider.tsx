@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
 import { useAppStore } from '../store';
 import { SafeImage } from './SafeImage';
+import { getOptimizedImage } from '../lib/cloudinary';
+import { preloadImages } from '../lib/imageCache';
 
 const newsTimestamp = (item: { date?: string; createdAt?: string }) => {
  const primary = item.date ? new Date(item.date).getTime() : NaN;
@@ -39,6 +41,10 @@ export default function HomeNewsSlider() {
  useEffect(()=>{const query=window.matchMedia('(prefers-reduced-motion: reduce)');const update=()=>setReducedMotion(query.matches);update();query.addEventListener('change',update);return()=>query.removeEventListener('change',update);},[]);
  useEffect(()=>{if(paused||interacting||reducedMotion||slides.length<2)return;const timer=window.setInterval(()=>{if(!document.hidden)select(active.current+1);},6000);return()=>window.clearInterval(timer);},[paused,interacting,reducedMotion,slides.length]);
  useEffect(()=>{active.current=0;setSelected(0);if(viewport.current)viewport.current.scrollLeft=0;},[newestId,slides.length]);
+ useEffect(()=>{
+  const priorityUrls=slides.slice(0,2).map(s=>getOptimizedImage(s.image,900)).filter(Boolean);
+  if(priorityUrls.length)preloadImages(priorityUrls);
+ },[newestId]);
  if(!slides.length)return null;
  return <div className="home-news-slider home-news-carousel" role="region" aria-roledescription="كاروسيل" aria-label="أبرز أخبار الاتحاد" dir="rtl"
   onMouseEnter={()=>setInteracting(true)} onMouseLeave={()=>setInteracting(false)}
@@ -53,7 +59,7 @@ export default function HomeNewsSlider() {
    onTouchCancel={()=>{dragStart.current=null;setInteracting(false);}}>
    {slides.map((story,i)=><article className="home-news-slide" key={story.id} role="group" aria-roledescription="شريحة" aria-label={`${i+1} من ${slides.length}`}>
     <Link to={`/news/${story.id}`} className="home-news-story" onClick={e=>{if(swiped.current){e.preventDefault();swiped.current=false;}}}>
-     <div className="home-news-photo"><SafeImage src={story.image||undefined} alt="" className="w-full h-full object-cover" width={900}/></div>
+     <div className="home-news-photo"><SafeImage src={story.image||undefined} alt={story.title} className="w-full h-full object-cover" width={900} loading={i<2?'eager':'lazy'} fetchPriority={i===0?'high':'auto'}/></div>
      <div className="home-news-shade" aria-hidden="true"/>
      <span className="home-news-category">{story.category||'أخبار النادي'}</span>
      <div className="home-news-copy"><h2>{story.title}</h2><div className="home-news-meta"><span>{story.author||'قناة الاتحاد'}</span>{newsDate(story.date)&&<><i aria-hidden="true"/><time dateTime={story.date}>{newsDate(story.date)}</time></>}</div></div>

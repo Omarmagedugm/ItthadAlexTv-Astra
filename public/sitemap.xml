@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
-    <loc>https://itthadalextv.com</loc>
+    <loc>https://itthadalextv.com/</loc>
     <lastmod>2026-11-25T21:52:21Z</lastmod>
     <changefreq>hourly</changefreq>
     <priority>1.0</priority>
@@ -42,6 +42,30 @@
     <lastmod>2026-11-25T21:52:21Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://itthadalextv.com/social</loc>
+    <lastmod>2026-11-25T21:52:21Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://itthadalextv.com/library</loc>
+    <lastmod>2026-11-25T21:52:21Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://itthadalextv.com/game</loc>
+    <lastmod>2026-11-25T21:52:21Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://itthadalextv.com/store</loc>
+    <lastmod>2026-11-25T21:52:21Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/club-members</loc>
@@ -84,6 +108,12 @@
     <lastmod>2026-08-01T00:00:00Z</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://itthadalextv.com/data-deletion</loc>
+    <lastmod>2026-08-01T00:00:00Z</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.2</priority>
   </url>
   <url>
     <loc>https://itthadalextv.com/news/R242L8qe6fn4rog9975N</loc>
@@ -362,7 +392,7 @@
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0026252792.firebasestorage.app/o/admin_image%2F1792019163633_818819_compressed_compressed.webp?alt=media&amp;token=ac22a9d9-6b5a-4fc3-91c7-582f53198ae3</image:loc>
-      <image:title>البطائح الإماراتي والاتحاد السكند��ي يتبادلان الدروع التذكارية</image:title>
+      <image:title>البطائح الإماراتي والاتحاد السكندري يتبادلان الدروع التذكارية</image:title>
     </image:image>
   </url>
   <url>
@@ -922,7 +952,7 @@
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://itthadalextv.com/storage/migrated/29_bml2a8n7fpc70d4gc680.jpg</image:loc>
-      <image:title>الاتحاد السكندري يواجه الزمالك في افتتاح مشواره بالدوري المص��ي</image:title>
+      <image:title>الاتحاد السكندري يواجه الزمالك في افتتاح مشواره بالدوري المصري</image:title>
     </image:image>
   </url>
   <url>
@@ -1032,7 +1062,7 @@
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://itthadalextv.com/storage/migrated/44_p3ggctbyse4g8ck4cm6v.jpg</image:loc>
-      <image:title>أحمد الشاذ��ى إتحاداوي لمدة 4 مواسم ✅🤩</image:title>
+      <image:title>أحمد الشاذلى إتحاداوي لمدة 4 مواسم ✅🤩</image:title>
     </image:image>
   </url>
   <url>

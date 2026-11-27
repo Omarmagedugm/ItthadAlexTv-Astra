@@ -15,7 +15,7 @@ import { preloadImages } from './lib/imageCache';
 
 import Home from './pages/Home';
 import MaintenanceScreen from './components/MaintenanceScreen';
-import { updateClientSEO, buildWebsiteSchema } from './lib/seo';
+import { updateClientSEO, buildWebsiteSchema, buildPageSchema } from './lib/seo';
 
 function safeLazy<T extends React.ComponentType<any>>(
   factory: () => Promise<{ default: T }>
@@ -551,76 +551,172 @@ function GlobalSEOSynchronizer() {
       return;
     }
 
+    const routeSeoMap: Record<string, { title: string; description: string; canonical?: string; pageType?: 'WebPage' | 'CollectionPage' | 'AboutPage' }> = {
+      '/news': {
+        title: 'أخبار الاتحاد السكندري العاجلة والحصرية',
+        description: 'تابع أحدث أخبار نادي الاتحاد السكندري في كرة القدم وكرة السلة وكافة الألعاب الرياضية، وتحليلات ومقالات حصرية عن زعيم الثغر لحظة بلحظة.',
+        pageType: 'CollectionPage'
+      },
+      '/matches': {
+        title: 'جدول مباريات ونتائج الاتحاد السكندري',
+        description: 'تعرف على مواعيد ونتائج مباريات نادي الاتحاد السكندري القادمة والسابقة في الدوري والكأس ودوري السلة بتحديث فوري وتفاصيل شاملة.',
+        pageType: 'CollectionPage'
+      },
+      '/media': {
+        title: 'المركز الإعلامي – صور وفيديوهات الاتحاد السكندري',
+        description: 'شاهد أهداف وملخصات مباريات الاتحاد السكندري وألبومات الصور الحصرية من التدريبات والمباريات ومدرجات جماهير زعيم الثغر.',
+        pageType: 'CollectionPage'
+      },
+      '/live': {
+        title: 'البث المباشر لمباريات وبرامج الاتحاد السكندري',
+        description: 'شاهد البث المباشر لمباريات كرة القدم وكرة السلة وبرامج قناة الاتحاد السكندري والتغطيات الحصرية لحظة بلحظة بجودة عالية.',
+        pageType: 'WebPage'
+      },
+      '/history': {
+        title: 'تاريخ وبطولات نادي الاتحاد السكندري منذ 1906',
+        description: 'استكشف تاريخ نادي الاتحاد السكندري العريق منذ عام 1906، سجل البطولات والألقاب في القدم والسلة، الخط الزمني والملاعب التاريخية.',
+        pageType: 'AboutPage'
+      },
+      '/fanzone': {
+        title: 'مدرج جماهير الاتحاد السكندري – التوقعات والتفاعل',
+        description: 'شارك في مدرج جماهير سيد البلد، توقع نتائج مباريات الاتحاد السكندري، تفاعل في الاستفتاءات وتصدّر قائمة المشجعين.',
+        canonical: '/fanzone',
+        pageType: 'CollectionPage'
+      },
+      '/feed': {
+        title: 'مدرج جماهير الاتحاد السكندري – التوقعات والتفاعل',
+        description: 'شارك في مدرج جماهير سيد البلد، توقع نتائج مباريات الاتحاد السكندري، تفاعل في الاستفتاءات وتصدّر قائمة المشجعين.',
+        canonical: '/fanzone',
+        pageType: 'CollectionPage'
+      },
+      '/fan-zone': {
+        title: 'مدرج جماهير الاتحاد السكندري – التوقعات والتفاعل',
+        description: 'شارك في مدرج جماهير سيد البلد، توقع نتائج مباريات الاتحاد السكندري، تفاعل في الاستفتاءات وتصدّر قائمة المشجعين.',
+        canonical: '/fanzone',
+        pageType: 'CollectionPage'
+      },
+      '/club-members': {
+        title: 'بوابة أعضاء نادي الاتحاد السكندري',
+        description: 'الخدمات والإعلانات والرحلات والخصومات الحصرية المخصصة لأعضاء نادي الاتحاد السكندري وعائلاتهم في فرعي الشاطبي وسموحة.',
+        pageType: 'WebPage'
+      },
+      '/discounts': {
+        title: 'عروض وخصومات جماهير وأعضاء الاتحاد السكندري',
+        description: 'اكتشف أحدث العروض والخصومات الحصرية المقدمة لجماهير وأعضاء نادي الاتحاد السكندري في الإسكندرية ومختلف المحافظات.',
+        pageType: 'CollectionPage'
+      },
+      '/business': {
+        title: 'دليل أعمال الاتحداوية – مشروعات وخدمات الجماهير',
+        description: 'تصفح دليل أعمال ومشروعات مشجعي نادي الاتحاد السكندري وادعم الأنشطة التجارية والخدمات المقدمة من أبناء زعيم الثغر.',
+        pageType: 'CollectionPage'
+      },
+      '/world-fans': {
+        title: 'رابطة مشجعي الاتحاد السكندري حول العالم',
+        description: 'تواصل مع روابط ومجموعات مشجعي نادي الاتحاد السكندري في مصر والدول العربية وجميع أنحاء العالم.',
+        canonical: '/world-fans',
+        pageType: 'CollectionPage'
+      },
+      '/world-association': {
+        title: 'رابطة مشجعي الاتحاد السكندري حول العالم',
+        description: 'تواصل مع روابط ومجموعات مشجعي نادي الاتحاد السكندري في مصر والدول العربية وجميع أنحاء العالم.',
+        canonical: '/world-fans',
+        pageType: 'CollectionPage'
+      },
+      '/services': {
+        title: 'الخدمات العامة لجماهير الاتحاد السكندري',
+        description: 'باقة من الخدمات المجتمعية والتعليمية والمبادرات الموجهة لجماهير نادي الاتحاد السكندري وأبناء الإسكندرية.',
+        canonical: '/services',
+        pageType: 'WebPage'
+      },
+      '/public-services': {
+        title: 'الخدمات العامة لجماهير الاتحاد السكندري',
+        description: 'باقة من الخدمات المجتمعية والتعليمية والمبادرات الموجهة لجماهير نادي الاتحاد السكندري وأبناء الإسكندرية.',
+        canonical: '/services',
+        pageType: 'WebPage'
+      },
+      '/library': {
+        title: 'مكتبة نادي الاتحاد السكندري – الأناشيد والكتب والأرشيف',
+        description: 'استمع لأناشيد وأهازيج جماهير الاتحاد السكندري وتصفح الكتب والوثائق والأرشيف الثقافي والتاريخي لنادي سيد البلد.',
+        pageType: 'CollectionPage'
+      },
+      '/social': {
+        title: 'الصفحة الرسمية لقناة الاتحاد السكندري – آخر المنشورات',
+        description: 'تابع أحدث منشورات وتغطيات الصفحة الرسمية لقناة الاتحاد السكندري وحسابات النادي على مواقع التواصل الاجتماعي.',
+        canonical: '/social',
+        pageType: 'CollectionPage'
+      },
+      '/social-media': {
+        title: 'الصفحة الرسمية لقناة الاتحاد السكندري – آخر المنشورات',
+        description: 'تابع أحدث منشورات وتغطيات الصفحة الرسمية لقناة الاتحاد السكندري وحسابات النادي على مواقع التواصل الاجتماعي.',
+        canonical: '/social',
+        pageType: 'CollectionPage'
+      },
+      '/facebook': {
+        title: 'الصفحة الرسمية لقناة الاتحاد السكندري – آخر المنشورات',
+        description: 'تابع أحدث منشورات وتغطيات الصفحة الرسمية لقناة الاتحاد السكندري وحسابات النادي على مواقع التواصل الاجتماعي.',
+        canonical: '/social',
+        pageType: 'CollectionPage'
+      },
+      '/store': {
+        title: 'متجر جماهير الاتحاد السكندري',
+        description: 'تصفح منتجات وتيشيرتات وإكسسوارات جماهير نادي الاتحاد السكندري الرسمية بأفضل جودة.',
+        pageType: 'CollectionPage'
+      },
+      '/game': {
+        title: 'لعبة الاتحداوي – مغامرة سيد البلد التفاعلية',
+        description: 'العب واستمتع بلعبة الاتحداوي الرسمية في شوارع الإسكندرية ونافس جماهير زعيم الثغر على أعلى النقاط.',
+        canonical: '/game',
+        pageType: 'WebPage'
+      },
+      '/privacy-policy': {
+        title: 'سياسة الخصوصية',
+        description: 'سياسة الخصوصية وحماية البيانات الشخصية لمستخدمي موقع وتطبيق قناة الاتحاد السكندري.',
+        canonical: '/privacy-policy'
+      },
+      '/privacy': {
+        title: 'سياسة الخصوصية',
+        description: 'سياسة الخصوصية وحماية البيانات الشخصية لمستخدمي موقع وتطبيق قناة الاتحاد السكندري.',
+        canonical: '/privacy-policy'
+      },
+      '/terms': {
+        title: 'شروط الاستخدام والخدمة',
+        description: 'الشروط والأحكام المنظمة لاستخدام موقع وتطبيق وخدمات قناة الاتحاد السكندري.',
+        canonical: '/terms'
+      },
+      '/data-deletion': {
+        title: 'حذف بيانات المستخدم',
+        description: 'تعليمات وطلب حذف حسابك وبياناتك الشخصية من موقع وتطبيق قناة الاتحاد السكندري.',
+        canonical: '/data-deletion'
+      },
+      '/user-data-deletion': {
+        title: 'حذف بيانات المستخدم',
+        description: 'تعليمات وطلب حذف حسابك وبياناتك الشخصية من موقع وتطبيق قناة الاتحاد السكندري.',
+        canonical: '/data-deletion'
+      }
+    };
+
     if (pathname === '/') {
       updateClientSEO({
-        title: 'قناة الاتحاد السكندري - زعيم الثغر وسيد البلد',
-        description: 'تطبيق قناة الاتحاد السكندري - المنصة الرسمية لجماهير سيد البلد، تغطية مباشرة ومباريات وأخبار النادي لحظة بلحظة',
+        title: 'قناة الاتحاد السكندري – أخبار ومباريات وبث مباشر زعيم الثغر',
+        description: 'المنصة الرسمية لجماهير نادي الاتحاد السكندري (سيد البلد): أخبار النادي العاجلة، جدول ونتائج المباريات، البث المباشر، المكتبة الإعلامية وتاريخ زعيم الثغر.',
         canonicalUrl: '/',
         type: 'website',
         structuredData: buildWebsiteSchema()
       });
-    } else if (pathname === '/news') {
+    } else if (routeSeoMap[pathname]) {
+      const entry = routeSeoMap[pathname];
+      const canonical = entry.canonical || pathname;
       updateClientSEO({
-        title: 'أخبار الاتحاد السكندري',
-        description: 'آخر أخبار نادي الاتحاد السكندري، تغطية حصرية لكافة الألعاب والبطولات ومتابعة أخبار زعيم الثغر',
-        canonicalUrl: '/news',
-        type: 'website'
-      });
-    } else if (pathname === '/matches') {
-      updateClientSEO({
-        title: 'مباريات ونتائج الاتحاد السكندري',
-        description: 'جدول مباريات نادي الاتحاد السكندري، النتائج المباشرة وترتيب الفريق في الدوري والبطولات',
-        canonicalUrl: '/matches',
-        type: 'website'
-      });
-    } else if (pathname === '/media') {
-      updateClientSEO({
-        title: 'المركز الإعلامي ومكتبة الفيديو والصور',
-        description: 'فيديوهات وأهداف وملخصات مباريات الاتحاد السكندري وصور حصرية من قلب النادي',
-        canonicalUrl: '/media',
-        type: 'website'
-      });
-    } else if (pathname === '/live') {
-      updateClientSEO({
-        title: 'البث المباشر والمتابعة الحية',
-        description: 'متابعة حية وبث مباشر لمباريات نادي الاتحاد السكندري وأحداث النادي الكبرى',
-        canonicalUrl: '/live',
-        type: 'website'
-      });
-    } else if (pathname === '/history') {
-      updateClientSEO({
-        title: 'تاريخ وبطولات زعيم الثغر',
-        description: 'سجل بطولات وتاريخ نادي الاتحاد السكندري العريق منذ التأسيس وأساطير النادي الخالدة',
-        canonicalUrl: '/history',
-        type: 'website'
-      });
-    } else if (pathname === '/fanzone' || pathname === '/feed' || pathname === '/fan-zone') {
-      updateClientSEO({
-        title: 'مدرج جماهير الاتحاد السكندري',
-        description: 'مساحة خاصة لجماهير سيد البلد للمشاركة والتفاعل ودعم الفريق',
-        canonicalUrl: '/fanzone',
-        type: 'website'
-      });
-    } else if (pathname === '/privacy-policy' || pathname === '/privacy') {
-      updateClientSEO({
-        title: 'سياسة الخصوصية',
-        description: 'سياسة الخصوصية وشروط الاستخدام لتطبيق قناة الاتحاد السكندري',
-        canonicalUrl: '/privacy-policy',
-        type: 'website'
-      });
-    } else if (pathname === '/terms') {
-      updateClientSEO({
-        title: 'شروط الخدمة والاستخدام',
-        description: 'الشروط والأحكام الخاصة باستخدام خدمات وتطبيق قناة الاتحاد السكندري',
-        canonicalUrl: '/terms',
-        type: 'website'
-      });
-    } else if (pathname === '/data-deletion') {
-      updateClientSEO({
-        title: 'حذف بيانات المستخدم',
-        description: 'كيفية حذف بيانات حسابك من تطبيق قناة الاتحاد السكندري',
-        canonicalUrl: '/data-deletion',
-        type: 'website'
+        title: entry.title,
+        description: entry.description,
+        canonicalUrl: canonical,
+        type: 'website',
+        structuredData: buildPageSchema({
+          title: entry.title,
+          description: entry.description,
+          path: canonical,
+          pageType: entry.pageType
+        })
       });
     } else {
       updateClientSEO({

@@ -512,6 +512,8 @@ export default function Home() {
                     <img 
                       src={userAvatar} 
                       alt={rawName} 
+                      loading="eager"
+                      decoding="async"
                       className="w-11 h-11 rounded-lg object-cover border-2 border-emerald-500/40 group-hover:border-emerald-500 shadow-md shadow-emerald-500/10 transition-all ring-2 ring-emerald-500/20"
                       referrerPolicy="no-referrer"
                     />
@@ -587,12 +589,14 @@ export default function Home() {
                         {heroMatch?.stadiumImage ? (
                           <img 
                             src={getOptimizedImage(heroMatch.stadiumImage, 600) || undefined} 
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover filter saturate-50 transition-all duration-500 rounded-xl" 
                             style={{ 
                               opacity: heroMatch?.stadiumOpacity ?? stadiumOpacity,
                               filter: `saturate(0.5) blur(${(heroMatch?.stadiumOpacity ?? stadiumOpacity) > 0.5 ? '0px' : '2px'})`
                             }}
-                            alt="stadium"
+                            alt="ملعب المباراة"
                           />
                         ) : (
                           <div className={`w-full h-full rounded-xl ${
